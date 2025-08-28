@@ -9,5 +9,198 @@
     "docs/public/contributors.html"
   ],
   "commit": false,
-  "contributors": []
+  "contributors": [
+    {
+      "login": "dwmkerr",
+      "name": "Dave Kerr",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1926984?v=4",
+      "profile": "http://www.dwmkerr.com/",
+      "contributions": [
+        "projectManagement",
+        "code"
+      ]
+    },
+    {
+      "login": "chi-wai-cheung-mckinsey",
+      "name": "chi-wai-cheung-mckinsey",
+      "avatar_url": "https://avatars.githubusercontent.com/u/94713721?v=4",
+      "profile": "https://github.com/chi-wai-cheung-mckinsey",
+      "contributions": [
+        "projectManagement",
+        "code"
+      ]
+    },
+    {
+      "login": "cm94242",
+      "name": "Chris Madden",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3154157?v=4",
+      "profile": "https://github.com/cm94242",
+      "contributions": [
+        "projectManagement",
+        "code"
+      ]
+    },
+    {
+      "login": "Roman-Galeev",
+      "name": "Roman Galeev",
+      "avatar_url": "https://avatars.githubusercontent.com/u/40388226?v=4",
+      "profile": "https://github.com/Roman-Galeev",
+      "contributions": [
+        "projectManagement",
+        "code"
+      ]
+    },
+    {
+      "login": "Mahesh-K-mck",
+      "name": "Mahesh-K-mck",
+      "avatar_url": "https://avatars.githubusercontent.com/u/130043778?v=4",
+      "profile": "https://github.com/Mahesh-K-mck",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "skokaina",
+      "name": "Sallah Kokaina",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2756985?v=4",
+      "profile": "https://github.com/skokaina",
+      "contributions": [
+        "projectManagement",
+        "code"
+      ]
+    },
+    {
+      "login": "RJFerguson",
+      "name": "Ryan Ferguson",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22607390?v=4",
+      "profile": "http://rferg.io",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "noklam",
+      "name": "Nok Lam Chan",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18221871?v=4",
+      "profile": "https://noklam.github.io/blog",
+      "contributions": [
+        "doc",
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "Nab-0",
+      "name": "Mohammed ELNABAWY",
+      "avatar_url": "https://avatars.githubusercontent.com/u/38665853?v=4",
+      "profile": "https://github.com/Nab-0",
+      "contributions": [
+        "projectManagement",
+        "doc"
+      ]
+    },
+    {
+      "login": "dberesford-mck",
+      "name": "Damian Beresford",
+      "avatar_url": "https://avatars.githubusercontent.com/u/95477177?v=4",
+      "profile": "https://github.com/dberesford-mck",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "Sukhacoder",
+      "name": "Sukhacoder",
+      "avatar_url": "https://avatars.githubusercontent.com/u/129385365?v=4",
+      "profile": "https://github.com/Sukhacoder",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "Ar11rA",
+      "name": "Aritra Ghosh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/20910498?v=4",
+      "profile": "https://github.com/Ar11rA",
+      "contributions": [
+        "doc",
+        "code"
+      ]
+    },
+    {
+      "login": "Nandika2000",
+      "name": "Nandika Arora",
+      "avatar_url": "https://avatars.githubusercontent.com/u/99251154?v=4",
+      "profile": "https://github.com/Nandika2000",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "anjali-mck",
+      "name": "anjali-mck",
+      "avatar_url": "https://avatars.githubusercontent.com/u/220323827?v=4",
+      "profile": "https://github.com/anjali-mck",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "jlopez-mck",
+      "name": "Joe Lopez",
+      "avatar_url": "https://avatars.githubusercontent.com/u/83838189?v=4",
+      "profile": "https://github.com/jlopez-mck",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "liranbg",
+      "name": "Liran BG",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6547459?v=4",
+      "profile": "https://www.linkedin.com/in/liranbg/",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "dbsmck",
+      "name": "Dan",
+      "avatar_url": "https://avatars.githubusercontent.com/u/126763940?v=4",
+      "profile": "https://github.com/dbsmck",
+      "contributions": [
+        "code",
+        "bug",
+        "doc"
+      ]
+    },
+    {
+      "login": "poornimanagQB",
+      "name": "poornimanagQB",
+      "avatar_url": "https://avatars.githubusercontent.com/u/173107615?v=4",
+      "profile": "https://github.com/poornimanagQB",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "StarkNDJ",
+      "name": "StarkNDJ",
+      "avatar_url": "https://avatars.githubusercontent.com/u/130988725?v=4",
+      "profile": "https://github.com/StarkNDJ",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "agents-at-scale",
+  "projectOwner": "McK-Internal",
+  "badgeTemplate": "<a href=\"https://github.com/McK-Internal/agents-at-scale/blob/main/docs/content/contributors.mdx\"><img src=\"https://img.shields.io/github/all-contributors/McK-Internal/agents-at-scale?color=ee8449&style=flat-square\" alt=\"All Contributors\" /></a>"
 }
