@@ -65,10 +65,10 @@ jobs:
         run: |
           devspace list profiles
 
-  test-deployment:
+  test-phoenix-deployment:
     runs-on: ubuntu-24.04
     needs: validate-phoenix
-    # if: github.event_name == 'workflow_dispatch' && inputs.run_deployment_test == true
+    if: github.event_name == 'workflow_dispatch' && inputs.run_deployment_test == true
     defaults:
       run:
         working-directory: services/phoenix
