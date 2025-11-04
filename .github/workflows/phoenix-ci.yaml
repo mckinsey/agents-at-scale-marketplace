@@ -94,12 +94,16 @@ jobs:
           chmod +x devspace
           sudo mv devspace /usr/local/bin/devspace
 
+      - name: Create required namespaces
+        run: |
+          kubectl create namespace ark-system || true
+          kubectl create namespace phoenix || true
+
       - name: Test Helm Installation
         run: |
           helm dependency update chart/
           helm install phoenix-test chart/ \
             --namespace phoenix \
-            --create-namespace \
             --wait \
             --timeout 5m
 
