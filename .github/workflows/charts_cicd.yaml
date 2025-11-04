@@ -1,0 +1,133 @@
+name: Charts CI/CD
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+# Concurrency is per-workflow, per-pull request or branch. This means that
+# existing workflows are *only* cancelled if someone pushes a new commit to the
+# same pull request or branch (which only triggers for 'main' in this workflow).
+# People therefore cannot cancel each others' build, only cancel pending builds
+# on their own PRs.
+# This pattern does *not* apply to the 'main' branch - which we want to always
+# have the full pipeline run on.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  validate-charts:
+    name: Validate Chart Services - ${{ matrix.chart.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        chart:
+          - { name: phoenix, path: services/phoenix, namespace: phoenix }
+    defaults:
+      run:
+        working-directory: ${{ matrix.chart.path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.14.0"
+
+      - name: Setup DevSpace
+        uses: loft-sh/setup-devspace@main
+
+      - name: Validate Helm Chart Dependencies - ${{ matrix.chart.name }}
+        run: |
+          helm dependency update chart/
+          helm dependency build chart/
+
+      - name: Lint Helm Chart - ${{ matrix.chart.name }}
+        run: |
+          helm lint chart/
+
+      - name: Package Helm Chart - ${{ matrix.chart.name }}
+        run: |
+          helm package chart/
+
+      - name: Validate Helm Template Rendering - ${{ matrix.chart.name }}
+        run: |
+          helm template ${{ matrix.chart.name }} chart/ \
+            --namespace ${{ matrix.chart.namespace }} \
+            --debug \
+            --dry-run
+
+      - name: Upload Helm Chart - ${{ matrix.chart.name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.chart.name }}-${{ github.sha }}
+          path: ${{ matrix.chart.path }}/${{ matrix.chart.name }}-*.tgz
+          retention-days: 30
+
+      - name: Validate DevSpace Configuration - ${{ matrix.chart.name }}
+        run: |
+          devspace print
+
+      - name: Check DevSpace Config Syntax - ${{ matrix.chart.name }}
+        run: |
+          devspace list profiles
+
+  test-phoenix-deployment:
+    name: Test Phoenix Deployment
+    runs-on: ubuntu-24.04
+    needs: validate-charts
+    defaults:
+      run:
+        working-directory: services/phoenix
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kind (Kubernetes in Docker)
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: phoenix-test
+          kubectl_version: v1.29.0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Setup DevSpace
+        run: |
+          curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64"
+          chmod +x devspace
+          sudo mv devspace /usr/local/bin/devspace
+
+      - name: Create required namespaces
+        run: |
+          kubectl create namespace ark-system || true
+          kubectl create namespace phoenix || true
+
+      - name: Test Helm Installation
+        run: |
+          helm dependency update chart/
+          helm install phoenix-test chart/ \
+            --namespace phoenix \
+            --wait \
+            --timeout 5m
+
+      - name: Verify Phoenix Deployment
+        run: |
+          kubectl get pods -n phoenix
+          kubectl get svc -n phoenix
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=phoenix-test -n phoenix --timeout=300s
+
+      - name: Cleanup
+        if: always()
+        run: |
+          helm uninstall phoenix-test -n phoenix || true
+          kubectl delete namespace phoenix || true
