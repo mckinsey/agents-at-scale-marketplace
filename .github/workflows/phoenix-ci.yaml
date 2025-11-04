@@ -37,8 +37,9 @@ jobs:
 
       - name: Setup DevSpace
         run: |
-          curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace
-          sudo mv devspace /usr/local/bin
+          curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64"
+          chmod +x devspace
+          sudo mv devspace /usr/local/bin/devspace
 
       - name: Validate Helm Chart Dependencies
         run: |
@@ -89,8 +90,9 @@ jobs:
 
       - name: Setup DevSpace
         run: |
-          curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace
-          sudo mv devspace /usr/local/bin
+          curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64"
+          chmod +x devspace
+          sudo mv devspace /usr/local/bin/devspace
 
       - name: Test Helm Installation
         run: |
