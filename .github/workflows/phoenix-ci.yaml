@@ -62,7 +62,7 @@ jobs:
   test-phoenix-deployment:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    needs: validate-phoenix
+    # needs: validate-phoenix
     defaults:
       run:
         working-directory: services/phoenix
