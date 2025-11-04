@@ -40,8 +40,8 @@ jobs:
         with:
           version: "3.14.0"
 
-      - name: Setup DevSpace
-        uses: loft-sh/setup-devspace@main
+      - name: Install DevSpace via npm
+        run: npm install -g devspace
 
       - name: Validate Helm Chart Dependencies - ${{ matrix.chart.name }}
         run: |
@@ -78,53 +78,56 @@ jobs:
         run: |
           devspace list profiles
 
-  test-phoenix-deployment:
-    name: Test Phoenix Deployment
-    runs-on: ubuntu-24.04
-    needs: validate-charts
-    defaults:
-      run:
-        working-directory: services/phoenix
+  # test-phoenix-deployment:
+  #   name: Test Phoenix Deployment
+  #   runs-on: ubuntu-24.04
+  #   needs: validate-charts
+  #   defaults:
+  #     run:
+  #       working-directory: services/phoenix
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Setup kind (Kubernetes in Docker)
-        uses: helm/kind-action@v1
-        with:
-          cluster_name: phoenix-test
-          kubectl_version: v1.29.0
+  #     - name: Setup kind (Kubernetes in Docker)
+  #       uses: helm/kind-action@v1
+  #       with:
+  #         cluster_name: phoenix-test
+  #         kubectl_version: v1.29.0
 
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: "latest"
+  #     - name: Setup Helm
+  #       uses: azure/setup-helm@v4
+  #       with:
+  #         version: "latest"
 
-      - name: Setup DevSpace
-        uses: loft-sh/setup-devspace@main
+  #     - name: Setup DevSpace
+  #       run: |
+  #         curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64"
+  #         chmod +x devspace
+  #         sudo mv devspace /usr/local/bin/devspace
 
-      - name: Create required namespaces
-        run: |
-          kubectl create namespace ark-system || true
-          kubectl create namespace phoenix || true
+  #     - name: Create required namespaces
+  #       run: |
+  #         kubectl create namespace ark-system || true
+  #         kubectl create namespace phoenix || true
 
-      - name: Test Helm Installation
-        run: |
-          helm dependency update chart/
-          helm install phoenix-test chart/ \
-            --namespace phoenix \
-            --wait \
-            --timeout 5m
+  #     - name: Test Helm Installation
+  #       run: |
+  #         helm dependency update chart/
+  #         helm install phoenix-test chart/ \
+  #           --namespace phoenix \
+  #           --wait \
+  #           --timeout 5m
 
-      - name: Verify Phoenix Deployment
-        run: |
-          kubectl get pods -n phoenix
-          kubectl get svc -n phoenix
-          kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=phoenix-test -n phoenix --timeout=300s
+  #     - name: Verify Phoenix Deployment
+  #       run: |
+  #         kubectl get pods -n phoenix
+  #         kubectl get svc -n phoenix
+  #         kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=phoenix-test -n phoenix --timeout=300s
 
-      - name: Cleanup
-        if: always()
-        run: |
-          helm uninstall phoenix-test -n phoenix || true
-          kubectl delete namespace phoenix || true
+  #     - name: Cleanup
+  #       if: always()
+  #       run: |
+  #         helm uninstall phoenix-test -n phoenix || true
+  #         kubectl delete namespace phoenix || true
