@@ -104,6 +104,7 @@ jobs:
           helm dependency update chart/
           helm install phoenix-test chart/ \
             --namespace phoenix \
+            --set httpRoute.enabled=true \
             --wait \
             --timeout 5m
 
