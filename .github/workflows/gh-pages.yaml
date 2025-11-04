@@ -2,7 +2,7 @@ name: Deploy docs site to Pages
 
 on:
   push:
-    branches: ["main", "feat/docs-and-phoenix-migration"] # add feat/docs-and-phoenix-migration for testing 
+    branches: ["main", "feat/docs-and-phoenix-migration"] # add feat/docs-and-phoenix-migration for testing
 
   workflow_dispatch:
 
@@ -51,7 +51,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build with Next.js
-        run: npx --no-install next build
+        run: npm run build
+      - name: Validate Internal Documentation Links
+        run: npm run check-links
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
