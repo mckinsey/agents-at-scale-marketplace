@@ -1,0 +1,118 @@
+name: Phoenix Service CI
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "services/phoenix/**"
+      - ".github/workflows/phoenix-ci.yaml"
+  push:
+    branches: ["main"]
+    paths:
+      - "services/phoenix/**"
+      - ".github/workflows/phoenix-ci.yaml"
+  workflow_dispatch:
+    inputs:
+      run_deployment_test:
+        description: 'Run deployment test in kind cluster'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  validate-phoenix:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: services/phoenix
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Setup DevSpace
+        run: |
+          curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace
+          sudo mv devspace /usr/local/bin
+
+      - name: Validate Helm Chart Dependencies
+        run: |
+          helm dependency update chart/
+          helm dependency build chart/
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint chart/
+
+      - name: Validate Helm Template Rendering
+        run: |
+          helm template phoenix chart/ \
+            --namespace phoenix \
+            --debug \
+            --dry-run
+
+      - name: Validate DevSpace Configuration
+        run: |
+          devspace print --skip-deploy
+
+      - name: Check DevSpace Config Syntax
+        run: |
+          devspace list profiles
+
+  test-deployment:
+    runs-on: ubuntu-24.04
+    needs: validate-phoenix
+    if: github.event_name == 'workflow_dispatch' && inputs.run_deployment_test == true
+    defaults:
+      run:
+        working-directory: services/phoenix
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kind (Kubernetes in Docker)
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: phoenix-test
+          kubectl_version: v1.29.0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Setup DevSpace
+        run: |
+          curl -s -L "https://github.com/loft-sh/devspace/releases/latest" | sed -nE 's!.*"([^"]*devspace-linux-amd64)".*!https://github.com\1!p' | xargs -n 1 curl -L -o devspace && chmod +x devspace
+          sudo mv devspace /usr/local/bin
+
+      - name: Test Helm Installation
+        run: |
+          helm dependency update chart/
+          helm install phoenix-test chart/ \
+            --namespace phoenix \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+
+      - name: Verify Phoenix Deployment
+        run: |
+          kubectl get pods -n phoenix
+          kubectl get svc -n phoenix
+          kubectl wait --for=condition=ready pod -l app=phoenix -n phoenix --timeout=300s
+
+      - name: Check Phoenix Service
+        run: |
+          kubectl describe svc phoenix-svc -n phoenix
+          
+      - name: Cleanup
+        if: always()
+        run: |
+          helm uninstall phoenix-test -n phoenix || true
+          kubectl delete namespace phoenix || true
