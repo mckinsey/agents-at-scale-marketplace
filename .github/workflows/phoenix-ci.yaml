@@ -104,7 +104,6 @@ jobs:
           helm dependency update chart/
           helm install phoenix-test chart/ \
             --namespace phoenix \
-            --set httpRoute.enabled=true \
             --wait \
             --timeout 5m
 
@@ -113,10 +112,6 @@ jobs:
           kubectl get pods -n phoenix
           kubectl get svc -n phoenix
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=phoenix-test -n phoenix --timeout=300s
-
-      - name: Check Phoenix Service
-        run: |
-          kubectl describe svc phoenix-svc -n phoenix
           
       - name: Cleanup
         if: always()
