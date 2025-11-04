@@ -11,7 +11,6 @@ on:
     paths:
       - "services/phoenix/**"
       - ".github/workflows/phoenix-ci.yaml"
-  workflow_dispatch:
 
 jobs:
   validate-phoenix:
@@ -60,9 +59,8 @@ jobs:
           devspace list profiles
 
   test-phoenix-deployment:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    # needs: validate-phoenix
+    needs: validate-phoenix
     defaults:
       run:
         working-directory: services/phoenix
