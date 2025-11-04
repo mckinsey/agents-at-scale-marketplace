@@ -30,7 +30,11 @@ jobs:
           version: 'latest'
 
       - name: Setup DevSpace
-        uses: loft-sh/setup-devspace@main
+          # uses: loft-sh/setup-devspace@main is blocked 
+        run: |
+          curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64"
+          chmod +x devspace
+          sudo mv devspace /usr/local/bin/devspace
 
       - name: Validate Helm Chart Dependencies
         run: |
@@ -80,7 +84,10 @@ jobs:
           version: 'latest'
 
       - name: Setup DevSpace
-        uses: loft-sh/setup-devspace@main
+        run: |
+          curl -L -o devspace "https://github.com/loft-sh/devspace/releases/latest/download/devspace-linux-amd64"
+          chmod +x devspace
+          sudo mv devspace /usr/local/bin/devspace
 
       - name: Create required namespaces
         run: |
