@@ -1,0 +1,14 @@
+# Helm chart dependencies
+*.tgz
+*/charts/*.tgz
+**/charts/*.tgz
+Chart.lock
+
+# DevSpace
+.devspace/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
