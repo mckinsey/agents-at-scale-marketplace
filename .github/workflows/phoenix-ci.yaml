@@ -111,7 +111,7 @@ jobs:
         run: |
           kubectl get pods -n phoenix
           kubectl get svc -n phoenix
-          kubectl wait --for=condition=ready pod -l app=phoenix -n phoenix --timeout=300s
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=phoenix-test -n phoenix --timeout=300s
 
       - name: Check Phoenix Service
         run: |
