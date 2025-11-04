@@ -2,7 +2,7 @@ name: Deploy docs site to Pages
 
 on:
   push:
-    branches: ["main", "feat/docs-and-phoenix-migration"] # add feat/docs-and-phoenix-migration for testing
+    branches: ["main"]
 
   workflow_dispatch:
 
