@@ -12,12 +12,6 @@ on:
       - "services/phoenix/**"
       - ".github/workflows/phoenix-ci.yaml"
   workflow_dispatch:
-    inputs:
-      run_deployment_test:
-        description: 'Run deployment test in kind cluster'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   validate-phoenix:
@@ -66,9 +60,9 @@ jobs:
           devspace list profiles
 
   test-phoenix-deployment:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     needs: validate-phoenix
-    if: github.event_name == 'workflow_dispatch' && inputs.run_deployment_test == true
     defaults:
       run:
         working-directory: services/phoenix
