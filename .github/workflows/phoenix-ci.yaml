@@ -59,7 +59,7 @@ jobs:
 
       - name: Validate DevSpace Configuration
         run: |
-          devspace print --skip-deploy
+          devspace print
 
       - name: Check DevSpace Config Syntax
         run: |
