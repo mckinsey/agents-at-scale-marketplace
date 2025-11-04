@@ -11,7 +11,7 @@ export const metadata = {
 const navbar = (
   <Navbar
     logo={<b>ARK Marketplace</b>}
-    projectLink="https://github.com/mckinsey/agents-at-scale-ark"
+    projectLink="https://github.com/mckinsey/agents-at-scale-marketplace"
   />
 )
 
@@ -31,7 +31,7 @@ export default async function RootLayout({ children }) {
         <Layout
           navbar={navbar}
           pageMap={await getPageMap()}
-          docsRepositoryBase="https://github.com/mckinsey/agents-at-scale-ark/tree/main/marketplace/docs"
+          docsRepositoryBase="https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/docs"
           footer={footer}
           sidebar={{
             defaultMenuCollapseLevel: 1,

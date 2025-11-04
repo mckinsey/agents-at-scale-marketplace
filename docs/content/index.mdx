@@ -27,7 +27,7 @@ Currently available services:
 
 ```bash
 # Deploy using Helm from local chart
-cd marketplace/services/phoenix
+cd services/phoenix
 helm dependency update chart/
 helm install phoenix ./chart -n phoenix --create-namespace
 ```
@@ -36,13 +36,13 @@ helm install phoenix ./chart -n phoenix --create-namespace
 
 ```bash
 # Use DevSpace for local development
-cd marketplace/services/phoenix
+cd services/phoenix
 devspace dev
 ```
 
 ## Future Plans
 
-This marketplace is being prepared for migration to a dedicated repository where it will include:
+This marketplace will include:
 - Additional observability services
 - Pre-built agents and agent templates
 - Reusable tools and utilities
@@ -52,8 +52,8 @@ This marketplace is being prepared for migration to a dedicated repository where
 
 When adding new services to the marketplace:
 
-1. Create service directory: `marketplace/services/<service-name>/`
-2. Add Helm chart: `marketplace/services/<service-name>/chart/`
-3. Add DevSpace config: `marketplace/services/<service-name>/devspace.yaml`
-4. Add documentation: `marketplace/docs/content/services/<service-name>.mdx`
+1. Create service directory: `services/<service-name>/`
+2. Add Helm chart: `services/<service-name>/chart/`
+3. Add DevSpace config: `services/<service-name>/devspace.yaml`
+4. Add documentation: `docs/content/services/<service-name>.mdx`
 5. Update the services index
