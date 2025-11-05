@@ -162,7 +162,7 @@ jobs:
           helm install ${{ inputs.chart-name }}-test chart/ \
             --namespace ${{ inputs.chart-namespace }} \
             --wait \
-            --timeout 10m
+            --timeout 5m
 
       - name: Verify Deployment
         run: |

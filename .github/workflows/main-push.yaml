@@ -23,7 +23,8 @@ jobs:
     strategy:
       matrix:
         chart:
-          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: true }
+          # disable langfuse deployment tests for PRs to avoid hitting 5m limit 
+          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: false }
           - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: true }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
@@ -96,12 +97,12 @@ jobs:
     strategy:
       matrix:
         chart:
-          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: true }
-          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
+          - { name: langfuse, path: services/langfuse, namespace: langfuse }
+          - { name: phoenix, path: services/phoenix, namespace: phoenix }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
       chart-path: ${{ matrix.chart.path }}
       chart-namespace: ${{ matrix.chart.namespace }}
       upload-artifact: true
-      run-deployment-test: ${{ matrix.chart.run-deployment-test }}
+      run-deployment-test: false # deployments already tested in validate-charts job

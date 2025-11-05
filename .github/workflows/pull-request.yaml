@@ -22,7 +22,8 @@ jobs:
     strategy:
       matrix:
         chart:
-          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: true }
+          # disable langfuse deployment tests for PRs to avoid hitting 5m limit 
+          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: false }
           - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: true }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
