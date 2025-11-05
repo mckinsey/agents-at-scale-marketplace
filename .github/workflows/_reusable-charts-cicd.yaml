@@ -1,0 +1,133 @@
+name: Charts CI/CD (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      chart-name:
+        description: 'Name of the chart to validate'
+        type: string
+        required: true
+      chart-path:
+        description: 'Path to the chart directory'
+        type: string
+        required: true
+      chart-namespace:
+        description: 'Kubernetes namespace for the chart'
+        type: string
+        required: true
+      upload-artifact:
+        description: 'Upload packaged chart as artifact'
+        type: boolean
+        default: false
+      run-deployment-test:
+        description: 'Run Kubernetes deployment test'
+        type: boolean
+        default: false
+
+jobs:
+  validate-chart:
+    name: Validate Chart - ${{ inputs.chart-name }}
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ${{ inputs.chart-path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Install DevSpace via npm
+        run: npm install -g devspace
+
+      - name: Validate Helm Chart Dependencies - ${{ inputs.chart-name }}
+        run: |
+          helm dependency update chart/
+          helm dependency build chart/
+
+      - name: Lint Helm Chart - ${{ inputs.chart-name }}
+        run: |
+          helm lint chart/
+
+      - name: Package Helm Chart - ${{ inputs.chart-name }}
+        run: |
+          helm package chart/
+
+      - name: Validate Helm Template Rendering - ${{ inputs.chart-name }}
+        run: |
+          helm template ${{ inputs.chart-name }} chart/ \
+            --namespace ${{ inputs.chart-namespace }} \
+            --debug \
+            --dry-run
+
+      - name: Upload Helm Chart - ${{ inputs.chart-name }}
+        if: ${{ inputs.upload-artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.chart-name }}-${{ github.sha }}
+          path: ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz
+          retention-days: 30
+
+      - name: Validate DevSpace Configuration - ${{ inputs.chart-name }}
+        run: |
+          devspace print
+
+      - name: Check DevSpace Config Syntax - ${{ inputs.chart-name }}
+        run: |
+          devspace list profiles
+
+  test-deployment:
+    name: Test Deployment - ${{ inputs.chart-name }}
+    runs-on: ubuntu-24.04
+    needs: validate-chart
+    if: ${{ inputs.run-deployment-test }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.chart-path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kind (Kubernetes in Docker)
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: ${{ inputs.chart-name }}-test
+          kubectl_version: v1.29.0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Install DevSpace
+        run: npm install -g devspace
+
+      - name: Create required namespaces
+        run: |
+          kubectl create namespace ark-system || true
+          kubectl create namespace ${{ inputs.chart-namespace }} || true
+
+      - name: Test Helm Installation
+        run: |
+          helm dependency update chart/
+          helm install ${{ inputs.chart-name }}-test chart/ \
+            --namespace ${{ inputs.chart-namespace }} \
+            --wait \
+            --timeout 5m
+
+      - name: Verify Deployment
+        run: |
+          kubectl get pods -n ${{ inputs.chart-namespace }}
+          kubectl get svc -n ${{ inputs.chart-namespace }}
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=${{ inputs.chart-name }}-test -n ${{ inputs.chart-namespace }} --timeout=300s
+
+      - name: Cleanup
+        if: always()
+        run: |
+          helm uninstall ${{ inputs.chart-name }}-test -n ${{ inputs.chart-namespace }} || true
+          kubectl delete namespace ${{ inputs.chart-namespace }} || true

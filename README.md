@@ -2,6 +2,8 @@
 
 A collection of services, agents, and tools for the Agents at Scale (ARK) platform.
 
+> **Note on Versioning**: This repository uses a unified versioning strategy where all services share a common version number. Individual services do not maintain separate versions. When a release is created, the version is synchronized across all service charts and documentation.
+
 ## Services
 
 | Service | Description | Chart |
