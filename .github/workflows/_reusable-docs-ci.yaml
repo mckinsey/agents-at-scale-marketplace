@@ -1,16 +1,7 @@
-name: Documentation CI
+name: Documentation CI (Reusable)
 
 on:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - 'docs/**'
-      - '.github/workflows/docs-ci.yaml'
-  push:
-    branches: ["main"]
-    paths:
-      - 'docs/**'
-      - '.github/workflows/docs-ci.yaml'
+  workflow_call:
 
 jobs:
   build-and-check-docs:

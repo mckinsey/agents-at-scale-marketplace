@@ -1,16 +1,7 @@
-name: Phoenix Service CI
+name: Phoenix Service CI (Reusable)
 
 on:
-  pull_request:
-    branches: ["main"]
-    paths:
-      - "services/phoenix/**"
-      - ".github/workflows/phoenix-ci.yaml"
-  push:
-    branches: ["main"]
-    paths:
-      - "services/phoenix/**"
-      - ".github/workflows/phoenix-ci.yaml"
+  workflow_call:
 
 jobs:
   validate-phoenix:

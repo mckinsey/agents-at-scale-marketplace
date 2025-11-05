@@ -1,0 +1,31 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - 'docs/**'
+      - 'services/phoenix/**'
+      - '.github/workflows/_reusable-*.yaml'
+      - '.github/workflows/pull-request.yaml'
+
+jobs:
+  validate-pr-title:
+    name: Validate PR Title
+    uses: ./.github/workflows/_reusable-validate-pr-title.yaml
+
+  validate-docs:
+    name: Validate Documentation
+    if: |
+      contains(github.event.pull_request.changed_files, 'docs/') ||
+      contains(github.event.pull_request.title, 'docs') ||
+      contains(github.event.pull_request.changed_files, '.github/workflows/_reusable-docs-ci.yaml')
+    uses: ./.github/workflows/_reusable-docs-ci.yaml
+
+  validate-phoenix:
+    name: Validate Phoenix Service
+    if: |
+      contains(github.event.pull_request.changed_files, 'services/phoenix/') ||
+      contains(github.event.pull_request.title, 'phoenix') ||
+      contains(github.event.pull_request.changed_files, '.github/workflows/_reusable-phoenix-ci.yaml')
+    uses: ./.github/workflows/_reusable-phoenix-ci.yaml
