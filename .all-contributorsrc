@@ -1,0 +1,8 @@
+{
+  "projectName": "agents-at-scale-marketplace",
+  "projectOwner": "mckinsey",
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com"
+}
