@@ -48,14 +48,22 @@ jobs:
         run: |
           # Extract and add all helm repositories from Chart.yaml dependencies
           if [ -f chart/Chart.yaml ]; then
+            repos_added=false
             yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
               if [[ $repo == http* ]]; then
                 repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
                 echo "Adding repository: $repo as $repo_name"
                 helm repo add "$repo_name" "$repo" || true
+                repos_added=true
               fi
             done
-            helm repo update
+            
+            # Only update repositories if any were added
+            if helm repo list &> /dev/null; then
+              helm repo update
+            else
+              echo "No Helm repositories to update"
+            fi
           fi
 
       - name: Validate Helm Chart Dependencies - ${{ inputs.chart-name }}
@@ -130,14 +138,22 @@ jobs:
         run: |
           # Extract and add all helm repositories from Chart.yaml dependencies
           if [ -f chart/Chart.yaml ]; then
+            repos_added=false
             yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
               if [[ $repo == http* ]]; then
                 repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
                 echo "Adding repository: $repo as $repo_name"
                 helm repo add "$repo_name" "$repo" || true
+                repos_added=true
               fi
             done
-            helm repo update
+            
+            # Only update repositories if any were added
+            if helm repo list &> /dev/null; then
+              helm repo update
+            else
+              echo "No Helm repositories to update"
+            fi
           fi
 
       - name: Test Helm Installation
