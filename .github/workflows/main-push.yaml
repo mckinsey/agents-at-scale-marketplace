@@ -20,7 +20,13 @@ jobs:
 
   validate-phoenix:
     name: Validate Phoenix Service
-    uses: ./.github/workflows/_reusable-phoenix-ci.yaml
+    uses: ./.github/workflows/_reusable-charts-cicd.yaml
+    with:
+      chart-name: phoenix
+      chart-path: services/phoenix
+      chart-namespace: phoenix
+      upload-artifact: false
+      run-deployment-test: true
 
   release-please:
     name: Create Release

@@ -39,7 +39,7 @@ jobs:
       - name: Setup Helm
         uses: azure/setup-helm@v4
         with:
-          version: "3.14.0"
+          version: "latest"
 
       - name: Install DevSpace via npm
         run: npm install -g devspace
