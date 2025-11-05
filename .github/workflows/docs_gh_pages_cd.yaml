@@ -3,6 +3,10 @@ name: Deploy docs site to Pages
 on:
   push:
     branches: ["main"]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs_gh_pages_cd.yaml'
+      - '.github/workflows/_reusable-docs-cicd.yaml'
 
   workflow_dispatch:
 
@@ -17,48 +21,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
+  # Build job - reuses the same build logic as CI
   build-gh-pages:
-    name: Build and Validate Docs
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: ./docs
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22.x"
-          cache: npm
-          cache-dependency-path: docs/package-lock.json
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          # Automatically inject basePath in your Next.js configuration file and disable
-          # server side image optimization (https://nextjs.org/docs/api-reference/next/image#unoptimized).
-          static_site_generator: next
-      - name: Restore cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .next/cache
-          # Generate a new cache whenever packages or source files change.
-          key: ${{ runner.os }}-docs-gh-pages-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx', '**.mdx') }}
-          # If source files changed but packages didn't, rebuild from a prior cache.
-          restore-keys: |
-            ${{ runner.os }}-docs-gh-pages-${{ hashFiles('package-lock.json') }}-
-      - name: Install dependencies
-        run: npm ci
-      - name: Build with Next.js
-        run: npm run build
-      - name: Validate Internal Documentation Links
-        run: npm run check-links
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/out
+    name: Build for GitHub Pages
+    uses: ./.github/workflows/_reusable-docs-cicd.yaml
+    with:
+      upload-artifact: true
+      setup-github-pages: true
 
   # Deployment job
   deploy-to-gh-pages:

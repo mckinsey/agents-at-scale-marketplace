@@ -19,8 +19,8 @@ jobs:
     if: |
       contains(github.event.pull_request.changed_files, 'docs/') ||
       contains(github.event.pull_request.title, 'docs') ||
-      contains(github.event.pull_request.changed_files, '.github/workflows/_reusable-docs-ci.yaml')
-    uses: ./.github/workflows/_reusable-docs-ci.yaml
+      contains(github.event.pull_request.changed_files, '.github/workflows/_reusable-docs-cicd.yaml')
+    uses: ./.github/workflows/_reusable-docs-cicd.yaml
 
   validate-phoenix:
     name: Validate Phoenix Service

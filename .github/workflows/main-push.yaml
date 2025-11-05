@@ -18,7 +18,7 @@ permissions:
 jobs:
   validate-docs:
     name: Validate Documentation
-    uses: ./.github/workflows/_reusable-docs-ci.yaml
+    uses: ./.github/workflows/_reusable-docs-cicd.yaml
 
   validate-phoenix:
     name: Validate Phoenix Service
