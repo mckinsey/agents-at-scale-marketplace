@@ -21,110 +21,15 @@ concurrency:
 
 jobs:
   validate-charts:
-    name: Validate Chart Services - ${{ matrix.chart.name }}
-    runs-on: ubuntu-24.04
+    name: Validate Chart - ${{ matrix.chart.name }}
     strategy:
       matrix:
         chart:
-          - { name: phoenix, path: services/phoenix, namespace: phoenix }
-    defaults:
-      run:
-        working-directory: ${{ matrix.chart.path }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: "3.14.0"
-
-      - name: Install DevSpace via npm
-        run: npm install -g devspace
-
-      - name: Validate Helm Chart Dependencies - ${{ matrix.chart.name }}
-        run: |
-          helm dependency update chart/
-          helm dependency build chart/
-
-      - name: Lint Helm Chart - ${{ matrix.chart.name }}
-        run: |
-          helm lint chart/
-
-      - name: Package Helm Chart - ${{ matrix.chart.name }}
-        run: |
-          helm package chart/
-
-      - name: Validate Helm Template Rendering - ${{ matrix.chart.name }}
-        run: |
-          helm template ${{ matrix.chart.name }} chart/ \
-            --namespace ${{ matrix.chart.namespace }} \
-            --debug \
-            --dry-run
-
-      - name: Upload Helm Chart - ${{ matrix.chart.name }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.chart.name }}-${{ github.sha }}
-          path: ${{ matrix.chart.path }}/${{ matrix.chart.name }}-*.tgz
-          retention-days: 30
-
-      - name: Validate DevSpace Configuration - ${{ matrix.chart.name }}
-        run: |
-          devspace print
-
-      - name: Check DevSpace Config Syntax - ${{ matrix.chart.name }}
-        run: |
-          devspace list profiles
-
-  test-phoenix-deployment:
-    name: Test Phoenix Deployment
-    runs-on: ubuntu-24.04
-    needs: validate-charts
-    defaults:
-      run:
-        working-directory: services/phoenix
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup kind (Kubernetes in Docker)
-        uses: helm/kind-action@v1
-        with:
-          cluster_name: phoenix-test
-          kubectl_version: v1.29.0
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: "latest"
-
-      - name: Install DevSpace
-        run: npm install -g devspace
-
-      - name: Create required namespaces
-        run: |
-          kubectl create namespace ark-system || true
-          kubectl create namespace phoenix || true
-
-      - name: Test Helm Installation
-        run: |
-          helm dependency update chart/
-          helm install phoenix-test chart/ \
-            --namespace phoenix \
-            --wait \
-            --timeout 5m
-
-      - name: Verify Phoenix Deployment
-        run: |
-          kubectl get pods -n phoenix
-          kubectl get svc -n phoenix
-          kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=phoenix-test -n phoenix --timeout=300s
-
-      - name: Cleanup
-        if: always()
-        run: |
-          helm uninstall phoenix-test -n phoenix || true
-          kubectl delete namespace phoenix || true
+          - { name: phoenix, path: services/phoenix, namespace: phoenix, upload-artifact: false, run-deployment-test: false }
+    uses: ./.github/workflows/_reusable-charts-cicd.yaml
+    with:
+      chart-name: ${{ matrix.chart.name }}
+      chart-path: ${{ matrix.chart.path }}
+      chart-namespace: ${{ matrix.chart.namespace }}
+      upload-artifact: ${{ matrix.chart.upload-artifact }}
+      run-deployment-test: ${{ matrix.chart.run-deployment-test }}
