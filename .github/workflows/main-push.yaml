@@ -18,19 +18,23 @@ jobs:
     name: Validate Documentation
     uses: ./.github/workflows/_reusable-docs-cicd.yaml
 
-  validate-phoenix:
-    name: Validate Phoenix Service
+  validate-charts:
+    name: Validate Chart - ${{ matrix.chart.name }}
+    strategy:
+      matrix:
+        chart:
+          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: true }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
-      chart-name: phoenix
-      chart-path: services/phoenix
-      chart-namespace: phoenix
+      chart-name: ${{ matrix.chart.name }}
+      chart-path: ${{ matrix.chart.path }}
+      chart-namespace: ${{ matrix.chart.namespace }}
       upload-artifact: false
-      run-deployment-test: true
+      run-deployment-test: ${{ matrix.chart.run-deployment-test }}
 
   release-please:
     name: Create Release
-    needs: [validate-docs, validate-phoenix]
+    needs: [validate-docs, validate-charts]
     runs-on: ubuntu-24.04
     outputs:
       released: ${{ steps.release-please.outputs.release_created }}
@@ -83,3 +87,19 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  deploy-charts:
+    name: Deploy Chart - ${{ matrix.chart.name }}
+    needs: [release-please, validate-charts]
+    if: ${{ needs.release-please.outputs.released == 'true' }}
+    strategy:
+      matrix:
+        chart:
+          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
+    uses: ./.github/workflows/_reusable-charts-cicd.yaml
+    with:
+      chart-name: ${{ matrix.chart.name }}
+      chart-path: ${{ matrix.chart.path }}
+      chart-namespace: ${{ matrix.chart.namespace }}
+      upload-artifact: true
+      run-deployment-test: ${{ matrix.chart.run-deployment-test }}

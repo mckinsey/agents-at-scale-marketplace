@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: ["main"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  
 jobs:
   validate-pr-title:
     name: Validate PR Title
@@ -13,12 +17,16 @@ jobs:
     name: Validate Documentation
     uses: ./.github/workflows/_reusable-docs-cicd.yaml
 
-  validate-phoenix:
-    name: Validate Phoenix Service
+  validate-charts:
+    name: Validate Chart - ${{ matrix.chart.name }}
+    strategy:
+      matrix:
+        chart:
+          - { name: phoenix, path: services/phoenix, namespace: phoenix, upload-artifact: false, run-deployment-test: true }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
-      chart-name: phoenix
-      chart-path: services/phoenix
-      chart-namespace: phoenix
-      upload-artifact: false
-      run-deployment-test: true
+      chart-name: ${{ matrix.chart.name }}
+      chart-path: ${{ matrix.chart.path }}
+      chart-namespace: ${{ matrix.chart.namespace }}
+      upload-artifact: ${{ matrix.chart.upload-artifact }}
+      run-deployment-test: ${{ matrix.chart.run-deployment-test }}
