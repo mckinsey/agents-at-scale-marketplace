@@ -4,16 +4,14 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'docs/**'
-      - 'services/phoenix/**'
-      - '.github/workflows/_reusable-*.yaml'
-      - '.github/workflows/main-push.yaml'
-      - '.github/release-please-*.json'
+  
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
 
 jobs:
   validate-docs:
@@ -49,3 +47,33 @@ jobs:
         with:
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
+
+  # Deploy documentation to GitHub Pages after successful release
+  build-docs-for-pages:
+    name: Build Documentation for GitHub Pages
+    needs: [release-please]
+    if: ${{ needs.release-please.outputs.released == 'true' }}
+    uses: ./.github/workflows/_reusable-docs-cicd.yaml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    with:
+      upload-artifact: true
+      setup-github-pages: true
+
+  deploy-docs-to-pages:
+    name: Deploy Documentation to GitHub Pages
+    needs: [release-please, build-docs-for-pages]
+    if: ${{ needs.release-please.outputs.released == 'true' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
