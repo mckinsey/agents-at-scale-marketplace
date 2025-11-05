@@ -6,6 +6,7 @@ A collection of services, agents, and tools for the Agents at Scale (ARK) platfo
 
 | Service | Description | Chart |
 |---------|-------------|-------|
+| [`langfuse`](./services/langfuse) | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart) |
 | [`phoenix`](./services/phoenix) | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart) |
 
 ## Quick Start
