@@ -4,23 +4,23 @@ on:
   workflow_call:
     inputs:
       chart-name:
-        description: 'Name of the chart to validate'
+        description: "Name of the chart to validate"
         type: string
         required: true
       chart-path:
-        description: 'Path to the chart directory'
+        description: "Path to the chart directory"
         type: string
         required: true
       chart-namespace:
-        description: 'Kubernetes namespace for the chart'
+        description: "Kubernetes namespace for the chart"
         type: string
         required: true
       upload-artifact:
-        description: 'Upload packaged chart as artifact'
+        description: "Upload packaged chart as artifact"
         type: boolean
         default: false
       run-deployment-test:
-        description: 'Run Kubernetes deployment test'
+        description: "Run Kubernetes deployment test"
         type: boolean
         default: false
 
