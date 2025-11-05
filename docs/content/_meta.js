@@ -1,4 +1,5 @@
 export default {
   index: 'Introduction',
-  services: 'Services'
+  services: 'Services',
+  contributors: 'Contributors',
 }
