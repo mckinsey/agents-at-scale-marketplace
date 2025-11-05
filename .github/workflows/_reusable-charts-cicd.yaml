@@ -44,6 +44,20 @@ jobs:
       - name: Install DevSpace via npm
         run: npm install -g devspace
 
+      - name: Add Helm Repositories - ${{ inputs.chart-name }}
+        run: |
+          # Extract and add all helm repositories from Chart.yaml dependencies
+          if [ -f chart/Chart.yaml ]; then
+            yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
+              if [[ $repo == http* ]]; then
+                repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
+                echo "Adding repository: $repo as $repo_name"
+                helm repo add "$repo_name" "$repo" || true
+              fi
+            done
+            helm repo update
+          fi
+
       - name: Validate Helm Chart Dependencies - ${{ inputs.chart-name }}
         run: |
           helm dependency update chart/
@@ -111,6 +125,20 @@ jobs:
         run: |
           kubectl create namespace ark-system || true
           kubectl create namespace ${{ inputs.chart-namespace }} || true
+
+      - name: Add Helm Repositories - ${{ inputs.chart-name }}
+        run: |
+          # Extract and add all helm repositories from Chart.yaml dependencies
+          if [ -f chart/Chart.yaml ]; then
+            yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
+              if [[ $repo == http* ]]; then
+                repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
+                echo "Adding repository: $repo as $repo_name"
+                helm repo add "$repo_name" "$repo" || true
+              fi
+            done
+            helm repo update
+          fi
 
       - name: Test Helm Installation
         run: |
