@@ -23,6 +23,7 @@ jobs:
     strategy:
       matrix:
         chart:
+          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: true }
           - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: true }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
@@ -95,6 +96,7 @@ jobs:
     strategy:
       matrix:
         chart:
+          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: true }
           - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
