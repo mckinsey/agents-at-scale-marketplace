@@ -1,11 +1,11 @@
-name: Validate PR Title
+name: Validate PR Title (Reusable)
 
 on:
-  pull_request:
-    types: [opened, edited, synchronize]
+  workflow_call:
 
 jobs:
   validate-title:
+    name: Validate PR Title
     runs-on: ubuntu-24.04
     steps:
       - name: Validate PR title follows conventional commits
