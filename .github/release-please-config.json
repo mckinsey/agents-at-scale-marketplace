@@ -1,11 +1,11 @@
 {
   "bump-minor-pre-major": false,
   "bump-patch-for-minor-pre-major": true,
-  ".": {
-    "changelog-path": "CHANGELOG.md",
-    "release-type": "simple"
-  },
   "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "simple"
+    },
     "docs": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "node",
