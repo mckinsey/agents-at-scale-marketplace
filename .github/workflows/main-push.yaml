@@ -47,13 +47,13 @@ jobs:
     
     steps:
       - name: Skip Release (Running Locally)
-        if: ${{ env.ACT }}
+        if: ${{ env.ACT == 'true' }}
         run: |
           echo "ℹ️  Skipping release when running locally with 'act'"
           echo "   Release creation requires GitHub tokens that are not available locally"
       
       - name: Run Release Please
-        if: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
+        if: ${{ env.ACT == 'false' && github.ref == 'refs/heads/main' }}
         uses: googleapis/release-please-action@v4
         id: release-please
         with:
