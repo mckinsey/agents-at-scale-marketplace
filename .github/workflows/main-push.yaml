@@ -41,6 +41,7 @@ jobs:
     outputs:
       released: ${{ steps.release-please.outputs.release_created }}
       tag: ${{ steps.release-please.outputs.tag_name }}
+      rp_outputs: ${{ steps.release-please.outputs }}
     
     env:
       ACT: false # Default value for ACT
@@ -104,5 +105,6 @@ jobs:
       chart-name: ${{ matrix.chart.name }}
       chart-path: ${{ matrix.chart.path }}
       chart-namespace: ${{ matrix.chart.namespace }}
-      upload-artifact: true
+      upload-artifact: ${{ needs.release-please.outputs.rp_outputs[format('{0}--release_created', matrix.chart.path)] }}
       run-deployment-test: false # deployments already tested in validate-charts job
+      chart-tag: ${{ needs.release-please.outputs.rp_outputs[format('{0}--tag_name', matrix.chart.path)] }}

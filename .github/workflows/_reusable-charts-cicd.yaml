@@ -23,6 +23,10 @@ on:
         description: "Run Kubernetes deployment test"
         type: boolean
         default: false
+      chart-tag:
+        description: "Tag of the chart to use for deployment"
+        type: string
+        required: false
 
 jobs:
   validate-chart:
@@ -93,6 +97,30 @@ jobs:
           name: ${{ inputs.chart-name }}-${{ github.sha }}
           path: ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz
           retention-days: 30
+
+      - name: Deploy Helm Chart to Container Registry - ${{ inputs.chart-name }}
+        if: ${{ inputs.upload-artifact && inputs.chart-tag != '' }}
+        run: |
+          echo "Deploying Helm chart to container registry..."
+          REGISTRY="${{ format('ghcr.io/{0}/{1}', github.repository_owner, github.event.repository.name) }}"
+          echo "Target registry: $REGISTRY"
+
+          helm registry login "$REGISTRY" \
+            --username ${{ github.actor }} \
+            --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
+
+          # Find the original packaged chart file
+          original_chart=$(ls ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz | head -n 1)
+          echo "Original chart file: $original_chart"
+
+          # Create renamed copy with chart-tag
+          renamed_chart="${{ inputs.chart-path }}/${{ inputs.chart-name }}-${{ inputs.chart-tag }}.tgz"
+          cp "$original_chart" "$renamed_chart"
+          echo "Renamed chart file: $renamed_chart"
+
+          # Push the renamed chart
+          helm push "$renamed_chart" "oci://${REGISTRY}/charts"
+          echo "✓ Helm chart deployed to oci://${REGISTRY}/charts/${{ inputs.chart-name }}-${{ inputs.chart-tag }}.tgz"
 
       - name: Validate DevSpace Configuration - ${{ inputs.chart-name }}
         run: |
