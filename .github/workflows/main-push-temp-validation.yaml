@@ -46,8 +46,8 @@ jobs:
       released: ${{ steps.release-please.outputs.release_created }}
       tag: ${{ steps.release-please.outputs.tag_name }}
     
-    env:
-      ACT: false # Default value for ACT
+    # env:
+    #   ACT: false # Default value for ACT
     
     steps:
       - name: (Debug) Print ACT value
