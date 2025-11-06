@@ -1,6 +1,6 @@
 # Agents at Scale Marketplace
 
-A collection of services, agents, and tools for the Agents at Scale (ARK) platform.
+A collection of services, agents, and tools for the [Agents at Scale (ARK) platform](https://github.com/mckinsey/agents-at-scale-ark).  
 
 > **Note on Versioning**: This repository uses a unified versioning strategy where all services share a common version number. Individual services do not maintain separate versions. When a release is created, the version is synchronized across all service charts and documentation.
 
