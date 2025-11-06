@@ -1,0 +1,116 @@
+
+name: Main Branch Push | testing release-please conditions
+
+on:
+  push:
+    branches:
+      - main
+      - fix/release-condition
+  
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+jobs:
+  validate-docs:
+    name: Validate Documentation
+    if: false
+    uses: ./.github/workflows/_reusable-docs-cicd.yaml
+
+  validate-charts:
+    name: Validate Chart - ${{ matrix.chart.name }}
+    if: false
+    strategy:
+      matrix:
+        chart:
+          # disable langfuse deployment tests for PRs to avoid hitting 5m limit 
+          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: false }
+          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: true }
+    uses: ./.github/workflows/_reusable-charts-cicd.yaml
+    with:
+      chart-name: ${{ matrix.chart.name }}
+      chart-path: ${{ matrix.chart.path }}
+      chart-namespace: ${{ matrix.chart.namespace }}
+      upload-artifact: false
+      run-deployment-test: ${{ matrix.chart.run-deployment-test }}
+
+  release-please:
+    name: Create Release | testing release-please conditions
+    # needs: [validate-docs, validate-charts]
+    runs-on: ubuntu-24.04
+    outputs:
+      released: ${{ steps.release-please.outputs.release_created }}
+      tag: ${{ steps.release-please.outputs.tag_name }}
+    
+    env:
+      ACT: false # Default value for ACT
+    
+    steps:
+      - name: (Debug) Print ACT value
+        run: echo "ACT is ${{ env.ACT }}"
+      - name: (Debug) Print ACT value
+        run: echo "ACT is ${{ env.ACT }}"
+      - name: Skip Release (Running Locally)
+        if: ${{ env.ACT }}
+        run: |
+          echo "ℹ️  Skipping release when running locally with 'act'"
+          echo "   Release creation requires GitHub tokens that are not available locally"
+      
+      - name: Run Release Please
+        if: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
+        uses: googleapis/release-please-action@v4
+        id: release-please
+        with:
+          config-file: .github/release-please-config.json
+          manifest-file: .github/release-please-manifest.json
+
+  # Deploy documentation to GitHub Pages after successful release
+  build-docs-for-pages:
+    name: Build Documentation for GitHub Pages
+    needs: [release-please]
+    if: false && ${{ needs.release-please.outputs.released == 'true' }}
+    uses: ./.github/workflows/_reusable-docs-cicd.yaml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    with:
+      upload-artifact: true
+      setup-github-pages: true
+
+  deploy-docs-to-pages:
+    name: Deploy Documentation to GitHub Pages
+    needs: [release-please, build-docs-for-pages]
+    if: false &&${{ needs.release-please.outputs.released == 'true' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  deploy-charts:
+    name: Deploy Chart - ${{ matrix.chart.name }}
+    needs: [release-please, validate-charts]
+    if: false && ${{ needs.release-please.outputs.released == 'true' }}
+    strategy:
+      matrix:
+        chart:
+          - { name: langfuse, path: services/langfuse, namespace: langfuse }
+          - { name: phoenix, path: services/phoenix, namespace: phoenix }
+    uses: ./.github/workflows/_reusable-charts-cicd.yaml
+    with:
+      chart-name: ${{ matrix.chart.name }}
+      chart-path: ${{ matrix.chart.path }}
+      chart-namespace: ${{ matrix.chart.namespace }}
+      upload-artifact: true
+      run-deployment-test: false # deployments already tested in validate-charts job
