@@ -1,27 +1,25 @@
 {
+  "bump-minor-pre-major": false,
+  "bump-patch-for-minor-pre-major": true,
+  ".": {
+    "changelog-path": "CHANGELOG.md",
+    "release-type": "simple"
+  },
   "packages": {
-    ".": {
+    "docs": {
       "changelog-path": "CHANGELOG.md",
-      "release-type": "simple",
-      "bump-minor-pre-major": false,
-      "bump-patch-for-minor-pre-major": true,
-      "extra-files": [
-        {
-          "type": "json",
-          "path": "docs/package.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "yaml",
-          "path": "services/langfuse/chart/Chart.yaml",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "yaml",
-          "path": "services/phoenix/chart/Chart.yaml",
-          "jsonpath": "$.version"
-        }
-      ]
+      "release-type": "node",
+      "package-name": "marketplace-docs"
+    },
+    "services/langfuse": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "langfuse"
+    },
+    "services/phoenix": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "phoenix"
     }
   }
 }
