@@ -1,6 +1,6 @@
 {
   "name": "marketplace-docs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Agents at Scale (ARK) Marketplace Documentation",
   "main": "index.js",
   "scripts": {
