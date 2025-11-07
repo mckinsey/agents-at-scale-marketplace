@@ -14,12 +14,18 @@
     "services/langfuse": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
-      "package-name": "langfuse"
+      "package-name": "langfuse",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
     },
     "services/phoenix": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
-      "package-name": "phoenix"
+      "package-name": "phoenix",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
     }
   }
 }
