@@ -1,0 +1,45 @@
+name: Test Deploy Charts
+
+on:
+  push:
+    branches:
+      - feat/deploy-charts-to-container-registry
+  
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  get-chart-versions:
+    name: Get Chart Versions
+    runs-on: ubuntu-24.04
+    outputs:
+      phoenix-version: ${{ steps.get-versions.outputs.phoenix-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Get Chart Versions
+        id: get-versions
+        run: |
+          phoenix_version=$(yq eval '.version' services/phoenix/chart/Chart.yaml)
+          
+          echo "phoenix-version=$phoenix_version" >> $GITHUB_OUTPUT
+          
+          echo "📊 Chart Version:"
+          echo "  Phoenix: $phoenix_version"
+
+  deploy-phoenix:
+    name: Deploy Phoenix Chart
+    needs: [get-chart-versions]
+    uses: ./.github/workflows/_reusable-charts-cicd.yaml
+    with:
+      chart-name: phoenix
+      chart-path: services/phoenix
+      chart-namespace: phoenix
+      upload-artifact: true
+      run-deployment-test: false
+      chart-tag: ${{ needs.get-chart-versions.outputs.phoenix-version }}
