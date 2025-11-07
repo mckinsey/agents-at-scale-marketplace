@@ -40,6 +40,26 @@ jobs:
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
 
+
+  debug-outputs:
+    name: Debug Release Please Outputs
+    needs: [release-please]
+    if: ${{ needs.release-please.outputs.released == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Display All Release Please Outputs
+        run: |
+          echo "📋 Complete Release Please Outputs:"
+          echo '${{ needs.release-please.outputs.rp_outputs }}' | jq '.'
+          echo ""
+          echo "🎯 Langfuse Chart:"
+          echo "   Release Created: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/langfuse--release_created'] }}"
+          echo "   Tag Name: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/langfuse--tag_name'] }}"
+          echo ""
+          echo "🎯 Phoenix Chart:"
+          echo "   Release Created: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/phoenix--release_created'] }}"
+          echo "   Tag Name: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/phoenix--tag_name'] }}"
+
   deploy-charts:
     name: Deploy Chart - ${{ matrix.chart.name }}
     needs: [release-please]
