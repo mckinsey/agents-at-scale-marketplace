@@ -23,10 +23,6 @@ on:
         description: "Run Kubernetes deployment test"
         type: boolean
         default: false
-      chart-tag:
-        description: "Tag of the chart to use for deployment"
-        type: string
-        required: false
 
 jobs:
   validate-chart:
@@ -99,7 +95,7 @@ jobs:
           retention-days: 30
 
       - name: Deploy Helm Chart to Container Registry - ${{ inputs.chart-name }}
-        if: ${{ inputs.upload-artifact && inputs.chart-tag != '' }}
+        if: ${{ inputs.upload-artifact }}
         run: |
           echo "Deploying Helm chart to container registry..."
           REGISTRY="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}"
