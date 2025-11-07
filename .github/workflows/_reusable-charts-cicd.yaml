@@ -101,6 +101,7 @@ jobs:
           REGISTRY="ghcr.io/${{ github.repository_owner }}"
           CHART_REPO="${REGISTRY}/$(echo '${{ github.repository }}' | cut -d'/' -f2)/charts"
           
+          echo "User: ${{ github.actor }}"
           echo "Registry: $REGISTRY"
           echo "Chart Repository: $CHART_REPO"
           
