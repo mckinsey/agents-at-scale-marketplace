@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/phoenix-v0.1.6...phoenix-v0.1.7) (2025-11-07)
+
+
+### Features
+
+* to trigger please release ([#30](https://github.com/mckinsey/agents-at-scale-marketplace/issues/30)) ([11b14f9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/11b14f97b00d737a26f86f01f61872e6b69bd945))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/phoenix-v0.1.5...phoenix-v0.1.6) (2025-11-07)
 
 

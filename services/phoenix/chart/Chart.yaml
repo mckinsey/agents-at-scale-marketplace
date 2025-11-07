@@ -2,7 +2,7 @@ apiVersion: v2
 name: phoenix
 description: Phoenix observability with OTEL configuration
 type: application
-version: 0.1.2
+version: 0.1.7
 appVersion: 4.0.5
 annotations:
   ark.mckinsey.com/service: phoenix

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.4...langfuse-v0.1.5) (2025-11-07)
+
+
+### Features
+
+* to trigger please release ([#30](https://github.com/mckinsey/agents-at-scale-marketplace/issues/30)) ([11b14f9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/11b14f97b00d737a26f86f01f61872e6b69bd945))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.3...langfuse-v0.1.4) (2025-11-07)
 
 
