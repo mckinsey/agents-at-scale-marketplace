@@ -102,22 +102,13 @@ jobs:
         if: ${{ inputs.upload-artifact && inputs.chart-tag != '' }}
         run: |
           echo "Deploying Helm chart to container registry..."
-          REGISTRY="${{ format('ghcr.io/{0}/{1}', github.repository_owner, github.event.repository.name) }}"
-          echo "Target registry: $REGISTRY"
-
+          REGISTRY="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}"
           helm registry login "$REGISTRY" \
-            --username ${{ github.actor }} \
+            --username "${{ github.actor }}" \
             --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
-
-          echo "current folder ${pwd}"
-          ls
-          
-          helm_file=$(ls ${{ inputs.chart-name }}-*.tgz | head -n 1)
-          echo "Helm file to push: $helm_file"
-
-          # Push the renamed chart
-          helm push "$helm_file" "oci://${REGISTRY}/charts"
-          echo "✓ Helm chart deployed to oci://${REGISTRY}/charts/${helm_file}"
+          CHART_FILE=$(ls ${{ inputs.chart-name }}-*.tgz | head -n 1)
+          helm push "$CHART_FILE" "oci://${REGISTRY}/charts"
+          echo "✓ Helm chart deployed: $CHART_FILE to oci://${REGISTRY}/charts"
 
       - name: Validate DevSpace Configuration - ${{ inputs.chart-name }}
         run: |
