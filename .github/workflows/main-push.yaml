@@ -41,7 +41,7 @@ jobs:
     outputs:
       released: ${{ steps.release-please.outputs.release_created }}
       tag: ${{ steps.release-please.outputs.tag_name }}
-      rp_outputs: ${{ steps.release-please.outputs }}
+      rp_outputs: ${{ toJSON(steps.release-please.outputs) }}
     
     env:
       ACT: false # Default value for ACT
@@ -100,7 +100,7 @@ jobs:
       - name: Display All Release Please Outputs
         run: |
           echo "📋 Complete Release Please Outputs:"
-          echo '${{ toJSON(needs.release-please.outputs.rp_outputs) }}' | jq '.'
+          echo '${{ needs.release-please.outputs.rp_outputs }}' | jq '.'
 
   deploy-charts:
     name: Deploy Chart - ${{ matrix.chart.name }}
