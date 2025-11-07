@@ -94,6 +94,18 @@ jobs:
           path: ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz
           retention-days: 30
 
+      - name: Deploy Helm Chart to Container Registry - ${{ inputs.chart-name }}
+        if: ${{ inputs.upload-artifact }}
+        run: |
+          echo "Deploying Helm chart to container registry..."
+          REGISTRY="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}"
+          helm registry login "$REGISTRY" \
+            --username "${{ github.actor }}" \
+            --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
+          CHART_FILE=$(ls ${{ inputs.chart-name }}-*.tgz | head -n 1)
+          helm push "$CHART_FILE" "oci://${REGISTRY}/charts"
+          echo "✓ Helm chart deployed: $CHART_FILE to oci://${REGISTRY}/charts"
+
       - name: Validate DevSpace Configuration - ${{ inputs.chart-name }}
         run: |
           devspace print
@@ -133,6 +145,8 @@ jobs:
         run: |
           kubectl create namespace ark-system || true
           kubectl create namespace ${{ inputs.chart-namespace }} || true
+          kubectl create namespace test-to-trigger-please-release || true
+          kubectl create namespace test-to-trigger-please-release-2 || true
 
       - name: Add Helm Repositories - ${{ inputs.chart-name }}
         run: |
