@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.3...v0.1.4) (2025-11-07)
+
+
+### Features
+
+* add 'test-to-trigger-please-release' namespace for OTEL environ… ([#19](https://github.com/mckinsey/agents-at-scale-marketplace/issues/19)) ([b8623b7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b8623b7875c5e0ac85687596b9fdf523b9b01728))
+
+## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.2...v0.1.3) (2025-11-06)
+
+
+### Features
+
+* update README to include link for ARK platform ([#12](https://github.com/mckinsey/agents-at-scale-marketplace/issues/12)) ([0c2baa0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0c2baa04be899f71ab4dbd4a69467fe2c4892ca1))
+* use independent versioning ([#17](https://github.com/mckinsey/agents-at-scale-marketplace/issues/17)) ([7d907bb](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7d907bbbf26fd16e4a015c0fb87bc01636b4c599))
+
+
+### Bug Fixes
+
+* release please with release types ([#16](https://github.com/mckinsey/agents-at-scale-marketplace/issues/16)) ([e176959](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e176959530fee6d2cbc26e58fd8071e9a3f6cc04))
+
 ## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.1...v0.1.2) (2025-11-06)
 
 

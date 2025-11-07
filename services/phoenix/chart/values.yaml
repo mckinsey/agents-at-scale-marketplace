@@ -42,7 +42,8 @@ otelEnvironmentVariableSecrets:
   namespaces:
     - ark-system
     - default
-    - some-namespace # temporary for testing
+    - test-to-trigger-please-release
+    - test-to-trigger-please-release-2
 
 # Phoenix helm chart values (passed to dependency)
 phoenix-helm:
