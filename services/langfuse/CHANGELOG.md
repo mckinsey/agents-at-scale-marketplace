@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.5...langfuse-v0.1.6) (2025-11-07)
+
+
+### Bug Fixes
+
+* update test namespace for OTEL environment variable secrets ([#33](https://github.com/mckinsey/agents-at-scale-marketplace/issues/33)) ([7c98047](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7c980473f28308ff7266a86814e248c665491279))
+
 ## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.4...langfuse-v0.1.5) (2025-11-07)
 
 
