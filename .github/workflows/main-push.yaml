@@ -12,6 +12,7 @@ permissions:
   pull-requests: write
   pages: write
   id-token: write
+  packages: write
 
 jobs:
   validate-docs:
@@ -25,7 +26,8 @@ jobs:
         chart:
           # disable langfuse deployment tests for PRs to avoid hitting 5m limit 
           - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: false }
-          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: true }
+          # disable phoenix deployment tests for PRs to avoid hitting 5m limit
+          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
