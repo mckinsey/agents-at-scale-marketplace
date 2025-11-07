@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/phoenix-v0.1.3...phoenix-v0.1.4) (2025-11-07)
+
+
+### Features
+
+* add 'test-to-trigger-please-release' namespace for OTEL environ… ([#19](https://github.com/mckinsey/agents-at-scale-marketplace/issues/19)) ([b8623b7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b8623b7875c5e0ac85687596b9fdf523b9b01728))
+
 ## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/phoenix-v0.1.2...phoenix-v0.1.3) (2025-11-06)
 
 
