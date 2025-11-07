@@ -111,21 +111,13 @@ jobs:
 
           echo "current folder ${pwd}"
           ls
-          echo "files in chart path ${{ inputs.chart-path }}:"
-          ls ${{ inputs.chart-path }}/
-
-          # Find the original packaged chart file
-          original_chart=$(ls ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz | head -n 1)
-          echo "Original chart file: $original_chart"
-
-          # Create renamed copy with chart-tag
-          renamed_chart="${{ inputs.chart-path }}/${{ inputs.chart-name }}-${{ inputs.chart-tag }}.tgz"
-          cp "$original_chart" "$renamed_chart"
-          echo "Renamed chart file: $renamed_chart"
+          
+          helm_file=$(ls ${{ inputs.chart-name }}-*.tgz | head -n 1)
+          echo "Helm file to push: $helm_file"
 
           # Push the renamed chart
-          helm push "$renamed_chart" "oci://${REGISTRY}/charts"
-          echo "✓ Helm chart deployed to oci://${REGISTRY}/charts/${{ inputs.chart-name }}-${{ inputs.chart-tag }}.tgz"
+          helm push "$helm_file" "oci://${REGISTRY}/charts"
+          echo "✓ Helm chart deployed to oci://${REGISTRY}/charts/${helm_file}"
 
       - name: Validate DevSpace Configuration - ${{ inputs.chart-name }}
         run: |
