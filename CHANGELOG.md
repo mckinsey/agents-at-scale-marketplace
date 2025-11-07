@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.7...v0.1.8) (2025-11-07)
+
+
+### Features
+
+* chart deployment test settings ([#31](https://github.com/mckinsey/agents-at-scale-marketplace/issues/31)) ([70f9a88](https://github.com/mckinsey/agents-at-scale-marketplace/commit/70f9a881abbcd89e5245fb75ab4123ed44245d8b))
+
+
+### Bug Fixes
+
+* update test namespace for OTEL environment variable secrets ([#33](https://github.com/mckinsey/agents-at-scale-marketplace/issues/33)) ([7c98047](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7c980473f28308ff7266a86814e248c665491279))
+
 ## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.6...v0.1.7) (2025-11-07)
 
 
