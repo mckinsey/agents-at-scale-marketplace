@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.6...v0.1.7) (2025-11-07)
+
+
+### Features
+
+* deploy charts to container registry ([#28](https://github.com/mckinsey/agents-at-scale-marketplace/issues/28)) ([fd26b60](https://github.com/mckinsey/agents-at-scale-marketplace/commit/fd26b60bde5b7a8a43161f0f6c8d2d86f1a8bc1d))
+* to trigger please release ([#30](https://github.com/mckinsey/agents-at-scale-marketplace/issues/30)) ([11b14f9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/11b14f97b00d737a26f86f01f61872e6b69bd945))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.5...v0.1.6) (2025-11-07)
 
 
