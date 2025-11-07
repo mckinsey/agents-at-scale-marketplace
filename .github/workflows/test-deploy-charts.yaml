@@ -17,6 +17,7 @@ jobs:
   release-please:
     name: Create Release
     runs-on: ubuntu-24.04
+    if: false
     outputs:
       released: ${{ steps.release-please.outputs.release_created }}
       tag: ${{ steps.release-please.outputs.tag_name }}
