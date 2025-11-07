@@ -50,15 +50,7 @@ jobs:
       - name: Display All Release Please Outputs
         run: |
           echo "📋 Complete Release Please Outputs:"
-          echo '${{ needs.release-please.outputs.rp_outputs }}' | jq '.'
-          echo ""
-          echo "🎯 Langfuse Chart:"
-          echo "   Release Created: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/langfuse--release_created'] }}"
-          echo "   Tag Name: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/langfuse--tag_name'] }}"
-          echo ""
-          echo "🎯 Phoenix Chart:"
-          echo "   Release Created: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/phoenix--release_created'] }}"
-          echo "   Tag Name: ${{ fromJSON(needs.release-please.outputs.rp_outputs)['services/phoenix--tag_name'] }}"
+          echo '${{ toJSON(needs.release-please.outputs.rp_outputs) }}' | jq '.'
 
   deploy-charts:
     name: Deploy Chart - ${{ matrix.chart.name }}
@@ -76,4 +68,3 @@ jobs:
       chart-namespace: ${{ matrix.chart.namespace }}
       upload-artifact: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.chart.path)] == 'true' }}
       run-deployment-test: false
-      chart-tag: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--tag_name', matrix.chart.path)] }}

@@ -91,6 +91,17 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
+  debug-rp-outputs:
+    name: Debug Release Please Outputs
+    needs: [release-please]
+    if: ${{ needs.release-please.outputs.released == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Display All Release Please Outputs
+        run: |
+          echo "📋 Complete Release Please Outputs:"
+          echo '${{ toJSON(needs.release-please.outputs.rp_outputs) }}' | jq '.'
+
   deploy-charts:
     name: Deploy Chart - ${{ matrix.chart.name }}
     needs: [release-please, validate-charts]
@@ -105,6 +116,5 @@ jobs:
       chart-name: ${{ matrix.chart.name }}
       chart-path: ${{ matrix.chart.path }}
       chart-namespace: ${{ matrix.chart.namespace }}
-      upload-artifact: ${{ needs.release-please.outputs.rp_outputs[format('{0}--release_created', matrix.chart.path)] }}
+      upload-artifact: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.chart.path)] == 'true' }}
       run-deployment-test: false # deployments already tested in validate-charts job
-      chart-tag: ${{ needs.release-please.outputs.rp_outputs[format('{0}--tag_name', matrix.chart.path)] }}
