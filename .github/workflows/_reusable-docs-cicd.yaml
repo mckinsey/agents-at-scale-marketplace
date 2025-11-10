@@ -54,6 +54,8 @@ jobs:
         run: npm ci
       
       - name: Build documentation
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ github.event.repository.name }}
         run: npm run build
       
       - name: Validate internal links
