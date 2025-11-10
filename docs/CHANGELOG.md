@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.3...marketplace-docs-v0.1.4) (2025-11-10)
+
+
+### Features
+
+* clarify compatibility note for Langfuse versions ([#39](https://github.com/mckinsey/agents-at-scale-marketplace/issues/39)) ([4cdcfb4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4cdcfb48623048a913d3f94c910f268828433522))
+
 ## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.2...marketplace-docs-v0.1.3) (2025-11-06)
 
 
