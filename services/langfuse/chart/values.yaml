@@ -10,7 +10,7 @@ global:
 # For newer deployments, consider using HTTPRoute (below) with Gateway API instead.
 ingress:
   enabled: false
-  className: ""  # e.g., "nginx", "traefik", "kong"
+  className: "" # e.g., "nginx", "traefik", "kong"
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
@@ -23,7 +23,7 @@ ingress:
   tls: []
   #  - secretName: langfuse-tls
   #    hosts:
-  #      - langfuse.example.local
+  #    - langfuse.example.local
 
 # HTTPRoute configuration (Gateway API - modern routing method)
 # Disabled by default. This is the preferred routing method for Kubernetes 1.23+
@@ -79,12 +79,12 @@ otelEnvironmentVariableSecrets:
 langfuse:
   langfuse:
     nextauth:
-      secret: 
+      secret:
         value: "langfuse-nextauth-secret-change-me"
-    
-    salt: 
+
+    salt:
       value: "langfuse-salt-local-development-mode"
-    
+
     encryptionKey:
       value: "cdd693af5b1ced98097c45550ea34f374fdd8d3427aa2a6a96a2204017a8caf3"
 
@@ -117,25 +117,25 @@ langfuse:
         value: "http://langfuse-s3:9000"
       - name: AWS_REGION
         value: "us-east-1"
-    
+
   postgresql:
     enabled: true
     auth:
       password: "changeme123"
       database: "langfuse"
-    
+
   clickhouse:
     enabled: true
     shards: 1
     replicaCount: 1
     auth:
       password: "clickhouse123"
-      
+
   redis:
     enabled: true
     auth:
       password: "redis123"
-  
+
   s3:
     enabled: true
     auth:
