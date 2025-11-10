@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.6...langfuse-v0.1.7) (2025-11-10)
+
+
+### Features
+
+* remove unnecessary test namespaces from CI/CD workflow and val… ([#42](https://github.com/mckinsey/agents-at-scale-marketplace/issues/42)) ([f632ef1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f632ef17bbb0cd53cf87d838c6369ac30a2f967f))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.5...langfuse-v0.1.6) (2025-11-07)
 
 

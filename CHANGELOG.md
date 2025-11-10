@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.9...v0.1.10) (2025-11-10)
+
+
+### Features
+
+* enhance CI/CD workflow to  deployment to container registry ([#40](https://github.com/mckinsey/agents-at-scale-marketplace/issues/40)) ([01e37c5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/01e37c557b0be581ad6c6036714f3e3c74519a78))
+* remove unnecessary test namespaces from CI/CD workflow and val… ([#42](https://github.com/mckinsey/agents-at-scale-marketplace/issues/42)) ([f632ef1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f632ef17bbb0cd53cf87d838c6369ac30a2f967f))
+
 ## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.8...v0.1.9) (2025-11-10)
 
 
