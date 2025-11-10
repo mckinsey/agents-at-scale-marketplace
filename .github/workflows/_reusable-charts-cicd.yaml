@@ -59,8 +59,6 @@ jobs:
         run: |
           kubectl create namespace ark-system || true
           kubectl create namespace ${{ inputs.chart-namespace }} || true
-          kubectl create namespace test-to-trigger-please-release || true
-          kubectl create namespace test-to-trigger-please-release-2 || true
 
       - name: Add Helm Repositories - ${{ inputs.chart-name }}
         run: |

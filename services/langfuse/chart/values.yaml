@@ -74,7 +74,6 @@ otelEnvironmentVariableSecrets:
   namespaces:
     - ark-system
     - default
-    - test-to-trigger-please-release
 
 # Langfuse helm chart values (passed to dependency)
 langfuse:
