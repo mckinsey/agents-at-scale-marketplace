@@ -93,8 +93,8 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  debug-rp-outputs:
-    name: Debug Release Please Outputs
+  log-rp-outputs:
+    name: Log Release Please Outputs
     needs: [release-please]
     if: ${{ needs.release-please.outputs.released == 'true' }}
     runs-on: ubuntu-24.04
