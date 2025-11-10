@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.1...v0.1.2) (2025-11-10)
+
+
+### Bug Fixes
+
+* update ARK platform link in documentation and adjust formatting … ([#45](https://github.com/mckinsey/agents-at-scale-marketplace/issues/45)) ([325bdf0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/325bdf0d504cbcfeb3476b12ed8f48316f935707))
+
 ## [0.1.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.0...v0.1.1) (2025-11-10)
 
 
