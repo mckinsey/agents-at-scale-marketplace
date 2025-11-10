@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.8...v0.1.9) (2025-11-10)
+
+
+### Features
+
+* clarify compatibility note for Langfuse versions ([#39](https://github.com/mckinsey/agents-at-scale-marketplace/issues/39)) ([4cdcfb4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4cdcfb48623048a913d3f94c910f268828433522))
+
+
+### Bug Fixes
+
+* remove test namespace from OTEL environment variable secrets ([#35](https://github.com/mckinsey/agents-at-scale-marketplace/issues/35)) ([b6c4b70](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b6c4b702fafa86bf0aa2360765c157332f30c578))
+
 ## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.7...v0.1.8) (2025-11-07)
 
 
