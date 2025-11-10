@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.2...v0.1.3) (2025-11-10)
+
+
+### Bug Fixes
+
+* set NEXT_PUBLIC_BASE_PATH environment variable for documentation… ([#47](https://github.com/mckinsey/agents-at-scale-marketplace/issues/47)) ([538e9bd](https://github.com/mckinsey/agents-at-scale-marketplace/commit/538e9bd0f4eb5f45cebdea8b2ed4d1096ae799cd))
+
 ## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.1...v0.1.2) (2025-11-10)
 
 
