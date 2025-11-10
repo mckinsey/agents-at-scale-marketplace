@@ -1,8 +1,8 @@
-name: Documentation CI (Reusable)
+name: Documentation CI/CD (Reusable)
 
-# This workflow can run in two modes:
-# 1. CI mode (default): Build and validate only
-# 2. CD mode: Build, validate, and prepare for GitHub Pages deployment
+# This workflow has two jobs:
+# 1. build-and-validate: Build without base path and validate links (always runs)
+# 2. build-for-deployment: Build with base path and prepare for GitHub Pages (conditional)
 
 on:
   workflow_call:
@@ -17,7 +17,7 @@ on:
         default: false
 
 jobs:
-  build-and-check-docs:
+  build-and-validate:
     name: Build and Validate Docs
     runs-on: ubuntu-24.04
     defaults:
@@ -34,28 +34,19 @@ jobs:
           cache: npm
           cache-dependency-path: docs/package-lock.json
 
-      # Only for GitHub Pages deployment
-      - name: Setup Pages
-        if: ${{ inputs.setup-github-pages }}
-        uses: actions/configure-pages@v5
-        with:
-          static_site_generator: next
-
       - name: Restore cache
         uses: actions/cache@v4
         with:
           path: |
             docs/.next/cache
-          key: ${{ runner.os }}-docs-${{ hashFiles('docs/package-lock.json') }}-${{ hashFiles('docs/**.[jt]s', 'docs/**.[jt]sx', 'docs/**.mdx') }}
+          key: ${{ runner.os }}-docs-validate-${{ hashFiles('docs/package-lock.json') }}-${{ hashFiles('docs/**.[jt]s', 'docs/**.[jt]sx', 'docs/**.mdx') }}
           restore-keys: |
-            ${{ runner.os }}-docs-${{ hashFiles('docs/package-lock.json') }}-
+            ${{ runner.os }}-docs-validate-${{ hashFiles('docs/package-lock.json') }}-
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build documentation
-        env:
-          NEXT_PUBLIC_BASE_PATH: "/${{ github.event.repository.name }}"
         run: npm run build
 
       - name: Validate internal links
@@ -69,9 +60,49 @@ jobs:
           fi
           echo "✓ Build artifacts verified"
 
-      # Only for GitHub Pages deployment
+  build-for-deployment:
+    name: Build for GitHub Pages
+    runs-on: ubuntu-24.04
+    needs: build-and-validate
+    if: ${{ inputs.upload-artifact }}
+    defaults:
+      run:
+        working-directory: ./docs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Setup Pages
+        if: ${{ inputs.setup-github-pages }}
+        uses: actions/configure-pages@v5
+        with:
+          static_site_generator: next
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            docs/.next/cache
+          key: ${{ runner.os }}-docs-deploy-${{ hashFiles('docs/package-lock.json') }}-${{ hashFiles('docs/**.[jt]s', 'docs/**.[jt]sx', 'docs/**.mdx') }}
+          restore-keys: |
+            ${{ runner.os }}-docs-deploy-${{ hashFiles('docs/package-lock.json') }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build documentation with base path
+        env:
+          NEXT_PUBLIC_BASE_PATH: "/${{ github.event.repository.name }}"
+        run: npm run build
+
       - name: Upload artifact
-        if: ${{ inputs.upload-artifact }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/out
