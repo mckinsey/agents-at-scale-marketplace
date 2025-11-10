@@ -119,4 +119,5 @@ jobs:
       chart-path: ${{ matrix.chart.path }}
       chart-namespace: ${{ matrix.chart.namespace }}
       upload-artifact: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.chart.path)] == 'true' }}
+      deploy-to-registry: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.chart.path)] == 'true' }}
       run-deployment-test: false # deployments already tested in validate-charts job
