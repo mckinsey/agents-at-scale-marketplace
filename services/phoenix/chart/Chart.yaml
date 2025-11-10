@@ -3,11 +3,11 @@ name: phoenix
 description: Phoenix observability with OTEL configuration
 type: application
 version: 0.1.1
-appVersion: 4.0.5
+appVersion: 4.0.10
 annotations:
   ark.mckinsey.com/service: phoenix
   ark.mckinsey.com/resources: service
 dependencies:
   - name: phoenix-helm
-    version: 4.0.5
+    version: 4.0.10
     repository: oci://registry-1.docker.io/arizephoenix
