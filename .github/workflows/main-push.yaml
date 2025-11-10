@@ -12,6 +12,7 @@ permissions:
   pull-requests: write
   pages: write
   id-token: write
+  packages: write
 
 jobs:
   validate-docs:
@@ -25,7 +26,8 @@ jobs:
         chart:
           # disable langfuse deployment tests for PRs to avoid hitting 5m limit 
           - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: false }
-          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: true }
+          # disable phoenix deployment tests for PRs to avoid hitting 5m limit
+          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -41,6 +43,7 @@ jobs:
     outputs:
       released: ${{ steps.release-please.outputs.release_created }}
       tag: ${{ steps.release-please.outputs.tag_name }}
+      rp_outputs: ${{ toJSON(steps.release-please.outputs) }}
     
     env:
       ACT: false # Default value for ACT
@@ -90,6 +93,17 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
+  log-rp-outputs:
+    name: Log Release Please Outputs
+    needs: [release-please]
+    if: ${{ needs.release-please.outputs.released == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Display All Release Please Outputs
+        run: |
+          echo "📋 Complete Release Please Outputs:"
+          echo '${{ needs.release-please.outputs.rp_outputs }}' | jq '.'
+
   deploy-charts:
     name: Deploy Chart - ${{ matrix.chart.name }}
     needs: [release-please, validate-charts]
@@ -104,5 +118,6 @@ jobs:
       chart-name: ${{ matrix.chart.name }}
       chart-path: ${{ matrix.chart.path }}
       chart-namespace: ${{ matrix.chart.namespace }}
-      upload-artifact: true
+      upload-artifact: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.chart.path)] == 'true' }}
+      deploy-to-registry: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.chart.path)] == 'true' }}
       run-deployment-test: false # deployments already tested in validate-charts job

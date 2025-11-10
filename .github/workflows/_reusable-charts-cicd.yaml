@@ -16,7 +16,11 @@ on:
         type: string
         required: true
       upload-artifact:
-        description: "Upload packaged chart as artifact"
+        description: "Upload packaged chart as GitHub Actions artifact"
+        type: boolean
+        default: false
+      deploy-to-registry:
+        description: "Deploy chart to container registry (GHCR)"
         type: boolean
         default: false
       run-deployment-test:
@@ -25,87 +29,9 @@ on:
         default: false
 
 jobs:
-  validate-chart:
-    name: Validate Chart - ${{ inputs.chart-name }}
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: ${{ inputs.chart-path }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: "latest"
-
-      - name: Install DevSpace via npm
-        run: npm install -g devspace
-
-      - name: Add Helm Repositories - ${{ inputs.chart-name }}
-        run: |
-          # Extract and add all helm repositories from Chart.yaml dependencies
-          if [ -f chart/Chart.yaml ]; then
-            repos_added=false
-            yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
-              if [[ $repo == http* ]]; then
-                repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
-                echo "Adding repository: $repo as $repo_name"
-                helm repo add "$repo_name" "$repo" || true
-                repos_added=true
-              fi
-            done
-            
-            # Only update repositories if any were added
-            if helm repo list &> /dev/null; then
-              helm repo update
-            else
-              echo "No Helm repositories to update"
-            fi
-          fi
-
-      - name: Validate Helm Chart Dependencies - ${{ inputs.chart-name }}
-        run: |
-          helm dependency update chart/
-          helm dependency build chart/
-
-      - name: Lint Helm Chart - ${{ inputs.chart-name }}
-        run: |
-          helm lint chart/
-
-      - name: Package Helm Chart - ${{ inputs.chart-name }}
-        run: |
-          helm package chart/
-
-      - name: Validate Helm Template Rendering - ${{ inputs.chart-name }}
-        run: |
-          helm template ${{ inputs.chart-name }} chart/ \
-            --namespace ${{ inputs.chart-namespace }} \
-            --debug \
-            --dry-run
-
-      - name: Upload Helm Chart - ${{ inputs.chart-name }}
-        if: ${{ inputs.upload-artifact }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.chart-name }}-${{ github.sha }}
-          path: ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz
-          retention-days: 30
-
-      - name: Validate DevSpace Configuration - ${{ inputs.chart-name }}
-        run: |
-          devspace print
-
-      - name: Check DevSpace Config Syntax - ${{ inputs.chart-name }}
-        run: |
-          devspace list profiles
-
   test-deployment:
     name: Test Deployment - ${{ inputs.chart-name }}
     runs-on: ubuntu-24.04
-    needs: validate-chart
     if: ${{ inputs.run-deployment-test }}
     defaults:
       run:
@@ -175,3 +101,122 @@ jobs:
         run: |
           helm uninstall ${{ inputs.chart-name }}-test -n ${{ inputs.chart-namespace }} || true
           kubectl delete namespace ${{ inputs.chart-namespace }} || true
+
+  validate-chart:
+    name: Validate Chart - ${{ inputs.chart-name }}
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ${{ inputs.chart-path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Install DevSpace via npm
+        run: npm install -g devspace
+
+      - name: Add Helm Repositories - ${{ inputs.chart-name }}
+        run: |
+          # Extract and add all helm repositories from Chart.yaml dependencies
+          if [ -f chart/Chart.yaml ]; then
+            repos_added=false
+            yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
+              if [[ $repo == http* ]]; then
+                repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
+                echo "Adding repository: $repo as $repo_name"
+                helm repo add "$repo_name" "$repo" || true
+                repos_added=true
+              fi
+            done
+            
+            # Only update repositories if any were added
+            if helm repo list &> /dev/null; then
+              helm repo update
+            else
+              echo "No Helm repositories to update"
+            fi
+          fi
+
+      - name: Validate Helm Chart Dependencies - ${{ inputs.chart-name }}
+        run: |
+          helm dependency update chart/
+          helm dependency build chart/
+
+      - name: Lint Helm Chart - ${{ inputs.chart-name }}
+        run: |
+          helm lint chart/
+
+      - name: Package Helm Chart - ${{ inputs.chart-name }}
+        run: |
+          helm package chart/
+
+      - name: Validate Helm Template Rendering - ${{ inputs.chart-name }}
+        run: |
+          helm template ${{ inputs.chart-name }} chart/ \
+            --namespace ${{ inputs.chart-namespace }} \
+            --debug \
+            --dry-run
+
+      - name: Upload Helm Chart - ${{ inputs.chart-name }}
+        if: ${{ inputs.upload-artifact || inputs.deploy-to-registry }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.chart-name }}-${{ github.sha }}
+          path: ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz
+          retention-days: 30
+
+      - name: Validate DevSpace Configuration - ${{ inputs.chart-name }}
+        run: |
+          devspace print
+
+      - name: Check DevSpace Config Syntax - ${{ inputs.chart-name }}
+        run: |
+          devspace list profiles
+
+  deploy-chart:
+    name: Deploy Chart to Registry - ${{ inputs.chart-name }}
+    runs-on: ubuntu-24.04
+    needs: validate-chart
+    if: ${{ inputs.deploy-to-registry }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.chart-path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Download Helm Chart Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.chart-name }}-${{ github.sha }}
+          path: ${{ inputs.chart-path }}
+
+      - name: Deploy Helm Chart to Container Registry - ${{ inputs.chart-name }}
+        run: |
+          echo "Deploying Helm chart to container registry..."
+          REGISTRY="ghcr.io/${{ github.repository_owner }}"
+          CHART_REPO="${REGISTRY}/$(echo '${{ github.repository }}' | cut -d'/' -f2)/charts"
+          
+          echo "User: ${{ github.actor }}"
+          echo "Registry: $REGISTRY"
+          echo "Chart Repository: $CHART_REPO"
+          
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login "$REGISTRY" --username "${{ github.actor }}" --password-stdin
+          
+          CHART_FILE=$(ls ${{ inputs.chart-name }}-*.tgz | head -n 1)
+          echo "Pushing chart: $CHART_FILE"
+          
+          helm push "$CHART_FILE" "oci://${CHART_REPO}"
+          echo "✓ Helm chart deployed: $CHART_FILE to oci://${CHART_REPO}"
