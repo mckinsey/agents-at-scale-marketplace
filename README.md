@@ -13,7 +13,8 @@
   <p align="center">
     <a href="#quick-start">Quick Start</a> •
     <a href="https://mckinsey.github.io/agents-at-scale-marketplace/">Documentation</a> •
-    <a href="#services">Services</a>
+    <a href="#services">Services</a> •
+    <a href="https://github.com/mckinsey/agents-at-scale-ark"><strong>ARK Platform →</strong></a>
   </p>
   <p align="center">
     <a href="https://github.com/mckinsey/agents-at-scale-marketplace/actions/workflows/main-push.yaml"><img src="https://github.com/mckinsey/agents-at-scale-marketplace/actions/workflows/main-push.yaml/badge.svg" alt="CI/CD"></a>
@@ -22,9 +23,12 @@
 
 ---
 
-A curated collection of services, agents, and tools for the Agents at Scale (ARK) platform, packaged as Helm charts with DevSpace support for seamless deployment and development.
+> **Part of the [Agents at Scale (ARK)](https://github.com/mckinsey/agents-at-scale-ark) Platform**  
+> A curated collection of services, agents, and tools packaged as Helm charts with DevSpace support for seamless deployment and development.
 
 ## Services
+
+All services are designed to integrate seamlessly with the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark) and can be deployed to any Kubernetes cluster.
 
 | Service | Description | Chart |
 |---------|-------------|-------|
@@ -90,3 +94,12 @@ This marketplace will include:
 - Additional observability services
 - Pre-built agents and agent templates
 - Reusable tools and utilities
+
+## Related Projects
+
+- **[ARK (Agents at Scale)](https://github.com/mckinsey/agents-at-scale-ark)** - The main platform repository
+- **[ARK Documentation](https://mckinsey.github.io/agents-at-scale-ark/)** - Complete platform documentation
+
+## License
+
+See [LICENSE](./LICENSE) for more information.
