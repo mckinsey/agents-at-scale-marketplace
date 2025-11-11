@@ -27,6 +27,10 @@ on:
         description: "Run Kubernetes deployment test"
         type: boolean
         default: false
+      release-tag:
+        description: "The git tag of the release to attach the chart to"
+        type: string
+        required: false
 
 jobs:
   test-deployment:
@@ -178,6 +182,35 @@ jobs:
       - name: Check DevSpace Config Syntax - ${{ inputs.chart-name }}
         run: |
           devspace list profiles
+
+  attach-chart-to-release:
+    name: Attach Chart to Release - ${{ inputs.chart-name }}
+    runs-on: ubuntu-24.04
+    needs: validate-chart
+    if: ${{ inputs.release-tag != '' }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.chart-path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Chart Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.chart-name }}-${{ github.sha }}
+          path: ${{ inputs.chart-path }}
+
+      - name: Upload Chart to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_TAG="${{ inputs.release-tag }}"
+          CHART_FILE=$(ls ${{ inputs.chart-name }}-*.tgz | head -n 1)
+          
+          echo "Uploading $CHART_FILE to release $RELEASE_TAG"
+          gh release upload "$RELEASE_TAG" "$CHART_FILE" --clobber
+          echo "✓ Chart attached to release: $RELEASE_TAG"
 
   deploy-chart:
     name: Deploy Chart to Registry - ${{ inputs.chart-name }}
