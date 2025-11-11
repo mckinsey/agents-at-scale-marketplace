@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.3...marketplace-docs-v0.1.4) (2025-11-11)
+
+
+### Features
+
+* Enhance ARK Platform Visibility ([#50](https://github.com/mckinsey/agents-at-scale-marketplace/issues/50)) ([78be24d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/78be24d51f085d03d12c6d050cdceaf9ad69b1e8))
+
 ## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.2...marketplace-docs-v0.1.3) (2025-11-10)
 
 
