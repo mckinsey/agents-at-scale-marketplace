@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.4...v0.1.5) (2025-11-12)
+
+
+### Bug Fixes
+
+* update phoenix-helm version and digest in Chart.lock and Chart.yaml ([#52](https://github.com/mckinsey/agents-at-scale-marketplace/issues/52)) ([d42a08f](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d42a08f45f8c310d0d3dacbb0708d9720ad01d79))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.3...v0.1.4) (2025-11-11)
 
 
