@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.2...langfuse-v0.1.3) (2025-11-13)
+
+
+### Features
+
+* add httproute crd check ([#55](https://github.com/mckinsey/agents-at-scale-marketplace/issues/55)) ([88cbcf8](https://github.com/mckinsey/agents-at-scale-marketplace/commit/88cbcf8b643ee5a42220d5edead51645ad977402))
+
 ## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.1...langfuse-v0.1.2) (2025-11-10)
 
 
