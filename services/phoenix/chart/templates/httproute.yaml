@@ -1,4 +1,5 @@
 {{- if .Values.httpRoute.enabled -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/HTTPRoute" -}}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -39,4 +40,8 @@ spec:
         - name: {{ $.Values.service.name }}
           port: {{ $.Values.service.port }}
     {{- end }}
+{{- else }}
+# WARNING: HTTPRoute is enabled but Gateway API CRDs are not installed.
+# Skipping HTTPRoute creation. Please install Gateway API CRDs or set httpRoute.enabled=false
+{{- end }}
 {{- end }}

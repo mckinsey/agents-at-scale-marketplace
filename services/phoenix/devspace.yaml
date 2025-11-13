@@ -1,6 +1,15 @@
 # DevSpace configuration for Phoenix observability
 version: v2beta1
 
+vars:
+  HTTPROUTE_ENABLED:
+    command: |-
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "true"
+      else
+        echo "false"
+      fi
+
 pipelines:
   dev: |-
     create_deployments --all
@@ -15,7 +24,7 @@ deployments:
         # Development-specific values can be added here
         httpRoute:
           # when true, http://phoenix-svc.phoenix.127.0.0.1.nip.io:8080 will be created
-          enabled: true
+          enabled: ${HTTPROUTE_ENABLED}
         otelEnvironmentVariableSecrets:
           enabled: true
           namespaces:
@@ -23,6 +32,14 @@ deployments:
             - default
 
 hooks:
+  - command: |-
+      # Check if Gateway API HTTPRoute CRD exists
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "✓ Gateway API HTTPRoute CRD found - HTTPRoute will be created"
+      else
+        echo "✗ Gateway API HTTPRoute CRD not found - HTTPRoute will be skipped"
+      fi
+    events: ["before:deploy:phoenix"]
   - command: |-
       echo "Restarting ark-controller to pick up Phoenix configuration..."
       
