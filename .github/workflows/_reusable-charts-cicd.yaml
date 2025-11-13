@@ -68,21 +68,20 @@ jobs:
         run: |
           # Extract and add all helm repositories from Chart.yaml dependencies
           if [ -f chart/Chart.yaml ]; then
-            repos_added=false
             yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
               if [[ $repo == http* ]]; then
                 repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
                 echo "Adding repository: $repo as $repo_name"
                 helm repo add "$repo_name" "$repo" || true
-                repos_added=true
               fi
             done
             
-            # Only update repositories if any were added
-            if helm repo list &> /dev/null; then
+            # Only update if repositories were actually added
+            if helm repo list &> /dev/null && [ "$(helm repo list -o json | jq length)" -gt 0 ]; then
+              echo "Updating Helm repositories..."
               helm repo update
             else
-              echo "No Helm repositories to update"
+              echo "No Helm repositories to update (chart may use OCI registries)"
             fi
           fi
 
@@ -129,21 +128,20 @@ jobs:
         run: |
           # Extract and add all helm repositories from Chart.yaml dependencies
           if [ -f chart/Chart.yaml ]; then
-            repos_added=false
             yq eval '.dependencies[].repository | select(. != null)' chart/Chart.yaml | sort -u | while read -r repo; do
               if [[ $repo == http* ]]; then
                 repo_name=$(echo "$repo" | sed 's|https\?://||' | sed 's|[/.]|-|g')
                 echo "Adding repository: $repo as $repo_name"
                 helm repo add "$repo_name" "$repo" || true
-                repos_added=true
               fi
             done
             
-            # Only update repositories if any were added
-            if helm repo list &> /dev/null; then
+            # Only update if repositories were actually added
+            if helm repo list &> /dev/null && [ "$(helm repo list -o json | jq length)" -gt 0 ]; then
+              echo "Updating Helm repositories..."
               helm repo update
             else
-              echo "No Helm repositories to update"
+              echo "No Helm repositories to update (chart may use OCI registries)"
             fi
           fi
 
