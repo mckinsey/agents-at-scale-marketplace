@@ -29,7 +29,7 @@ deployments:
 hooks:
   - command: |-
       echo "Restarting ark-controller to pick up Langfuse configuration..."
-      
+
       # Check if ark-controller-devspace exists first (DevSpace deployment)
       if kubectl get deployment ark-controller-devspace -n ark-system >/dev/null 2>&1; then
         echo "Found ark-controller-devspace, restarting..."
@@ -43,4 +43,8 @@ hooks:
       else
         echo "Warning: No ark-controller deployment found in ark-system namespace"
       fi
+
+      echo ""
+      echo "Langfuse: http://langfuse.telemetry.127.0.0.1.nip.io:8080"
+      echo "Login: ark@ark.com / password123"
     events: ["after:deploy:langfuse"]
