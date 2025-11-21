@@ -30,22 +30,41 @@
 
 All services are designed to integrate seamlessly with the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark) and can be deployed to any Kubernetes cluster.
 
-| Service | Description | Chart |
-|---------|-------------|-------|
+| Service                           | Description                                                                | Chart                              |
+| --------------------------------- | -------------------------------------------------------------------------- | ---------------------------------- |
 | [`langfuse`](./services/langfuse) | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart) |
-| [`phoenix`](./services/phoenix) | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart) |
+| [`phoenix`](./services/phoenix)   | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)  |
 
 ## Quick Start
 
-### Deploy a Service
+### Install with ARK CLI (Recommended)
+
+The easiest way to install marketplace services is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
+
+```bash
+# Install Langfuse
+ark install marketplace/services/langfuse
+
+# Install Phoenix
+ark install marketplace/services/phoenix
+```
+
+### Deploy with Helm
+
+For production deployments or custom configurations:
 
 ```bash
 # Deploy using Helm from local chart
 cd services/phoenix
 helm dependency update chart/
 helm install phoenix ./chart -n phoenix --create-namespace
+```
 
-# Or deploy with DevSpace for development
+### Deploy with DevSpace
+
+For local development with hot-reload:
+
+```bash
 cd services/phoenix
 devspace deploy
 ```
@@ -91,6 +110,7 @@ Detailed documentation for marketplace services can be found in the [`docs/`](./
 ## Future Plans
 
 This marketplace will include:
+
 - Additional observability services
 - Pre-built agents and agent templates
 - Reusable tools and utilities
