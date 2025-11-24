@@ -1,0 +1,18 @@
+Phoenix has been deployed!
+
+{{- if .Values.httpRoute.enabled }}
+
+Access via HTTPRoute:
+{{- range .Values.httpRoute.hostnames }}
+  http://{{ . }}
+{{- end }}
+{{- end }}
+
+Port Forward:
+  kubectl port-forward -n {{ .Values.namespace }} svc/{{ .Values.service.name }} 6006:{{ .Values.service.port }}
+  Then access: http://localhost:6006
+
+{{- if not (index .Values "phoenix-helm").auth.enableAuth }}
+
+Note: Authentication is disabled (development mode)
+{{- end }}

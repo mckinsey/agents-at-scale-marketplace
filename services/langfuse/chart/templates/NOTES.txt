@@ -1,0 +1,21 @@
+Langfuse has been deployed!
+
+Login Credentials:
+  Email:    {{ .Values.demo.user.username }}
+  Password: {{ .Values.demo.user.password }}
+
+Project Keys:
+  Public:  {{ .Values.demo.project.publicKey }}
+  Secret:  {{ .Values.demo.project.secretKey }}
+
+{{- if .Values.httpRoute.enabled }}
+
+Access via HTTPRoute:
+{{- range .Values.httpRoute.hostnames }}
+  http://{{ . }}
+{{- end }}
+{{- end }}
+
+Port Forward:
+  kubectl port-forward -n {{ .Values.namespace }} svc/{{ .Values.service.name }} 3000:{{ .Values.service.port }}
+  Then access: http://localhost:3000
