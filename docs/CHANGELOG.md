@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.4...marketplace-docs-v0.1.5) (2025-11-24)
+
+
+### Features
+
+* migrate contributor list from ark ([#67](https://github.com/mckinsey/agents-at-scale-marketplace/issues/67)) ([311aa95](https://github.com/mckinsey/agents-at-scale-marketplace/commit/311aa95d7b99ed13c4214c06348aa0533763118c))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.3...marketplace-docs-v0.1.4) (2025-11-11)
 
 
