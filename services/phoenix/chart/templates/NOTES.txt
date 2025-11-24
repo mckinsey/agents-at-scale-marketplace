@@ -12,7 +12,7 @@ Port Forward:
   kubectl port-forward -n {{ .Values.namespace }} svc/{{ .Values.service.name }} 6006:{{ .Values.service.port }}
   Then access: http://localhost:6006
 
-{{- if not .Values["phoenix-helm"].auth.enableAuth }}
+{{- if not (index .Values "phoenix-helm").auth.enableAuth }}
 
 Note: Authentication is disabled (development mode)
 {{- end }}
