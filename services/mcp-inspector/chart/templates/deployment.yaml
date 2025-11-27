@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mcp-inspector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mcp-inspector.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mcp-inspector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mcp-inspector.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: mcp-inspector
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: client
+          containerPort: 6274
+          protocol: TCP
+        - name: proxy
+          containerPort: 6277
+          protocol: TCP
+        env:
+        - name: HOST
+          value: "0.0.0.0"
+        - name: CLIENT_PORT
+          value: "6274"
+        - name: SERVER_PORT
+          value: "6277"
+        {{- if .Values.security.dangerouslyOmitAuth }}
+        - name: DANGEROUSLY_OMIT_AUTH
+          value: "true"
+        {{- end }}
+        - name: ALLOWED_ORIGINS
+          value: "http://mcp-inspector.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080"
+        - name: MCP_PROXY_ADDRESS
+          value: "mcp-inspector-proxy.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: client
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: client
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}

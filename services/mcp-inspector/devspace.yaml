@@ -1,0 +1,28 @@
+# DevSpace configuration for MCP Inspector
+version: v2beta1
+
+pipelines:
+  dev: |-
+    create_deployments --all
+
+deployments:
+  mcp-inspector:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart
+      values:
+        httpRoute:
+          enabled: true
+
+hooks:
+  - command: |-
+      echo ""
+      echo "MCP Inspector: http://mcp-inspector.default.127.0.0.1.nip.io:8080"
+      echo "MCP Proxy:     http://mcp-inspector-proxy.default.127.0.0.1.nip.io:8080"
+      echo ""
+      echo "Usage:"
+      echo "  1. Open the MCP Inspector UI"
+      echo "  2. Go to Configuration and set Proxy Session Token to 'test'"
+      echo "  3. Connect to an MCP server: kubectl get mcpserver -A"
+    events: ["after:deploy:mcp-inspector"]
