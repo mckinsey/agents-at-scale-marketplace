@@ -2,5 +2,6 @@
   ".": "0.1.7",
   "docs": "0.1.4",
   "services/langfuse": "0.1.4",
-  "services/phoenix": "0.1.5"
+  "services/phoenix": "0.1.5",
+  "services/mcp-inspector": "0.1.0"
 }
