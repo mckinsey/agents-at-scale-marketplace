@@ -1,0 +1,20 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ .Values.service.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: noah
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    mcp/server: {{ .Values.service.name }}
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ .Values.service.name }}
+        port: "http"
+  timeout: {{ .Values.mcpServer.timeout }}
+  transport: {{ .Values.mcpServer.transport }}
+  description: {{ .Values.mcpServer.description | quote }}
+{{- end }}

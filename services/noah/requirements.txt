@@ -1,0 +1,9 @@
+pandas>=2.0.0  # Data analysis and manipulation
+numpy>=1.24.0  # Numerical computing and arrays
+kubernetes>=28.0.0  # Kubernetes API client
+pyyaml>=6.0.0  # YAML parsing and generation
+jinja2>=3.1.0  # Template engine for config generation
+requests>=2.31.0  # HTTP client library
+httpx>=0.25.0  # Async HTTP client
+jsonpath-ng>=1.6.0  # JSONPath queries for data extraction
+python-dateutil>=2.8.0  # Date/time parsing utilities
