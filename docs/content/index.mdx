@@ -38,7 +38,21 @@ Currently available services:
 
 ## Quick Start
 
-### Deploy a Service
+### Install with ARK CLI (Recommended)
+
+The easiest way to install marketplace services is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
+
+```bash
+# Install Langfuse
+ark install marketplace/services/langfuse
+
+# Install Phoenix
+ark install marketplace/services/phoenix
+```
+
+### Deploy with Helm 
+
+For production deployments or advanced customization:
 
 ```bash
 # Deploy using Helm from local chart
@@ -47,7 +61,9 @@ helm dependency update chart/
 helm install phoenix ./chart -n phoenix --create-namespace
 ```
 
-### Development Mode
+### Development Mode with DevSpace
+
+For local development with hot-reload and debugging:
 
 ```bash
 # Use DevSpace for local development
