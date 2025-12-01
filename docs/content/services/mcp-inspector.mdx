@@ -1,157 +1,41 @@
 ---
 title: MCP Inspector
-description: Developer tool for testing and debugging MCP servers
+description: Debug and test MCP servers
 ---
 
 # MCP Inspector
 
-[MCP Inspector](https://github.com/modelcontextprotocol/inspector) is a developer tool for testing and debugging Model Context Protocol (MCP) servers. It provides a web-based interface to connect to MCP servers, inspect their capabilities, and test tool executions.
-
-## Overview
-
-MCP Inspector integration with ARK provides:
-
-- **Server Discovery**: Connect to any MCP server running in your cluster
-- **Tool Testing**: Execute tools and inspect responses interactively
-- **Resource Browsing**: View available resources and prompts
-- **Debug Interface**: Trace MCP protocol messages in real-time
+Debug and test MCP servers in Kubernetes.
 
 ![MCP Inspector interface](./images/mcp-inspector.png)
 
-## Quick Start
+## Install
 
-### Installation
+```bash
+ark install marketplace/services/mcp-inspector
+```
 
-**Using DevSpace (Recommended for Development):**
+Or with DevSpace:
+
 ```bash
 cd services/mcp-inspector
 devspace dev
 ```
 
-**Using Helm:**
-```bash
-cd services/mcp-inspector
-helm install mcp-inspector ./chart -n default
-```
-
-### Access Inspector
-
-**With DevSpace:**
-```bash
-cd services/mcp-inspector
-devspace dev
-# Access at http://mcp-inspector.default.127.0.0.1.nip.io:8080
-```
-
-**With kubectl:**
-```bash
-kubectl port-forward -n default svc/mcp-inspector 6274:6274
-# Open http://localhost:6274
-```
+Access: http://mcp-inspector.default.127.0.0.1.nip.io:8080
 
 ## Usage
 
-### Connecting to MCP Servers
-
-1. Open the MCP Inspector UI
-2. Go to "Configuration" and set "Proxy Session Token" to any value (e.g., `test`)
-3. Find available MCP servers in your cluster:
-   ```bash
-   kubectl get mcpserver -A
-   # NAMESPACE   NAME                 TOOLS   PHASE   ADDRESS
-   # default     ark-admin-mcp        7       ready   http://ark-admin-mcp.default.svc.cluster.local:8080/mcp
-   ```
-4. Enter the server URL and click "Connect"
-
-### Testing Tools
-
-Once connected to an MCP server:
-
-1. Navigate to the "Tools" tab to see available tools
-2. Click on a tool to view its schema and parameters
-3. Fill in the required parameters and click "Run Tool"
-4. Inspect the response in the right panel
-
-### Browsing Resources
-
-The "Resources" tab shows all resources exposed by the MCP server:
-
-- View resource URIs and descriptions
-- Fetch resource contents
-- Inspect resource metadata
-
-## Configuration
-
-### Default Configuration
-
-MCP Inspector is deployed with these defaults:
-- **Namespace**: `default`
-- **Client Port**: `6274` (Web UI)
-- **Proxy Port**: `6277` (MCP Proxy)
-- **Authentication**: Disabled (development mode)
-
-### Custom Configuration
-
-Customize MCP Inspector by modifying `chart/values.yaml`:
-
-```yaml
-# Enable HTTPRoute for Gateway API routing
-httpRoute:
-  enabled: true
-  parentRefs:
-    - name: localhost-gateway
-      namespace: ark-system
-
-# Configure resources
-resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 100m
-    memory: 128Mi
-
-# Enable authentication (recommended for production)
-security:
-  dangerouslyOmitAuth: false
-```
-
-## Troubleshooting
-
-### Inspector Not Accessible
-
-Check if MCP Inspector is running:
-```bash
-kubectl get pods -l app.kubernetes.io/name=mcp-inspector -n default
-kubectl get svc -l app.kubernetes.io/name=mcp-inspector -n default
-```
-
-Verify port-forwarding:
-```bash
-kubectl port-forward -n default svc/mcp-inspector 6274:6274
-```
-
-### Cannot Connect to MCP Server
-
-1. Verify the MCP server is running and ready:
+1. Find your MCP server address:
    ```bash
    kubectl get mcpserver -A
    ```
 
-2. Check network connectivity from the inspector pod:
-   ```bash
-   kubectl exec -it deployment/mcp-inspector -- wget -qO- http://<mcp-server-address>/health
-   ```
+2. In the inspector UI, go to **Configuration** and set **Proxy Session Token** to any value (e.g., `test`)
 
-3. Ensure the Proxy Session Token is set in Configuration
+3. Enter the MCP server address and connect
 
-### Connection Timeouts
-
-Increase timeout settings in the inspector UI:
-- Request Timeout: `10000` (default)
-- Maximum Total Timeout: `60000` (default)
-
-## Uninstallation
+## Uninstall
 
 **Using DevSpace:**
 ```bash
@@ -167,5 +51,4 @@ helm uninstall mcp-inspector -n default
 ## Additional Resources
 
 - [MCP Inspector GitHub](https://github.com/modelcontextprotocol/inspector)
-- [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
-- [MCP Server Development Guide](https://modelcontextprotocol.io/docs/server)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
