@@ -33,6 +33,7 @@ All services are designed to integrate seamlessly with the [ARK platform](https:
 | Service                           | Description                                                                | Chart                              |
 | --------------------------------- | -------------------------------------------------------------------------- | ---------------------------------- |
 | [`langfuse`](./services/langfuse) | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart) |
+| [`noah`](./services/noah)         | Runtime administration agent with cluster privileges and MCP server        | [Chart](./services/noah/chart)     |
 | [`phoenix`](./services/phoenix)   | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)  |
 
 ## Quick Start
@@ -44,6 +45,9 @@ The easiest way to install marketplace services is using the [ARK CLI](https://m
 ```bash
 # Install Langfuse
 ark install marketplace/services/langfuse
+
+# Install Noah
+ark install marketplace/services/noah
 
 # Install Phoenix
 ark install marketplace/services/phoenix
