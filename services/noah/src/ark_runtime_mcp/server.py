@@ -14,7 +14,6 @@ mcp = FastMCP("ARK Runtime", stateless_http=True)
 # Get port from environment with default
 PORT = os.getenv("PORT", "8639")
 
-
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> JSONResponse:
     """Health check endpoint."""
