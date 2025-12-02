@@ -22,7 +22,10 @@ cd services/mcp-inspector
 devspace dev
 ```
 
-Access: http://mcp-inspector.default.127.0.0.1.nip.io:8080
+Access via:
+- http://mcp-inspector.default.127.0.0.1.nip.io:8080
+- Port forward: `kubectl port-forward svc/mcp-inspector 6274:6274`
+- Ark Dashboard → Services page
 
 ## Usage
 

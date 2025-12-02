@@ -1,25 +1,14 @@
 MCP Inspector has been deployed!
 
-Wait for MCP Inspector to be ready:
-  kubectl wait --for=condition=Available -n {{ .Release.Namespace }} deployment/{{ include "mcp-inspector.fullname" . }} --timeout=5m
-
 {{- if .Values.httpRoute.enabled }}
 
-Access via HTTPRoute:
-  Client UI: http://mcp-inspector.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080
-  Proxy:     http://mcp-inspector-proxy.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080
+Access via:
+  http://mcp-inspector.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080
 {{- end }}
 
-Port Forward:
-  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "mcp-inspector.fullname" . }} 6274:{{ .Values.service.clientPort }}
-  Then access: http://localhost:6274
+Port forward:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "mcp-inspector.fullname" . }} 6274:6274
 
 Usage:
-  1. Open the MCP Inspector UI
-  2. Go to "Configuration" and set "Proxy Session Token" to any value (e.g., "test")
-  3. Enter the URL of an MCP server to connect:
-     kubectl get mcpserver -A
-{{- if .Values.security.dangerouslyOmitAuth }}
-
-Note: Authentication is disabled (development mode)
-{{- end }}
+  1. Go to Configuration and set Proxy Session Token to 'test'
+  2. Connect to an MCP server: kubectl get mcpserver -A
