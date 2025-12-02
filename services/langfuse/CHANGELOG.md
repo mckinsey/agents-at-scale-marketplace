@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.4...langfuse-v0.1.5) (2025-12-02)
+
+
+### Features
+
+* Add Helm NOTES.txt templates for langfuse and phoenix ([#64](https://github.com/mckinsey/agents-at-scale-marketplace/issues/64)) ([5ad1299](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5ad129904763cbcd9bfafbf68da2d2724169424c))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.3...langfuse-v0.1.4) (2025-11-13)
 
 
