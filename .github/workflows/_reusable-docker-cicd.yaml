@@ -44,11 +44,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract repository name
+        id: repo
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
+
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/$(echo '${{ github.repository }}' | cut -d'/' -f2)/${{ inputs.service-name }}
+          images: ghcr.io/${{ github.repository_owner }}/${{ steps.repo.outputs.name }}/${{ inputs.service-name }}
           tags: |
             type=raw,value=${{ inputs.image-tag }}
             type=raw,value=latest,enable=${{ inputs.image-tag != 'latest' && inputs.push-to-registry }}
