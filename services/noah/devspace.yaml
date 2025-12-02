@@ -1,0 +1,55 @@
+# DevSpace configuration for Noah runtime administration agent
+version: v2beta1
+
+images:
+  noah:
+    image: noah
+    dockerfile: Dockerfile
+    context: .
+
+pipelines:
+  deploy: |-
+    build_images --all
+    create_deployments --all
+  dev: |-
+    build_images --all
+    create_deployments --all
+    start_dev --all
+
+deployments:
+  noah:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart
+      values:
+        image:
+          repository: ${runtime.images.noah.image}
+          tag: ${runtime.images.noah.tag}
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+
+dev:
+  noah:
+    imageSelector: noah
+    command:
+      [
+        "sh",
+        "-c",
+        "cd /app && uv sync && uv run fastmcp run src/ark_runtime_mcp/server.py --transport http --port 8639 --host 0.0.0.0",
+      ]
+    namespace: default
+    logs:
+      lastLines: 50
+    sync:
+      - path: .:/app
+        startContainer: true
+        disableDownload: true
+        uploadExcludeFile: .dockerignore
+    ssh:
+      enabled: true
