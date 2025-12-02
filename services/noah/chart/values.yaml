@@ -3,7 +3,7 @@
 # Image configuration
 image:
   repository: ghcr.io/mckinsey/agents-at-scale-marketplace/noah
-  tag: latest
+  tag: "latest"
   pullPolicy: IfNotPresent
 
 # Service configuration

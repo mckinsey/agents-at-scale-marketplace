@@ -50,14 +50,29 @@ jobs:
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
 
+      - name: Clean image tag
+        id: clean-tag
+        run: |
+          RAW_TAG="${{ inputs.image-tag }}"
+
+          # Strip service path prefix (e.g., 'services/noah-v0.1.0' -> 'v0.1.0')
+          CLEAN_TAG="${RAW_TAG#${{ inputs.service-path }}-}"
+
+          # Strip 'v' prefix if present (e.g., 'v0.1.0' -> '0.1.0')
+          # This ensures compatibility with Helm chart appVersion
+          CLEAN_TAG="${CLEAN_TAG#v}"
+
+          echo "clean=$CLEAN_TAG" >> $GITHUB_OUTPUT
+          echo "Cleaned tag: $RAW_TAG -> $CLEAN_TAG"
+
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ steps.repo.outputs.name }}/${{ inputs.service-name }}
           tags: |
-            type=raw,value=${{ inputs.image-tag }}
-            type=raw,value=latest,enable=${{ inputs.image-tag != 'latest' && inputs.push-to-registry }}
+            type=raw,value=${{ steps.clean-tag.outputs.clean }}
+            type=raw,value=latest,enable=${{ steps.clean-tag.outputs.clean != 'latest' && inputs.push-to-registry }}
             type=sha,prefix=sha-,enable=${{ !inputs.push-to-registry }}
 
       - name: Build Docker image
