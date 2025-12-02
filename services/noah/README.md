@@ -39,7 +39,7 @@ helm uninstall noah -n default
 - `bash` - System commands for advanced operations
 - `python` - Python code execution
 - `ark_status` - Check ARK system status and version
-- `aas_runtime_101` - AAS runtime resource discovery and operational procedures
+- `ark_runtime_101` - AAS runtime resource discovery and operational procedures
 - `system_info` - MCP server capabilities report
 
 ## Usage

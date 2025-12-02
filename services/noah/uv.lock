@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.11"
 
 [[package]]
-name = "aas-runtime-mcp"
+name = "ark-runtime-mcp"
 version = "0.1.4"
 source = { editable = "." }
 dependencies = [

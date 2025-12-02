@@ -8,5 +8,5 @@
 * MCP server with runtime administration tools
 * Agent resource for conversational infrastructure management
 * Full cluster privileges with RBAC configuration
-* Tools: kubectl, helm, psql, rabbitmqctl, rabbitmq_admin, bash, python
-* ARK-specific tools: ark_status, aas_runtime_101, system_info
+* Tools: kubectl, helm, bash, python
+* ARK-specific tools: ark_status, ark_runtime_101, system_info
