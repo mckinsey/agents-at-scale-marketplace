@@ -34,6 +34,14 @@
       "extra-files": [
         "chart/Chart.yaml"
       ]
+    },
+    "mcp/filesystem-mcp": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "filesystem-mcp",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
     }
   }
 }
