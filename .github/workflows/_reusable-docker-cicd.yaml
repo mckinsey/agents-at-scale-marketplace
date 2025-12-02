@@ -58,7 +58,7 @@ jobs:
           tags: |
             type=raw,value=${{ inputs.image-tag }}
             type=raw,value=latest,enable=${{ inputs.image-tag != 'latest' && inputs.push-to-registry }}
-            type=sha,prefix={{branch}}-,enable=${{ !inputs.push-to-registry }}
+            type=sha,prefix=sha-,enable=${{ !inputs.push-to-registry }}
 
       - name: Build Docker image
         uses: docker/build-push-action@v6
