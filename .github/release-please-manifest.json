@@ -1,5 +1,5 @@
 {
-  ".": "0.1.8",
+  ".": "0.1.9",
   "docs": "0.1.5",
   "services/langfuse": "0.1.5",
   "services/phoenix": "0.1.6",
