@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.9...v0.1.10) (2025-12-02)
+
+
+### Features
+
+* update docs with ark and trigger release ([#72](https://github.com/mckinsey/agents-at-scale-marketplace/issues/72)) ([0e55fb1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0e55fb12ae60c1b002adf830660b68f9b77c124c))
+
 ## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.8...v0.1.9) (2025-12-02)
 
 
