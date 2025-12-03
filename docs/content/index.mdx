@@ -13,9 +13,9 @@ title: Marketplace Documentation
   color: 'white'
 }}>
   <h3 style={{ margin: 0, marginBottom: '8px', color: 'white' }}>Part of the ARK Platform</h3>
-  <p style={{ margin: 0, opacity: 0.9 }}>
+  <div style={{ margin: 0, opacity: 0.9 }}>
     This marketplace is an integral component of the <a href="https://github.com/mckinsey/agents-at-scale-ark" style={{ color: 'white', textDecoration: 'underline' }}><strong>Agents at Scale (ARK)</strong></a> platform, providing services and tools for agentic systems.
-  </p>
+  </div>
 </div>
 
 Welcome to the Agents at Scale Marketplace documentation. This marketplace provides a collection of services, agents, and tools for the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark).
@@ -36,18 +36,25 @@ Currently available services:
 - **[Langfuse](./services/langfuse)** - Open Source LLM Application/Agent observability, evaluation, and prompt management
 - **[Phoenix](./services/phoenix)** - AI/ML observability and evaluation platform with OpenTelemetry integration
 
+## Available Agents
+
+Currently available agents:
+
+- **[Noah](./agents/noah)** - Runtime administration agent with cluster privileges and MCP server
+
 ## Quick Start
 
 ### Install with ARK CLI (Recommended)
 
-The easiest way to install marketplace services is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
+The easiest way to install marketplace services and agents is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
 
 ```bash
-# Install Langfuse
+# Install services
 ark install marketplace/services/langfuse
-
-# Install Phoenix
 ark install marketplace/services/phoenix
+
+# Install agents
+ark install marketplace/agents/noah
 ```
 
 ### Deploy with Helm 
@@ -93,3 +100,11 @@ When adding new services to the marketplace:
 3. Add DevSpace config: `services/<service-name>/devspace.yaml`
 4. Add documentation: `docs/content/services/<service-name>.mdx`
 5. Update the services index
+
+When adding new agents to the marketplace:
+
+1. Create agent directory: `agents/<agent-name>/`
+2. Add Helm chart: `agents/<agent-name>/chart/`
+3. Add DevSpace config: `agents/<agent-name>/devspace.yaml`
+4. Add documentation: `docs/content/agents/<agent-name>.mdx`
+5. Update the agents index and marketplace.json with `type: "agent"`

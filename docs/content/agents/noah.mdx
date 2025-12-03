@@ -1,0 +1,151 @@
+---
+title: Noah
+description: Runtime administration agent with cluster management capabilities
+---
+
+# Noah
+
+Noah is the ARK Runtime Administration Agent, providing comprehensive cluster management and infrastructure operations through an MCP (Model Context Protocol) server. With full cluster privileges, Noah enables conversational infrastructure management and runtime administration.
+
+## Overview
+
+Noah integration with ARK provides:
+
+- **Kubernetes Management**: Execute kubectl commands for cluster operations
+- **Helm Operations**: Package management and chart deployment
+- **System Commands**: Run bash commands for advanced operations
+- **Python Execution**: Execute Python scripts for data analysis and automation
+- **ARK Status**: Monitor ARK system health and version information
+- **Runtime Discovery**: Access operational procedures and resource discovery
+- **MCP Server**: Expose tools through Model Context Protocol
+
+**Note**: Noah requires cluster-admin privileges for full functionality.
+
+![Noah runtime administration interface](./images/noah.png)
+
+## Quick Start
+
+### Installation
+
+**Using ARK CLI (Recommended):**
+```bash
+ark install marketplace/agents/noah
+```
+
+**Using DevSpace (for Development):**
+```bash
+cd agents/noah
+devspace deploy
+```
+
+**Using Helm:**
+```bash
+cd agents/noah
+helm install noah ./chart -n default
+```
+
+## Available Tools
+
+Noah provides the following tools through its MCP interface:
+
+### Kubernetes Operations
+- `kubectl` - Execute kubectl commands for cluster management
+  - View resources, pods, deployments
+  - Check logs and describe resources
+  - Apply configurations and manage workloads
+
+### Package Management
+- `helm` - Helm chart operations
+  - List installed releases
+  - Install, upgrade, and uninstall charts
+  - Manage chart repositories
+
+### System Commands
+- `bash` - Execute system commands
+  - File operations
+  - Process management
+  - Advanced shell operations
+
+### Python Execution
+- `python` - Run Python code
+  - Data analysis and processing
+  - Automation scripts
+  - Custom operations
+
+### ARK Operations
+- `ark_status` - Check ARK system status and version
+- `ark_runtime_101` - Runtime resource discovery and operational procedures
+- `system_info` - View MCP server capabilities and tool information
+
+## Usage Examples
+
+Once deployed, Noah can be accessed through ARK as the runtime administration agent:
+
+### Cluster Management
+```
+"Show me all pods in the cluster"
+"What's the status of deployments in the ark-system namespace?"
+"Describe the noah-mcp service"
+```
+
+### Helm Operations
+```
+"List all Helm releases"
+"Show me the values for the langfuse release"
+"What charts are available in the repository?"
+```
+
+### System Operations
+```
+"Check disk usage on the cluster nodes"
+"Run a Python script to analyze resource usage"
+"Execute a bash command to check system logs"
+```
+
+### ARK Status
+```
+"What's the status of ARK?"
+"Show me the ARK system version"
+"Get runtime operational procedures"
+```
+
+## Security Considerations
+
+**Warning**: Noah has cluster-admin privileges and can perform ANY operation in the cluster, including:
+- Deleting resources and namespaces
+- Modifying critical system configurations
+- Accessing secrets and sensitive data
+- Changing RBAC permissions
+
+**Best Practices**:
+- Always confirm destructive operations before execution
+- Use Noah only in controlled environments
+- Monitor Noah's operations through audit logs
+- Restrict access to Noah through ARK's authentication system
+- Review commands before execution in production clusters
+
+## Uninstallation
+
+**Using ARK CLI:**
+```bash
+ark uninstall marketplace/agents/noah
+```
+
+**Using DevSpace:**
+```bash
+cd agents/noah
+devspace purge
+```
+
+**Using Helm:**
+```bash
+helm uninstall noah -n default
+```
+
+**Note**: Uninstalling Noah will also remove the associated ServiceAccount and ClusterRoleBinding.
+
+## Additional Resources
+
+- [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Helm Documentation](https://helm.sh/docs/)

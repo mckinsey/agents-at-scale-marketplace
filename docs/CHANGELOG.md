@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.4...marketplace-docs-v0.1.5) (2025-12-02)
+
+
+### Features
+
+* add Noah runtime administration agent service ([#69](https://github.com/mckinsey/agents-at-scale-marketplace/issues/69)) ([e21b306](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e21b306d2e98574c3156d9248c5eb9e888a23481))
+* migrate contributor list from ark ([#67](https://github.com/mckinsey/agents-at-scale-marketplace/issues/67)) ([311aa95](https://github.com/mckinsey/agents-at-scale-marketplace/commit/311aa95d7b99ed13c4214c06348aa0533763118c))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.3...marketplace-docs-v0.1.4) (2025-11-11)
 
 

@@ -1,0 +1,34 @@
+# Noah service configuration
+
+# Image configuration
+image:
+  repository: ghcr.io/mckinsey/agents-at-scale-marketplace/noah
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  name: noah-mcp
+  port: 8639
+  type: ClusterIP
+
+# Agent configuration
+agent:
+  enabled: true
+  name: noah
+
+# MCP Server configuration
+mcpServer:
+  enabled: true
+  timeout: "60s"
+  transport: http
+  description: "Noah MCP server providing runtime administration tools"
+
+# Resources
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
