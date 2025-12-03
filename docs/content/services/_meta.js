@@ -1,5 +1,4 @@
 export default {
   langfuse: 'Langfuse',
-  phoenix: 'Phoenix',
-  noah: 'Noah'
+  phoenix: 'Phoenix'
 }
