@@ -18,7 +18,9 @@ deployments:
 hooks:
   - command: |-
       echo ""
-      echo "MCP Inspector: http://mcp-inspector.default.127.0.0.1.nip.io:8080"
+      echo "Dashboard URL:"
+      echo "  http://mcp-inspector.default.127.0.0.1.nip.io:8080/?MCP_PROXY_FULL_ADDRESS=http://mcp-inspector-proxy.default.127.0.0.1.nip.io:8080"
+      echo ""
       echo "Port forward:  kubectl port-forward svc/mcp-inspector 6274:6274"
       echo ""
       echo "Usage:"

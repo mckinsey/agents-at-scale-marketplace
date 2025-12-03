@@ -2,8 +2,8 @@ MCP Inspector has been deployed!
 
 {{- if .Values.httpRoute.enabled }}
 
-Access via:
-  http://mcp-inspector.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080
+Dashboard URL:
+  http://mcp-inspector.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080/?MCP_PROXY_FULL_ADDRESS=http://mcp-inspector-proxy.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080
 {{- end }}
 
 Port forward:
