@@ -27,6 +27,14 @@
         "chart/Chart.yaml"
       ]
     },
+    "services/mcp-inspector": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "mcp-inspector",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
+    },
     "agents/noah": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",

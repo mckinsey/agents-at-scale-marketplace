@@ -57,6 +57,33 @@
       }
     },
     {
+      "name": "mcp-inspector",
+      "type": "service",
+      "displayName": "MCP Inspector",
+      "description": "Developer tool for testing and debugging MCP servers",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["mcp", "debugging", "development", "testing"],
+      "category": "development",
+      "icon": "https://example.com/mcp-inspector-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/mcp-inspector/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/mcp-inspector",
+        "namespace": "default",
+        "helmReleaseName": "mcp-inspector",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "mcp-inspector",
+        "k8sServicePort": 6274,
+        "k8sDeploymentName": "mcp-inspector"
+      }
+    },
+    {
       "name": "noah",
       "type": "agent",
       "displayName": "Noah",

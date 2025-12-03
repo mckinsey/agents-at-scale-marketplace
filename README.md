@@ -30,10 +30,11 @@
 
 Services are designed to integrate seamlessly with the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark) and can be deployed to any Kubernetes cluster.
 
-| Service                           | Description                                                                | Chart                              |
-| --------------------------------- | -------------------------------------------------------------------------- | ---------------------------------- |
-| [`langfuse`](./services/langfuse) | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart) |
-| [`phoenix`](./services/phoenix)   | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)  |
+| Service                                       | Description                                                                | Chart                                      |
+| --------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
+| [`langfuse`](./services/langfuse)             | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart)         |
+| [`mcp-inspector`](./services/mcp-inspector)   | Developer tool for testing and debugging MCP servers                       | [Chart](./services/mcp-inspector/chart)    |
+| [`phoenix`](./services/phoenix)               | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)          |
 
 ## Agents
 
@@ -52,6 +53,7 @@ The easiest way to install marketplace services and agents is using the [ARK CLI
 ```bash
 # Install services
 ark install marketplace/services/langfuse
+ark install marketplace/services/mcp-inspector
 ark install marketplace/services/phoenix
 
 # Install agents
