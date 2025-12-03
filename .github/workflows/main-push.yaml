@@ -25,6 +25,7 @@ jobs:
       matrix:
         service:
           - { name: noah, path: services/noah }
+          - { name: filesystem-mcp-server, path: mcp/filesystem-mcp }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -42,6 +43,8 @@ jobs:
           - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
           # disable noah deployment tests for PRs to avoid hitting 5m limit
           - { name: noah, path: services/noah, namespace: noah, run-deployment-test: false }
+          # disable filesystem-mcp deployment tests for PRs to avoid hitting 5m limit
+          - { name: filesystem-mcp-server, path: mcp/filesystem-mcp, namespace: filesystem-mcp, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -126,6 +129,7 @@ jobs:
       matrix:
         service:
           - { name: noah, path: services/noah }
+          - { name: filesystem-mcp-server, path: mcp/filesystem-mcp }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -143,6 +147,7 @@ jobs:
           - { name: langfuse, path: services/langfuse, namespace: langfuse }
           - { name: phoenix, path: services/phoenix, namespace: phoenix }
           - { name: noah, path: services/noah, namespace: noah }
+          - { name: filesystem-mcp-server, path: mcp/filesystem-mcp, namespace: default }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
