@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.10...v0.1.11) (2025-12-03)
+
+
+### Bug Fixes
+
+* docker builds architecture and trigger noah release ([#75](https://github.com/mckinsey/agents-at-scale-marketplace/issues/75)) ([9b85a55](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9b85a55bd32c8488d9995ac28457da0671300608))
+
 ## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.9...v0.1.10) (2025-12-02)
 
 
