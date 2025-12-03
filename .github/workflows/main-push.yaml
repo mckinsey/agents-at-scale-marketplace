@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         service:
-          - { name: noah, path: services/noah }
+          - { name: noah, path: agents/noah }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -41,7 +41,7 @@ jobs:
           # disable phoenix deployment tests for PRs to avoid hitting 5m limit
           - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
           # disable noah deployment tests for PRs to avoid hitting 5m limit
-          - { name: noah, path: services/noah, namespace: noah, run-deployment-test: false }
+          - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -125,7 +125,7 @@ jobs:
     strategy:
       matrix:
         service:
-          - { name: noah, path: services/noah }
+          - { name: noah, path: agents/noah }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -142,7 +142,7 @@ jobs:
         chart:
           - { name: langfuse, path: services/langfuse, namespace: langfuse }
           - { name: phoenix, path: services/phoenix, namespace: phoenix }
-          - { name: noah, path: services/noah, namespace: noah }
+          - { name: noah, path: agents/noah, namespace: noah }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}

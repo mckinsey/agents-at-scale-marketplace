@@ -61,7 +61,7 @@
       "type": "agent",
       "displayName": "Noah",
       "description": "Runtime administration agent with cluster privileges and MCP server",
-      "version": "0.1.0",
+      "version": "0.1.3",
       "author": "ARK Marketplace",
       "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
       "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
