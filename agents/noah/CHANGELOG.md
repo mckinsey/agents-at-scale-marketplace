@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.3...noah-v0.1.4) (2025-12-03)
+
+
+### Features
+
+* migrate ark marketplace following anthropic plugin marketplace ([#77](https://github.com/mckinsey/agents-at-scale-marketplace/issues/77)) ([115d3aa](https://github.com/mckinsey/agents-at-scale-marketplace/commit/115d3aa73ae13621180950769b3eeebcc3d8f2cc))
+
 ## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.2...noah-v0.1.3) (2025-12-03)
 
 
