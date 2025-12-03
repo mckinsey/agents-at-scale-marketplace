@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.12](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.11...v0.1.12) (2025-12-03)
+
+
+### Features
+
+* Add MCP Inspector service ([#68](https://github.com/mckinsey/agents-at-scale-marketplace/issues/68)) ([932bbe6](https://github.com/mckinsey/agents-at-scale-marketplace/commit/932bbe655cbc3f124132a03d530a16bde458ab02))
+* migrate ark marketplace following anthropic plugin marketplace ([#77](https://github.com/mckinsey/agents-at-scale-marketplace/issues/77)) ([115d3aa](https://github.com/mckinsey/agents-at-scale-marketplace/commit/115d3aa73ae13621180950769b3eeebcc3d8f2cc))
+
 ## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.10...v0.1.11) (2025-12-03)
 
 
