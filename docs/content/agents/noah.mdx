@@ -27,15 +27,20 @@ Noah integration with ARK provides:
 
 ### Installation
 
-**Using DevSpace (Recommended for Development):**
+**Using ARK CLI (Recommended):**
 ```bash
-cd services/noah
+ark install marketplace/agents/noah
+```
+
+**Using DevSpace (for Development):**
+```bash
+cd agents/noah
 devspace deploy
 ```
 
 **Using Helm:**
 ```bash
-cd services/noah
+cd agents/noah
 helm install noah ./chart -n default
 ```
 
@@ -121,9 +126,14 @@ Once deployed, Noah can be accessed through ARK as the runtime administration ag
 
 ## Uninstallation
 
+**Using ARK CLI:**
+```bash
+ark uninstall marketplace/agents/noah
+```
+
 **Using DevSpace:**
 ```bash
-cd services/noah
+cd agents/noah
 devspace purge
 ```
 

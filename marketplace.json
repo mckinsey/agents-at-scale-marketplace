@@ -55,6 +55,33 @@
         "k8sServicePort": 3000,
         "k8sDeploymentName": "langfuse-web"
       }
+    },
+    {
+      "name": "noah",
+      "type": "agent",
+      "displayName": "Noah",
+      "description": "Runtime administration agent with cluster privileges and MCP server",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["agent", "administration", "mcp", "runtime"],
+      "category": "agents",
+      "icon": "https://example.com/noah-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/agents/noah/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/noah",
+        "namespace": "default",
+        "helmReleaseName": "noah",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "noah-mcp",
+        "k8sServicePort": 8639,
+        "k8sDeploymentName": "noah-mcp"
+      }
     }
   ]
 }
