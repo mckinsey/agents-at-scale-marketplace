@@ -4,6 +4,7 @@
   "items": [
     {
       "name": "phoenix",
+      "type": "service",
       "displayName": "Phoenix",
       "description": "AI/ML observability and evaluation platform with OpenTelemetry integration",
       "version": "0.1.5",
@@ -30,6 +31,7 @@
     },
     {
       "name": "langfuse",
+      "type": "service",
       "displayName": "Langfuse",
       "description": "Open-source LLM observability and analytics platform with session tracking",
       "version": "0.1.4",
