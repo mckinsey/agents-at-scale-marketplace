@@ -28,29 +28,34 @@
 
 ## Services
 
-All services are designed to integrate seamlessly with the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark) and can be deployed to any Kubernetes cluster.
+Services are designed to integrate seamlessly with the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark) and can be deployed to any Kubernetes cluster.
 
 | Service                           | Description                                                                | Chart                              |
 | --------------------------------- | -------------------------------------------------------------------------- | ---------------------------------- |
 | [`langfuse`](./services/langfuse) | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart) |
-| [`noah`](./services/noah)         | Runtime administration agent with cluster privileges and MCP server        | [Chart](./services/noah/chart)     |
 | [`phoenix`](./services/phoenix)   | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)  |
+
+## Agents
+
+Pre-built agents that can be deployed to your ARK cluster for various operational tasks.
+
+| Agent                     | Description                                                         | Chart                        |
+| ------------------------- | ------------------------------------------------------------------- | ---------------------------- |
+| [`noah`](./agents/noah)   | Runtime administration agent with cluster privileges and MCP server | [Chart](./agents/noah/chart) |
 
 ## Quick Start
 
 ### Install with ARK CLI (Recommended)
 
-The easiest way to install marketplace services is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
+The easiest way to install marketplace services and agents is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
 
 ```bash
-# Install Langfuse
+# Install services
 ark install marketplace/services/langfuse
-
-# Install Noah
-ark install marketplace/services/noah
-
-# Install Phoenix
 ark install marketplace/services/phoenix
+
+# Install agents
+ark install marketplace/agents/noah
 ```
 
 ### Deploy with Helm

@@ -3,5 +3,5 @@
   "docs": "0.1.5",
   "services/langfuse": "0.1.5",
   "services/phoenix": "0.1.6",
-  "services/noah": "0.1.3"
+  "agents/noah": "0.1.3"
 }

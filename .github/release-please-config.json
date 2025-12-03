@@ -27,7 +27,7 @@
         "chart/Chart.yaml"
       ]
     },
-    "services/noah": {
+    "agents/noah": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
       "package-name": "noah",
