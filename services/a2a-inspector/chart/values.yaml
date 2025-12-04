@@ -7,8 +7,8 @@ global:
 
 # Image configuration
 image:
-  repository: ghcr.io/a2aproject/a2a-inspector
-  tag: "" # Uses Chart.appVersion if empty
+  repository: ghcr.io/havasik/a2a-inspector
+  tag: "latest" # Uses Chart.appVersion if empty
   pullPolicy: IfNotPresent
 
 # Replica count
