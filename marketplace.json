@@ -57,6 +57,33 @@
       }
     },
     {
+      "name": "a2a-inspector",
+      "type": "service",
+      "displayName": "A2A Inspector",
+      "description": "Developer tool for testing and debugging A2A protocol agents",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["a2a", "debugging", "development", "testing", "agent2agent"],
+      "category": "development",
+      "icon": "https://example.com/a2a-inspector-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/a2a-inspector/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/a2a-inspector",
+        "namespace": "default",
+        "helmReleaseName": "a2a-inspector",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "a2a-inspector",
+        "k8sServicePort": 8080,
+        "k8sDeploymentName": "a2a-inspector"
+      }
+    },
+    {
       "name": "mcp-inspector",
       "type": "service",
       "displayName": "MCP Inspector",

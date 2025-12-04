@@ -1,0 +1,43 @@
+# A2A Inspector chart values
+
+# Global annotations
+global:
+  annotations:
+    ark.mckinsey.com/service: a2a-inspector
+
+# Image configuration
+image:
+  repository: ghcr.io/havasik/a2a-inspector
+  tag: "latest" # Uses Chart.appVersion if empty
+  pullPolicy: IfNotPresent
+
+# Replica count
+replicaCount: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+
+# Namespace configuration
+namespace: default
+
+# HTTPRoute configuration (Gateway API)
+# Enable for Gateway API routing with namespace-based access.
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  # Hostname is auto-generated based on namespace:
+  # - a2a-inspector.{namespace}.127.0.0.1.nip.io
+
+# Resources
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

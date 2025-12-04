@@ -3,6 +3,7 @@
   "docs": "0.1.6",
   "services/langfuse": "0.1.5",
   "services/phoenix": "0.1.6",
+  "services/a2a-inspector": "0.1.0",
   "services/mcp-inspector": "0.1.1",
   "agents/noah": "0.1.4"
 }
