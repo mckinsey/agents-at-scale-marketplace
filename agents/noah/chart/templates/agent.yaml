@@ -28,9 +28,6 @@ spec:
     - ark_status: Check ARK system status and version
     - kubectl: Execute kubectl commands for cluster management
     - helm: Manage Helm charts and releases
-    - psql: Query PostgreSQL databases for platform data
-    - rabbitmqctl: Manage RabbitMQ clusters and queues
-    - rabbitmq_admin: Use RabbitMQ HTTP API for operations
     - bash: Run system commands as needed
     - python: Execute Python code for data processing and analysis
 
