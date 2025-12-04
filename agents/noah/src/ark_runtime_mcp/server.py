@@ -207,7 +207,6 @@ async def system_info() -> str:
     info += "  • python - Python code execution\n"
     info += "  • bash - Shell command execution (for tools without dedicated MCP tools)\n"
     info += "  • ark_status - ARK system status\n"
-    info += "  • ark_runtime_101 - ARK runtime resource discovery and operational procedures\n"
     info += "  • system_info - This capability report\n\n"
 
     info += f"{packages_info}\n\n"
@@ -244,61 +243,10 @@ async def ark_status() -> str:
     return f"ARK System Status:\n\nVersion: {version_json['stdout']}\n\nPod Status:\n{status_json['stdout']}"
 
 
-@mcp.tool
-async def ark_runtime_101() -> str:
-    """Comprehensive ARK Runtime knowledge base for infrastructure and operations.
-
-    Returns:
-        Detailed documentation of ARK resources, runtime architecture, and operational procedures
-    """
-    # Get all ARK CRDs
-    crd_cmd = "kubectl get crd | grep ark.mckinsey.com"
-    crds_result = await run_command(crd_cmd)
-    crds_json = json.loads(crds_result)
-
-    # Get detailed schema for each CRD
-    schemas = []
-    ark_crds = [
-        "agents.ark.mckinsey.com",
-        "models.ark.mckinsey.com",
-        "teams.ark.mckinsey.com",
-        "queries.ark.mckinsey.com",
-        "evaluators.ark.mckinsey.com",
-        "executionengines.ark.mckinsey.com",
-        "mcpservers.ark.mckinsey.com",
-        "memories.ark.mckinsey.com",
-        "tools.ark.mckinsey.com",
-        "a2aservers.ark.mckinsey.com",
-    ]
-
-    for crd in ark_crds:
-        schema_cmd = f"kubectl get crd {crd} -o jsonpath='{{.spec.versions[0].schema.openAPIV3Schema.properties.spec}}'"
-        schema_result = await run_command(schema_cmd)
-        schema_json = json.loads(schema_result)
-        if schema_json["statusCode"] == 0 and schema_json["stdout"].strip():
-            schemas.append(f"\n## {crd.split('.')[0].upper()}\n{schema_json['stdout']}")
-
-    # Read comprehensive guide from markdown file
-    try:
-        guide_path = "/app/src/ark_runtime_mcp/ark_runtime_guide.md"
-        with open(guide_path, "r") as f:
-            comprehensive_guide = f.read()
-    except FileNotFoundError:
-        comprehensive_guide = (
-            "ARK Runtime guide file not found. Please check the ark_runtime_guide.md "
-            "file in the src/ark_runtime_mcp directory."
-        )
-
-    return (
-        f"ARK Runtime Platform CRDs:\n\n{crds_json['stdout']}\n\n"
-        f"Resource Schemas:{''.join(schemas)}\n{comprehensive_guide}"
-    )
-
-
 if __name__ == "__main__":
     print("📦 MCP Server: ark-runtime", flush=True)
     print(
-        "🔧 Dedicated Tools: kubectl, helm, python, ark-status, ark-runtime-101, system-info",
+        "🔧 Dedicated Tools: kubectl, helm, python, ark-status, system-info",
         flush=True,
     )
     print("⚡ General Tool: bash (for utilities without dedicated tools)", flush=True)
