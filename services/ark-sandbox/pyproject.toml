@@ -1,0 +1,38 @@
+[project]
+name = "ark-sandbox"
+version = "0.1.0"
+description = "ARK Sandbox - Kubernetes controller and MCP server for managing isolated dev sandbox containers"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=0.6.0",
+    "kubernetes>=31.0.0",
+    "kopf>=1.37.0",
+    "uvicorn>=0.30.0",
+    "starlette>=0.50.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pyyaml>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+

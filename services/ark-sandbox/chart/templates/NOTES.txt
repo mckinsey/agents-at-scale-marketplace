@@ -1,0 +1,58 @@
+ARK Sandbox has been deployed!
+
+=== Service Information ===
+
+Service: {{ .Values.service.name }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+MCP Endpoint: http://{{ .Values.service.name }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+=== MCP Tools ===
+
+The following tools are available via the MCP server:
+
+- create_sandbox: Create a new sandbox container
+- delete_sandbox: Delete a sandbox
+- execute_command: Execute a command in a sandbox
+- upload_file: Upload a file to a sandbox
+- download_file: Download a file from a sandbox
+- get_sandbox_logs: Get logs from a sandbox
+- list_sandboxes: List all sandboxes
+
+=== Port Forwarding ===
+
+To access the MCP server locally:
+
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ .Values.service.name }} 2628:{{ .Values.service.port }}
+
+{{- if .Values.httpRoute.enabled }}
+
+=== HTTPRoute ===
+
+HTTPRoute is enabled. Access the service at:
+{{- range .Values.httpRoute.hostnames }}
+  http://{{ . }}:8080
+{{- end }}
+{{- end }}
+
+=== CRDs ===
+
+The following CRDs are available:
+
+- Sandbox (sandboxes.ark.mckinsey.com)
+- SandboxTemplate (sandboxtemplates.ark.mckinsey.com)
+- SandboxPool (sandboxpools.ark.mckinsey.com)
+
+Example Sandbox:
+
+  apiVersion: ark.mckinsey.com/v1alpha1
+  kind: Sandbox
+  metadata:
+    name: my-sandbox
+  spec:
+    image: python:3.12-slim
+    ttlMinutes: 60
+
+=== Documentation ===
+
+For more information, see:
+https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/ark-sandbox
+

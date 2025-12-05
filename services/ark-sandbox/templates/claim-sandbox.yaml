@@ -1,0 +1,67 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: ark-sandbox-claim
+  annotations:
+    workflows.argoproj.io/description: "Claim a sandbox from a warm pool"
+spec:
+  templates:
+    - name: claim
+      inputs:
+        parameters:
+          - name: pool-name
+            description: "Name of the SandboxPool to claim from"
+          - name: pvc-name
+            value: ""
+            description: "Optional PVC name to attach at /shared"
+          - name: namespace
+            value: "default"
+            description: "Kubernetes namespace"
+      outputs:
+        parameters:
+          - name: sandbox-id
+            valueFrom:
+              path: /tmp/sandbox-id
+          - name: sandbox-namespace
+            valueFrom:
+              path: /tmp/sandbox-namespace
+      script:
+        image: bitnami/kubectl:latest
+        command: [bash]
+        source: |
+          set -e
+          POOL="{{inputs.parameters.pool-name}}"
+          NAMESPACE="{{inputs.parameters.namespace}}"
+          PVC_NAME="{{inputs.parameters.pvc-name}}"
+
+          echo "Looking for available sandbox in pool $POOL..."
+
+          # Find unclaimed sandbox from pool
+          SANDBOX=$(kubectl get sandbox -n $NAMESPACE \
+            -l ark.mckinsey.com/pool=$POOL,ark.mckinsey.com/claimed!=true \
+            --field-selector=status.phase=Running \
+            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+
+          if [ -z "$SANDBOX" ]; then
+            echo "ERROR: No available sandbox in pool $POOL"
+            exit 1
+          fi
+
+          echo "Found sandbox: $SANDBOX"
+
+          # Claim it by adding label
+          kubectl label sandbox $SANDBOX -n $NAMESPACE ark.mckinsey.com/claimed=true --overwrite
+
+          # Optionally attach PVC
+          if [ -n "$PVC_NAME" ]; then
+            echo "Attaching PVC $PVC_NAME to sandbox..."
+            kubectl patch sandbox $SANDBOX -n $NAMESPACE --type=merge \
+              -p "{\"spec\":{\"pvcName\":\"$PVC_NAME\"}}"
+          fi
+
+          # Output sandbox details
+          echo -n "$SANDBOX" > /tmp/sandbox-id
+          echo -n "$NAMESPACE" > /tmp/sandbox-namespace
+
+          echo "Successfully claimed sandbox: $SANDBOX"
+

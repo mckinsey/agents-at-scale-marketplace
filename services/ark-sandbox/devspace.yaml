@@ -1,0 +1,70 @@
+# DevSpace configuration for ARK Sandbox
+version: v2beta1
+
+vars:
+  HTTPROUTE_ENABLED:
+    command: |-
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "true"
+      else
+        echo "false"
+      fi
+
+images:
+  ark-sandbox:
+    image: ark-sandbox
+    dockerfile: Dockerfile
+    context: .
+
+pipelines:
+  deploy: |-
+    build_images --all
+    create_deployments --all
+  dev: |-
+    build_images --all
+    create_deployments --all
+
+deployments:
+  ark-sandbox:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart
+      values:
+        app:
+          image:
+            repository: ${runtime.images.ark-sandbox.image}
+            tag: ${runtime.images.ark-sandbox.tag}
+        httpRoute:
+          enabled: ${HTTPROUTE_ENABLED}
+        mcpServer:
+          enabled: true
+
+hooks:
+  - command: |-
+      # Apply CRDs first
+      echo "Installing Sandbox CRDs..."
+      kubectl apply -f chart/crds/
+
+      # Check if Gateway API HTTPRoute CRD exists
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "✓ Gateway API HTTPRoute CRD found - HTTPRoute will be created"
+      else
+        echo "✗ Gateway API HTTPRoute CRD not found - HTTPRoute will be skipped"
+      fi
+    events: ["before:deploy:ark-sandbox"]
+  - command: |-
+      echo ""
+      echo "=== ARK Sandbox Deployed ==="
+      echo ""
+      echo "Service: ark-sandbox.default.svc.cluster.local:80"
+      echo "MCP Endpoint: http://ark-sandbox.default.svc.cluster.local:80"
+      echo ""
+      echo "Port-forward: kubectl port-forward -n default svc/ark-sandbox 2628:80"
+      echo ""
+      echo "HTTPRoute: http://ark-sandbox.default.127.0.0.1.nip.io:8080"
+      echo ""
+      echo "Check MCP tools:"
+      echo "  kubectl get tools -n default | grep ark-sandbox"
+      echo ""
+    events: ["after:deploy:ark-sandbox"]
