@@ -106,6 +106,20 @@ async def sandbox_created(
 
         return {"pod_name": pod.metadata.name}
 
+    except ApiException as e:
+        if e.status == 409:
+            # Pod already exists - this is fine, just update status to track it
+            logger.info(f"Pod {name} already exists for sandbox {name}, using existing pod")
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
+            patch.status["phase"] = "Pending"
+            patch.status["podName"] = name
+            patch.status["expiresAt"] = expires_at.isoformat()
+            return {"pod_name": name}
+        else:
+            logger.error(f"Failed to create pod for sandbox {name}: {e}")
+            patch.status["phase"] = "Terminated"
+            patch.status["message"] = str(e)
+            raise kopf.PermanentError(f"Failed to create pod: {e}")
     except Exception as e:
         logger.error(f"Failed to create pod for sandbox {name}: {e}")
         patch.status["phase"] = "Terminated"
