@@ -40,6 +40,8 @@ jobs:
           - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: false }
           # disable phoenix deployment tests for PRs to avoid hitting 5m limit
           - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
+          # disable a2a-inspector deployment tests for PRs to avoid hitting 5m limit
+          - { name: a2a-inspector, path: services/a2a-inspector, namespace: default, run-deployment-test: false }
           # disable mcp-inspector deployment tests for PRs to avoid hitting 5m limit
           - { name: mcp-inspector, path: services/mcp-inspector, namespace: default, run-deployment-test: false }
           # disable noah deployment tests for PRs to avoid hitting 5m limit
@@ -144,6 +146,7 @@ jobs:
         chart:
           - { name: langfuse, path: services/langfuse, namespace: langfuse }
           - { name: phoenix, path: services/phoenix, namespace: phoenix }
+          - { name: a2a-inspector, path: services/a2a-inspector, namespace: default }
           - { name: mcp-inspector, path: services/mcp-inspector, namespace: default }
           - { name: noah, path: agents/noah, namespace: noah }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml

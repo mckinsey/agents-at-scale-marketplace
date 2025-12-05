@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.6...marketplace-docs-v0.1.7) (2025-12-05)
+
+
+### Features
+
+* add a2a-inspector service ([#79](https://github.com/mckinsey/agents-at-scale-marketplace/issues/79)) ([6ef6b68](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6ef6b68e18a0e16236d1441f32d443a96d4d7d46))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.5...marketplace-docs-v0.1.6) (2025-12-03)
 
 

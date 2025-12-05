@@ -1,0 +1,15 @@
+A2A Inspector has been deployed!
+
+{{- if .Values.httpRoute.enabled }}
+
+Access via:
+  http://a2a-inspector.{{ .Release.Namespace }}.127.0.0.1.nip.io:8080
+{{- end }}
+
+Port forward:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "a2a-inspector.fullname" . }} 8080:8080
+
+Usage:
+  1. Connect to an A2A agent by entering its URL
+  2. View the agent card and perform spec compliance checks
+  3. Use the chat interface to interact with the agent

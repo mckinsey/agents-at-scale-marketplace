@@ -32,6 +32,7 @@ Services are designed to integrate seamlessly with the [ARK platform](https://gi
 
 | Service                                       | Description                                                                | Chart                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
+| [`a2a-inspector`](./services/a2a-inspector)   | Developer tool for testing and debugging A2A protocol agents               | [Chart](./services/a2a-inspector/chart)    |
 | [`langfuse`](./services/langfuse)             | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart)         |
 | [`mcp-inspector`](./services/mcp-inspector)   | Developer tool for testing and debugging MCP servers                       | [Chart](./services/mcp-inspector/chart)    |
 | [`phoenix`](./services/phoenix)               | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)          |
@@ -52,6 +53,7 @@ The easiest way to install marketplace services and agents is using the [ARK CLI
 
 ```bash
 # Install services
+ark install marketplace/services/a2a-inspector
 ark install marketplace/services/langfuse
 ark install marketplace/services/mcp-inspector
 ark install marketplace/services/phoenix
