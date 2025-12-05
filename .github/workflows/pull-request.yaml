@@ -9,45 +9,18 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  validate-pr-title:
-    name: Validate PR Title
-    uses: ./.github/workflows/_reusable-validate-pr-title.yaml
-
-  validate-docs:
-    name: Validate Documentation
-    uses: ./.github/workflows/_reusable-docs-cicd.yaml
-
-  build-docker-images:
-    name: Build Docker Image - ${{ matrix.service.name }}
-    strategy:
-      matrix:
-        service:
-          - { name: noah, path: agents/noah }
-    uses: ./.github/workflows/_reusable-docker-cicd.yaml
-    with:
-      service-name: ${{ matrix.service.name }}
-      service-path: ${{ matrix.service.path }}
-      push-to-registry: false
-
-  validate-charts:
-    name: Validate Chart - ${{ matrix.chart.name }}
+  deploy-charts:
+    name: Deploy Chart - ${{ matrix.chart.name }}
     strategy:
       matrix:
         chart:
-          # disable langfuse deployment tests for PRs to avoid hitting 5m limit
-          - { name: langfuse, path: services/langfuse, namespace: langfuse, run-deployment-test: false }
-          # disable phoenix deployment tests for PRs to avoid hitting 5m limit
-          - { name: phoenix, path: services/phoenix, namespace: phoenix, run-deployment-test: false }
-          # disable a2a-inspector deployment tests for PRs to avoid hitting 5m limit
-          - { name: a2a-inspector, path: services/a2a-inspector, namespace: default, run-deployment-test: false }
-          # disable mcp-inspector deployment tests for PRs to avoid hitting 5m limit
-          - { name: mcp-inspector, path: services/mcp-inspector, namespace: default, run-deployment-test: false }
-          # disable noah deployment tests for PRs to avoid hitting 5m limit
-          - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
+          - { name: noah, path: agents/noah, namespace: noah }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
       chart-path: ${{ matrix.chart.path }}
       chart-namespace: ${{ matrix.chart.namespace }}
-      upload-artifact: false
-      run-deployment-test: ${{ matrix.chart.run-deployment-test }}
+      upload-artifact: true
+      deploy-to-registry: true
+      run-deployment-test: false
+      release-tag: 0.1.5
