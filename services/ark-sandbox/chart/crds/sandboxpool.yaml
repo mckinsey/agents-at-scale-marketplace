@@ -1,0 +1,107 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sandboxpools.ark.mckinsey.com
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: ark.mckinsey.com
+  names:
+    kind: SandboxPool
+    listKind: SandboxPoolList
+    plural: sandboxpools
+    singular: sandboxpool
+    shortNames:
+      - sbxpool
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: SandboxPool manages a warm pool of pre-created sandboxes
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: SandboxPoolSpec defines the desired pool configuration
+              required:
+                - templateRef
+                - minSize
+              properties:
+                templateRef:
+                  type: object
+                  description: Reference to a SandboxTemplate for creating pool sandboxes
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the SandboxTemplate
+                minSize:
+                  type: integer
+                  description: Minimum number of warm (unclaimed) sandboxes to maintain
+                  minimum: 0
+                  maximum: 100
+                maxSize:
+                  type: integer
+                  description: "Maximum total sandboxes in the pool (default: minSize * 2)"
+                  minimum: 1
+                  maximum: 200
+            status:
+              type: object
+              description: SandboxPoolStatus defines the observed state of a SandboxPool
+              properties:
+                readyCount:
+                  type: integer
+                  description: Number of warm (unclaimed, running) sandboxes
+                claimedCount:
+                  type: integer
+                  description: Number of claimed sandboxes
+                sandboxes:
+                  type: array
+                  description: Names of all sandboxes in the pool
+                  items:
+                    type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Min
+          type: integer
+          jsonPath: .spec.minSize
+        - name: Max
+          type: integer
+          jsonPath: .spec.maxSize
+        - name: Ready
+          type: integer
+          jsonPath: .status.readyCount
+        - name: Claimed
+          type: integer
+          jsonPath: .status.claimedCount
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+

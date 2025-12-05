@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: ark-sandbox-wait
+  annotations:
+    workflows.argoproj.io/description: "Wait for a sandbox to be ready"
+spec:
+  templates:
+    - name: wait-ready
+      inputs:
+        parameters:
+          - name: sandbox-id
+            description: "Sandbox identifier (name)"
+          - name: namespace
+            value: "default"
+            description: "Kubernetes namespace"
+          - name: timeout
+            value: "120s"
+            description: "Maximum time to wait for sandbox to be ready"
+      script:
+        image: bitnami/kubectl:latest
+        command: [bash]
+        source: |
+          set -e
+          SANDBOX="{{inputs.parameters.sandbox-id}}"
+          NAMESPACE="{{inputs.parameters.namespace}}"
+          TIMEOUT="{{inputs.parameters.timeout}}"
+          
+          echo "Waiting for sandbox $SANDBOX to be ready..."
+          
+          kubectl wait sandbox $SANDBOX \
+            -n $NAMESPACE \
+            --for=jsonpath='{.status.phase}'=Running \
+            --timeout=$TIMEOUT
+          
+          echo "Sandbox $SANDBOX is ready"
+          
+          # Output sandbox details
+          kubectl get sandbox $SANDBOX -n $NAMESPACE -o jsonpath='{.status}'
+

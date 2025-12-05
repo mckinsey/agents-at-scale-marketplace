@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: ark-sandbox-delete
+  annotations:
+    workflows.argoproj.io/description: "Delete an ARK Sandbox"
+spec:
+  templates:
+    - name: delete
+      inputs:
+        parameters:
+          - name: sandbox-id
+            description: "Sandbox identifier (name)"
+          - name: namespace
+            value: "default"
+            description: "Kubernetes namespace containing the sandbox"
+      resource:
+        action: delete
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Sandbox
+          metadata:
+            name: {{inputs.parameters.sandbox-id}}
+            namespace: {{inputs.parameters.namespace}}
+

@@ -1,0 +1,141 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sandboxes.ark.mckinsey.com
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: ark.mckinsey.com
+  names:
+    kind: Sandbox
+    listKind: SandboxList
+    plural: sandboxes
+    singular: sandbox
+    shortNames:
+      - sbx
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Sandbox is an isolated container environment for code execution
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: SandboxSpec defines the desired state of a Sandbox
+              properties:
+                image:
+                  type: string
+                  description: Container image to use for the sandbox
+                  default: "python:3.12-slim"
+                ttlMinutes:
+                  type: integer
+                  description: Time-to-live in minutes before automatic cleanup
+                  default: 120
+                  minimum: 1
+                  maximum: 1440
+                pvcName:
+                  type: string
+                  description: Optional PVC name to mount at /shared
+                resources:
+                  type: object
+                  description: Resource requirements for the sandbox container
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        x-kubernetes-int-or-string: true
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        x-kubernetes-int-or-string: true
+                templateRef:
+                  type: object
+                  description: Reference to a SandboxTemplate
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the SandboxTemplate
+                  required:
+                    - name
+            status:
+              type: object
+              description: SandboxStatus defines the observed state of a Sandbox
+              properties:
+                phase:
+                  type: string
+                  description: Current phase of the sandbox
+                  enum:
+                    - Pending
+                    - Running
+                    - Paused
+                    - Terminated
+                podName:
+                  type: string
+                  description: Name of the underlying pod
+                podIP:
+                  type: string
+                  description: IP address of the pod
+                startedAt:
+                  type: string
+                  format: date-time
+                  description: Timestamp when sandbox started running
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: Timestamp when sandbox will expire
+                message:
+                  type: string
+                  description: Human-readable message about current state
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Image
+          type: string
+          jsonPath: .spec.image
+          priority: 1
+        - name: Pod
+          type: string
+          jsonPath: .status.podName
+          priority: 1
+        - name: Expires
+          type: date
+          jsonPath: .status.expiresAt
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+

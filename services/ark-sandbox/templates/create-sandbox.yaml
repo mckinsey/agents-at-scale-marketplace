@@ -1,0 +1,103 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: ark-sandbox-create
+  annotations:
+    workflows.argoproj.io/description: "Create a new ARK Sandbox container"
+spec:
+  templates:
+    - name: create
+      inputs:
+        parameters:
+          - name: image
+            default: "python:3.12-slim"
+          - name: ttl-minutes
+            default: "120"
+          - name: pvc-name
+            default: ""
+          - name: namespace
+            default: "default"
+          - name: cpu-limit
+            default: "1"
+          - name: memory-limit
+            default: "2Gi"
+      outputs:
+        parameters:
+          - name: sandbox-id
+            valueFrom:
+              jsonPath: "{.metadata.name}"
+          - name: sandbox-namespace
+            valueFrom:
+              jsonPath: "{.metadata.namespace}"
+      resource:
+        action: create
+        setOwnerReference: true
+        successCondition: status.phase == Running
+        failureCondition: status.phase == Terminated
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Sandbox
+          metadata:
+            generateName: sandbox-
+            namespace: "{{inputs.parameters.namespace}}"
+          spec:
+            image: "{{inputs.parameters.image}}"
+            ttlMinutes: {{inputs.parameters.ttl-minutes}}
+            resources:
+              limits:
+                cpu: "{{inputs.parameters.cpu-limit}}"
+                memory: "{{inputs.parameters.memory-limit}}"
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+
+    # Template with PVC support
+    - name: create-with-pvc
+      inputs:
+        parameters:
+          - name: image
+            default: "python:3.12-slim"
+          - name: ttl-minutes
+            default: "120"
+          - name: pvc-name
+          - name: namespace
+            default: "default"
+          - name: cpu-limit
+            default: "1"
+          - name: memory-limit
+            default: "2Gi"
+          - name: workflow-name
+            default: ""
+      outputs:
+        parameters:
+          - name: sandbox-id
+            valueFrom:
+              jsonPath: "{.metadata.name}"
+          - name: sandbox-namespace
+            valueFrom:
+              jsonPath: "{.metadata.namespace}"
+      resource:
+        action: create
+        setOwnerReference: true
+        successCondition: status.phase == Running
+        failureCondition: status.phase == Terminated
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Sandbox
+          metadata:
+            generateName: sandbox-
+            namespace: "{{inputs.parameters.namespace}}"
+            labels:
+              ark.mckinsey.com/workflow: "{{inputs.parameters.workflow-name}}"
+          spec:
+            image: "{{inputs.parameters.image}}"
+            ttlMinutes: {{inputs.parameters.ttl-minutes}}
+            pvcName: "{{inputs.parameters.pvc-name}}"
+            resources:
+              limits:
+                cpu: "{{inputs.parameters.cpu-limit}}"
+                memory: "{{inputs.parameters.memory-limit}}"
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+
