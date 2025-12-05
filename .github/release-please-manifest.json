@@ -1,9 +1,9 @@
 {
-  ".": "0.1.12",
-  "docs": "0.1.6",
+  ".": "0.1.13",
+  "docs": "0.1.7",
   "services/langfuse": "0.1.5",
   "services/phoenix": "0.1.6",
-  "services/a2a-inspector": "0.1.0",
+  "services/a2a-inspector": "0.1.1",
   "services/mcp-inspector": "0.1.1",
-  "agents/noah": "0.1.4"
+  "agents/noah": "0.1.5"
 }
