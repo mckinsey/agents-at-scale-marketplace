@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.14](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.13...v0.1.14) (2025-12-05)
+
+
+### Bug Fixes
+
+* noah context and tools ([#80](https://github.com/mckinsey/agents-at-scale-marketplace/issues/80)) ([f786ba9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f786ba99f3e3ae8a68843c2ccd315af4130bf263))
+
 ## [0.1.13](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.12...v0.1.13) (2025-12-05)
 
 
