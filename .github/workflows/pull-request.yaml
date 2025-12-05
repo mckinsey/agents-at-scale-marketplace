@@ -23,4 +23,4 @@ jobs:
       upload-artifact: true
       deploy-to-registry: true
       run-deployment-test: false
-      release-tag: 0.1.5
+      release-tag: "noah-v0.1.5"
