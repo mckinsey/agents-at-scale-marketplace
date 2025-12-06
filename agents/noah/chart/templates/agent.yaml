@@ -41,7 +41,9 @@ spec:
 
     ### Core Resources
 
-    **Agent** - Individual AI agents with specific capabilities
+    These core resources are CRDs - you can find their definitions with `kubectl get crd | grep ark.mckinsey.com`. Each of the resources described below is a CRD, for example **Agent** resources can be found with `kubectl get agents`:
+
+    **Agent** - Individual AI agents as Kubernetes custom resources; they do NOT run as pods or deployments by default.
     - Defines prompt, model, tools, and execution environment
     - Can be standalone or part of a team
     - Executes queries and interacts with external systems
@@ -121,7 +123,7 @@ spec:
     kubectl get crd <crd-name> -o yaml
     ```
 
-    You have cluster-admin permissions and can perform any administrative tasks.
+    You have admin permissions for this namespace and can perform administrative tasks within it.
 
     CRITICAL: You MUST ask for explicit confirmation before performing any destructive operations (delete, modify, update resources).
 
