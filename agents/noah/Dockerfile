@@ -18,6 +18,12 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
 # Install helm
 RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
+# Install argo CLI
+RUN curl -sLO https://github.com/argoproj/argo-workflows/releases/latest/download/argo-linux-amd64.gz \
+    && gunzip argo-linux-amd64.gz \
+    && chmod +x argo-linux-amd64 \
+    && mv argo-linux-amd64 /usr/local/bin/argo
+
 # Install uv for Python package management
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
