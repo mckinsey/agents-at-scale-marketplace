@@ -8,9 +8,10 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: noah-admin
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: noah
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -20,15 +21,16 @@ rules:
   verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: noah-admin-binding
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: noah
     app.kubernetes.io/instance: {{ .Release.Name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: noah-admin
 subjects:
 - kind: ServiceAccount
