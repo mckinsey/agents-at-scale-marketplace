@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.15](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.14...v0.1.15) (2025-12-12)
+
+
+### Features
+
+* Ark Sandbox ([#83](https://github.com/mckinsey/agents-at-scale-marketplace/issues/83)) ([260097d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/260097dfe024ac8721e2d950c27e7bb3ae3e8f60))
+
+
+### Bug Fixes
+
+* scope noah RBAC to namespace and add argo CLI ([#86](https://github.com/mckinsey/agents-at-scale-marketplace/issues/86)) ([33a2cd8](https://github.com/mckinsey/agents-at-scale-marketplace/commit/33a2cd84abca905f6d0f97c492600c5d3dee5049))
+
 ## [0.1.14](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.13...v0.1.14) (2025-12-05)
 
 

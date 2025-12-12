@@ -2,6 +2,13 @@
 
 All notable changes to ARK Sandbox will be documented in this file.
 
+## [0.1.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.0...ark-sandbox-v0.1.1) (2025-12-12)
+
+
+### Features
+
+* Ark Sandbox ([#83](https://github.com/mckinsey/agents-at-scale-marketplace/issues/83)) ([260097d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/260097dfe024ac8721e2d950c27e7bb3ae3e8f60))
+
 ## [0.1.0] - 2025-12-05
 
 ### Added
@@ -24,4 +31,3 @@ All notable changes to ARK Sandbox will be documented in this file.
 - HTTPRoute support for Gateway API
 - MCPServer registration for ARK tool discovery
 - Argo WorkflowTemplates for workflow integration
-
