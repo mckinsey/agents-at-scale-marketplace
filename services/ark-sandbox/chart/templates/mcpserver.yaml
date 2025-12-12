@@ -1,0 +1,22 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: {{ .Values.mcpServer.description | quote }}
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ .Values.service.name }}
+        port: "http"
+  transport: http
+  pollInterval: {{ .Values.mcpServer.pollInterval }}
+  timeout: {{ .Values.mcpServer.timeout }}
+{{- end }}
+

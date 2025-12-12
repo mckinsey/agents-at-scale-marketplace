@@ -1,0 +1,74 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sandboxtemplates.ark.mckinsey.com
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: ark.mckinsey.com
+  names:
+    kind: SandboxTemplate
+    listKind: SandboxTemplateList
+    plural: sandboxtemplates
+    singular: sandboxtemplate
+    shortNames:
+      - sbxtpl
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: SandboxTemplate defines a reusable sandbox configuration
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              description: SandboxTemplateSpec defines the template configuration
+              properties:
+                image:
+                  type: string
+                  description: Container image to use
+                  default: "python:3.12-slim"
+                ttlMinutes:
+                  type: integer
+                  description: Default TTL for sandboxes created from this template
+                  default: 120
+                  minimum: 1
+                  maximum: 1440
+                resources:
+                  type: object
+                  description: Default resource requirements
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        x-kubernetes-int-or-string: true
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        x-kubernetes-int-or-string: true
+      additionalPrinterColumns:
+        - name: Image
+          type: string
+          jsonPath: .spec.image
+        - name: TTL
+          type: integer
+          jsonPath: .spec.ttlMinutes
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+

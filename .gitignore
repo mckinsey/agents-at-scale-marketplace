@@ -6,3 +6,11 @@ Thumbs.db
 .vscode/
 .idea/
 *.iml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so

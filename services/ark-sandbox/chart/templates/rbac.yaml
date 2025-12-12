@@ -1,0 +1,79 @@
+{{- if .Values.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.app.name }}-role
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+rules:
+  # CRD discovery for kopf operator
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  # Pod management for sandbox containers
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "delete", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Sandbox CRD management
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["sandboxes"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["sandboxes/status"]
+    verbs: ["get", "update", "patch"]
+  # SandboxTemplate CRD management
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["sandboxtemplates"]
+    verbs: ["get", "list", "watch"]
+  # SandboxPool CRD management
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["sandboxpools"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["sandboxpools/status"]
+    verbs: ["get", "update", "patch"]
+  # Events for controller status reporting
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Coordination for leader election (kopf)
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.app.name }}-binding
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.app.name }}-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+

@@ -111,6 +111,33 @@
       }
     },
     {
+      "name": "ark-sandbox",
+      "type": "service",
+      "displayName": "ARK Sandbox",
+      "description": "Isolated container environments for AI agent code execution with MCP tool access",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["sandbox", "execution", "containers", "mcp", "development"],
+      "category": "development",
+      "icon": "https://example.com/ark-sandbox-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/ark-sandbox/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/ark-sandbox",
+        "namespace": "default",
+        "helmReleaseName": "ark-sandbox",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "ark-sandbox",
+        "k8sServicePort": 80,
+        "k8sDeploymentName": "ark-sandbox"
+      }
+    },
+    {
       "name": "noah",
       "type": "agent",
       "displayName": "Noah",
@@ -139,4 +166,3 @@
     }
   ]
 }
-

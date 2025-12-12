@@ -23,6 +23,7 @@ jobs:
       matrix:
         service:
           - { name: noah, path: agents/noah }
+          - { name: ark-sandbox, path: services/ark-sandbox }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -42,6 +43,8 @@ jobs:
           - { name: a2a-inspector, path: services/a2a-inspector, namespace: default, run-deployment-test: false }
           # disable mcp-inspector deployment tests for PRs to avoid hitting 5m limit
           - { name: mcp-inspector, path: services/mcp-inspector, namespace: default, run-deployment-test: false }
+          # disable ark-sandbox deployment tests for PRs to avoid hitting 5m limit
+          - { name: ark-sandbox, path: services/ark-sandbox, namespace: default, run-deployment-test: false }
           # disable noah deployment tests for PRs to avoid hitting 5m limit
           - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml

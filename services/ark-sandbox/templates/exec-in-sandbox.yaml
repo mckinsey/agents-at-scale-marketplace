@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: ark-sandbox-exec
+  annotations:
+    workflows.argoproj.io/description: "Execute a command in a sandbox (for procedural workflow steps)"
+spec:
+  templates:
+    - name: exec
+      inputs:
+        parameters:
+          - name: sandbox-id
+            description: "Sandbox identifier (name)"
+          - name: command
+            description: "Shell command to execute"
+          - name: working-dir
+            value: "/workspace"
+            description: "Working directory for command execution"
+          - name: namespace
+            value: "default"
+            description: "Kubernetes namespace"
+      outputs:
+        parameters:
+          - name: stdout
+            valueFrom:
+              path: /tmp/stdout
+          - name: exit-code
+            valueFrom:
+              path: /tmp/exit-code
+      script:
+        image: bitnami/kubectl:latest
+        command: [bash]
+        source: |
+          set -e
+          SANDBOX="{{inputs.parameters.sandbox-id}}"
+          NAMESPACE="{{inputs.parameters.namespace}}"
+          WORKING_DIR="{{inputs.parameters.working-dir}}"
+          
+          # Get pod name from Sandbox status
+          POD=$(kubectl get sandbox $SANDBOX -n $NAMESPACE \
+            -o jsonpath='{.status.podName}')
+          
+          if [ -z "$POD" ]; then
+            echo "ERROR: Sandbox $SANDBOX has no pod" >&2
+            echo "1" > /tmp/exit-code
+            exit 1
+          fi
+          
+          echo "Executing command in pod $POD..."
+          
+          # Execute command and capture output
+          set +e
+          kubectl exec $POD -n $NAMESPACE -- sh -c "cd $WORKING_DIR && {{inputs.parameters.command}}" > /tmp/stdout 2>&1
+          EXIT_CODE=$?
+          set -e
+          
+          echo "$EXIT_CODE" > /tmp/exit-code
+          
+          # Show output
+          echo "=== Command Output ==="
+          cat /tmp/stdout
+          echo "=== Exit Code: $EXIT_CODE ==="
+          
+          # Exit with the command's exit code
+          exit $EXIT_CODE
+
