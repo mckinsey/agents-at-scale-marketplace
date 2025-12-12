@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.14](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.13...v0.1.14) (2025-12-05)
+
+
+### Bug Fixes
+
+* noah context and tools ([#80](https://github.com/mckinsey/agents-at-scale-marketplace/issues/80)) ([f786ba9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f786ba99f3e3ae8a68843c2ccd315af4130bf263))
+
+## [0.1.13](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.12...v0.1.13) (2025-12-05)
+
+
+### Features
+
+* add a2a-inspector service ([#79](https://github.com/mckinsey/agents-at-scale-marketplace/issues/79)) ([6ef6b68](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6ef6b68e18a0e16236d1441f32d443a96d4d7d46))
+
+
+### Bug Fixes
+
+* noah agent skip validation for ark install ([#82](https://github.com/mckinsey/agents-at-scale-marketplace/issues/82)) ([f4cfef7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f4cfef79077585148632c317c81408e5b5760ddb))
+
 ## [0.1.12](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.11...v0.1.12) (2025-12-03)
 
 
