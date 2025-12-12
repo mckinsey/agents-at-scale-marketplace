@@ -43,6 +43,14 @@
         "chart/Chart.yaml"
       ]
     },
+    "services/ark-sandbox": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "ark-sandbox",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
+    },
     "agents/noah": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",

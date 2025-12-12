@@ -5,5 +5,6 @@
   "services/phoenix": "0.1.6",
   "services/a2a-inspector": "0.1.0",
   "services/mcp-inspector": "0.1.1",
+  "services/ark-sandbox": "0.1.0",
   "agents/noah": "0.1.4"
 }

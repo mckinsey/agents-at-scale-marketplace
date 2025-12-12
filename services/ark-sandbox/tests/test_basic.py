@@ -59,3 +59,4 @@ def test_controller_pool_import():
     assert hasattr(pool, 'pool_deleted')
     assert hasattr(pool, 'pool_timer')
 
+

@@ -184,3 +184,4 @@ class TestTemplateNamingConventions:
         assert "workflows.argoproj.io/description" in annotations, \
             f"{template_file.name} should have a description annotation"
 
+
