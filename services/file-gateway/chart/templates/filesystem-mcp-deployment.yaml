@@ -1,0 +1,80 @@
+{{- if .Values.filesystemMcp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "file-gateway.fullname" . }}-filesystem-mcp
+  labels:
+    {{- include "file-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: filesystem-mcp
+spec:
+  replicas: {{ .Values.filesystemMcp.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "file-gateway.filesystemMcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "file-gateway.filesystemMcp.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "file-gateway.filesystemMcp.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.filesystemMcp.podSecurityContext | nindent 8 }}
+      initContainers:
+      - name: create-directories
+        image: busybox:latest
+        command: ['sh', '-c', 'mkdir -p {{ .Values.filesystemMcp.config.dataPath }}/{{ .Values.filesystemMcp.config.bucketName }} {{ .Values.filesystemMcp.config.dataPath }}/sessions']
+        volumeMounts:
+        - name: data
+          mountPath: {{ .Values.filesystemMcp.config.dataPath }}
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+      containers:
+      - name: filesystem-mcp
+        securityContext:
+          {{- toYaml .Values.filesystemMcp.securityContext | nindent 12 }}
+        image: "{{ .Values.filesystemMcp.image.repository }}:{{ .Values.filesystemMcp.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.filesystemMcp.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.filesystemMcp.config.port | int }}
+          protocol: TCP
+        env:
+        - name: HOME
+          value: /tmp
+        - name: HOST
+          value: {{ .Values.filesystemMcp.config.host | quote }}
+        - name: PORT
+          value: {{ .Values.filesystemMcp.config.port | quote }}
+        - name: LOG_LEVEL
+          value: {{ .Values.filesystemMcp.config.logLevel | quote }}
+        - name: DATA_PATH
+          value: {{ .Values.filesystemMcp.config.dataPath | quote }}
+        - name: BASE_DATA_DIR
+          value: {{ printf "%s/%s" .Values.filesystemMcp.config.dataPath .Values.filesystemMcp.config.bucketName | quote }}
+        volumeMounts:
+        - name: data
+          mountPath: {{ .Values.filesystemMcp.config.dataPath }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.filesystemMcp.resources | nindent 12 }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "file-gateway.pvcName" . }}
+{{- end }}

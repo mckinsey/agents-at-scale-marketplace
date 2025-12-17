@@ -1,0 +1,59 @@
+{{- if .Values.versitygw.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "file-gateway.fullname" . }}-versitygw
+  labels:
+    {{- include "file-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: versitygw
+spec:
+  replicas: {{ .Values.versitygw.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "file-gateway.versitygw.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "file-gateway.versitygw.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "file-gateway.versitygw.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.versitygw.podSecurityContext | nindent 8 }}
+      containers:
+      - name: versitygw
+        securityContext:
+          {{- toYaml .Values.versitygw.securityContext | nindent 12 }}
+        image: "{{ .Values.versitygw.image.repository }}:{{ .Values.versitygw.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.versitygw.image.pullPolicy }}
+        args:
+          - "posix"
+          - {{ .Values.versitygw.config.dataPath | quote }}
+        ports:
+        - name: s3
+          containerPort: {{ .Values.versitygw.config.port | int }}
+          protocol: TCP
+        env:
+        - name: ROOT_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "file-gateway.s3SecretName" . }}
+              key: access-key-id
+        - name: ROOT_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "file-gateway.s3SecretName" . }}
+              key: secret-access-key
+        - name: VGW_PORT
+          value: {{ printf ":%s" .Values.versitygw.config.port | quote }}
+        - name: VGW_REGION
+          value: {{ .Values.versitygw.config.region | quote }}
+        volumeMounts:
+        - name: data
+          mountPath: {{ .Values.versitygw.config.dataPath }}
+        resources:
+          {{- toYaml .Values.versitygw.resources | nindent 12 }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "file-gateway.pvcName" . }}
+{{- end }}

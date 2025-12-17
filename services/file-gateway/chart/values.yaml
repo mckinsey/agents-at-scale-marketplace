@@ -1,0 +1,158 @@
+global:
+  annotations:
+    ark.mckinsey.com/service: file-gateway
+
+storage:
+  enabled: true
+  size: 10Gi
+  storageClassName: ""
+  accessModes:
+    - ReadWriteMany
+  pvcName: ""
+
+httpRoute:
+  enabled: true
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  hostnames:
+    - "file-gateway.127.0.0.1.nip.io"
+    - "file-gateway.default.127.0.0.1.nip.io"
+
+versitygw:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/versity/versitygw
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  serviceAccount:
+    create: true
+    name: ""
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    type: ClusterIP
+    port: 7070
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  config:
+    region: "us-east-1"
+    port: "7070"
+    dataPath: "/data"
+
+  s3SecretName: "file-gateway-s3-credentials"
+
+  createSecret: true
+  s3Credentials:
+    accessKeyId: "admin"
+    secretAccessKey: ""
+
+filesystemMcp:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: filesystem-mcp-server
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  serviceAccount:
+    create: true
+    name: ""
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  config:
+    logLevel: INFO
+    host: "0.0.0.0"
+    port: "8000"
+    dataPath: "/data"
+    bucketName: "aas-files"
+
+fileApi:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: file-api
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  serviceAccount:
+    create: true
+    name: ""
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  config:
+    host: "0.0.0.0"
+    port: "8080"
+
+  cors:
+    origins: "http://localhost:3000"
+    allowCredentials: true
+    allowMethods: "*"
+    allowHeaders: "*"
