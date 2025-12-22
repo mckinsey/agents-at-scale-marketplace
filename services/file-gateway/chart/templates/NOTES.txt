@@ -1,0 +1,56 @@
+File Gateway has been installed!
+
+Resources:
+{{- if .Values.versitygw.enabled }}
+- VersityGW S3 API: {{ include "file-gateway.fullname" . }}-versitygw:{{ .Values.versitygw.service.port }}
+{{- end }}
+{{- if .Values.filesystemMcp.enabled }}
+- Filesystem MCP: {{ include "file-gateway.fullname" . }}-filesystem-mcp:{{ .Values.filesystemMcp.service.port }}
+{{- end }}
+{{- if .Values.fileApi.enabled }}
+- File API: {{ include "file-gateway.fullname" . }}-file-api:{{ .Values.fileApi.service.port }}
+{{- end }}
+{{- if .Values.storage.enabled }}
+- Shared Storage: {{ include "file-gateway.pvcName" . }} ({{ .Values.storage.size }})
+{{- end }}
+
+To verify the deployment:
+
+  kubectl get pods -l app.kubernetes.io/name={{ include "file-gateway.name" . }}
+  kubectl get pvc {{ include "file-gateway.pvcName" . }}
+  kubectl get svc -l app.kubernetes.io/name={{ include "file-gateway.name" . }}
+
+{{- if .Values.versitygw.enabled }}
+
+To test the S3 API (from within the cluster):
+
+  aws s3 ls --endpoint-url http://{{ include "file-gateway.fullname" . }}-versitygw:{{ .Values.versitygw.service.port }}
+
+{{- end }}
+{{- if .Values.filesystemMcp.enabled }}
+
+To test filesystem-mcp health:
+
+  kubectl exec -it deploy/{{ include "file-gateway.fullname" . }}-filesystem-mcp -- curl http://localhost:{{ .Values.filesystemMcp.service.port }}/health
+
+{{- end }}
+{{- if .Values.fileApi.enabled }}
+
+To test File API:
+
+  kubectl port-forward svc/{{ include "file-gateway.fullname" . }}-file-api {{ .Values.fileApi.service.port }}:{{ .Values.fileApi.service.port }}
+  curl http://localhost:{{ .Values.fileApi.service.port }}/health
+  curl http://localhost:{{ .Values.fileApi.service.port }}/files
+
+{{- end }}
+
+Configuration:
+- S3 Secret: {{ include "file-gateway.s3SecretName" . }}
+{{- if .Values.versitygw.createSecret }}
+  - Access Key ID: {{ .Values.versitygw.s3Credentials.accessKeyId }}
+  {{- if not .Values.versitygw.s3Credentials.secretAccessKey }}
+  - Secret Access Key: (auto-generated - retrieve with: kubectl get secret {{ include "file-gateway.s3SecretName" . }} -o jsonpath='{.data.secret-access-key}' | base64 -d)
+  {{- end }}
+{{- end }}
+- Bucket Name: {{ .Values.filesystemMcp.config.bucketName }}
+- Data Path: {{ include "file-gateway.filesystemMcp.dataPath" . }}
