@@ -1,13 +1,15 @@
+fullnameOverride: "file-gateway"
+
 global:
   annotations:
     ark.mckinsey.com/service: file-gateway
 
 storage:
   enabled: true
-  size: 10Gi
+  size: 1Gi
   storageClassName: ""
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   pvcName: ""
 
 httpRoute:
@@ -46,7 +48,7 @@ versitygw:
 
   service:
     type: ClusterIP
-    port: 7070
+    port: 80
 
   resources:
     limits:
@@ -66,14 +68,14 @@ versitygw:
   createSecret: true
   s3Credentials:
     accessKeyId: "admin"
-    secretAccessKey: ""
+    secretAccessKey: "change-me"
 
 filesystemMcp:
   enabled: true
   replicaCount: 1
 
   image:
-    repository: filesystem-mcp-server
+    repository: ghcr.io/mckinsey/agents-at-scale-ark/filesystem-mcp-server
     pullPolicy: IfNotPresent
     tag: "latest"
 
@@ -94,7 +96,7 @@ filesystemMcp:
 
   service:
     type: ClusterIP
-    port: 8000
+    port: 80
 
   resources:
     limits:
@@ -137,7 +139,7 @@ fileApi:
 
   service:
     type: ClusterIP
-    port: 8080
+    port: 80
 
   resources:
     limits:

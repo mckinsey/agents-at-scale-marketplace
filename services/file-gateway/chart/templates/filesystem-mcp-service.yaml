@@ -10,9 +10,9 @@ spec:
   type: {{ .Values.filesystemMcp.service.type }}
   ports:
   - port: {{ .Values.filesystemMcp.service.port }}
-    targetPort: http
+    targetPort: web
     protocol: TCP
-    name: http
+    name: web
   selector:
     {{- include "file-gateway.filesystemMcp.selectorLabels" . | nindent 4 }}
 {{- end }}

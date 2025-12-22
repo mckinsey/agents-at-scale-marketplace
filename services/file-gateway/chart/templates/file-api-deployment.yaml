@@ -26,7 +26,7 @@ spec:
         image: "{{ .Values.fileApi.image.repository }}:{{ .Values.fileApi.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.fileApi.image.pullPolicy }}
         ports:
-        - name: http
+        - name: web
           containerPort: {{ .Values.fileApi.config.port | int }}
           protocol: TCP
         env:
@@ -59,7 +59,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: http
+            port: web
           initialDelaySeconds: 10
           periodSeconds: 30
           timeoutSeconds: 5
@@ -67,7 +67,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health
-            port: http
+            port: web
           initialDelaySeconds: 5
           periodSeconds: 10
           timeoutSeconds: 5
