@@ -14,6 +14,35 @@ S3-compatible gateway for object storage, providing the underlying storage backe
 
 **Port:** 7070
 
+## Deployment
+
+### Deploying to [kind](https://kind.sigs.k8s.io/) clusters
+
+When deploying to Docker Desktop managed kind clusters, the registry-mirror may fail to pull external images. Use the following workaround to load images directly:
+
+#### Build the file-api image
+
+```bash
+cd services/file-api
+docker build -t file-api:latest .
+```
+
+#### Load the image to the cluster
+
+```bash
+# Load file-api image
+kind load docker-image file-api:latest --name <cluster-name>
+
+# Load busybox for init containers (if kind load fails with multi-platform issues)
+docker pull busybox:latest
+docker save busybox:latest | docker exec -i <cluster-name>-control-plane ctr --namespace=k8s.io images import -
+
+# Deploy with Helm
+helm upgrade --install file-gateway ./chart -n <namespace>
+```
+
+**Note**: The `values.yaml` uses `repository: file-api` (without registry prefix). This allows kubernetes to find the locally loaded image in containerd's cache.
+
 ## Development
 
 For local development, forward port 8080 to access the file gateway API:
