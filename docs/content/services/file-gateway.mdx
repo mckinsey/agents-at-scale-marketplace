@@ -1,0 +1,97 @@
+---
+title: File Gateway
+description: File management system with S3 operations through REST API and MCP server
+---
+
+# File Gateway
+
+A file management system providing S3 file operations through a REST API and MCP server for AI agents.
+
+## Overview
+
+File Gateway provides:
+- **File API** - FastAPI REST service for S3 file operations (list, upload, download, delete)
+- **MCP Server** - Model Context Protocol server for agent file access
+- **VersityGW** - S3-compatible gateway for object storage backend
+- **Persistent Storage** - Kubernetes PVC-backed storage
+
+## Install
+
+```bash
+ark install marketplace/services/file-gateway
+```
+
+Or with DevSpace:
+
+```bash
+cd services/file-gateway
+devspace deploy
+```
+
+Or with Helm:
+
+```bash
+helm install file-gateway ./chart -n default
+```
+
+Access via:
+- Port forward: `kubectl port-forward svc/file-gateway-file-api 8080:8080`
+- Ark Dashboard → [Files page](http://dashboard.127.0.0.1.nip.io:8080/files)
+
+## Services
+
+### File API
+
+FastAPI REST service for S3 file operations via VersityGW. Provides endpoints for listing, uploading, downloading, and deleting files from S3-compatible storage.
+
+**Port:** 8080
+
+### Filesystem MCP Server
+
+Model Context Protocol server that provides file system access tools for AI agents. Agents can interact with the file storage through MCP tools.
+
+**Port:** 8000
+
+### VersityGW
+
+S3-compatible gateway for object storage, providing the underlying storage backend.
+
+**Port:** 7070
+
+## Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `fileApi.image.repository` | File API container image | `ghcr.io/mckinsey/agents-at-scale-marketplace/file-api` |
+| `fileApi.service.port` | File API service port | `80` |
+| `filesystemMcp.enabled` | Enable MCP server | `true` |
+| `filesystemMcp.config.bucketName` | S3 bucket name | `aas-files` |
+| `versitygw.enabled` | Enable VersityGW | `true` |
+| `versitygw.service.port` | VersityGW service port | `80` |
+| `storage.enabled` | Enable persistent storage | `true` |
+| `storage.size` | Storage size | `1Gi` |
+| `httpRoute.enabled` | Enable Gateway API HTTPRoute | `true` |
+
+## Usage with Agents
+
+Agents can access files through the Filesystem MCP server. The MCP server is automatically registered with Ark and provides file operation tools to connected agents.
+
+Use the ark-dashboard to browse and manage files.
+
+## Uninstall
+
+**Using DevSpace:**
+```bash
+cd services/file-gateway
+devspace purge
+```
+
+**Using Helm:**
+```bash
+helm uninstall file-gateway -n default
+```
+
+## Additional Resources
+
+- [File Gateway README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/file-gateway)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
