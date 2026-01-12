@@ -4,19 +4,13 @@ name: ark-filesystem
 # Define images to build
 images:
   file-api:
-    image: file-api
+    image: localhost/file-api
     dockerfile: ./services/file-api/Dockerfile
     context: ./services/file-api
     buildKit:
       preferMinikube: true
     tags:
       - latest
-
-  # filesystem-mcp:
-  #   image: filesystem-mcp-server
-  #   dockerfile: ./services/filesystem-mcp/Dockerfile
-  #   context: ./services/filesystem-mcp
-  #   rebuildStrategy: ignoreContextChanges
 
 # Deploy using your Helm chart
 deployments:
@@ -30,7 +24,7 @@ deployments:
           image:
             repository: ${runtime.images.file-api.image}
             tag: ${runtime.images.file-api.tag}
-            pullPolicy: Never
+            pullPolicy: IfNotPresent
 
         # filesystem-mcp uses external image for now
         filesystemMcp:
