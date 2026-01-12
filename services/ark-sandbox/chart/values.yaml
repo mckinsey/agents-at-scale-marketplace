@@ -61,6 +61,7 @@ mcpServer:
   description: "ARK Sandbox MCP server for executing commands in sandbox containers"
   pollInterval: "1m"
   timeout: "120s"
+  path: /mcp
 
 # Sandbox defaults - used for documentation and reference
 sandboxDefaults:

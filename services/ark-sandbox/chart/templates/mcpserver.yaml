@@ -15,6 +15,9 @@ spec:
       serviceRef:
         name: {{ .Values.service.name }}
         port: "http"
+        {{- if .Values.mcpServer.path }}
+        path: {{ .Values.mcpServer.path }}
+        {{- end }}
   transport: http
   pollInterval: {{ .Values.mcpServer.pollInterval }}
   timeout: {{ .Values.mcpServer.timeout }}
