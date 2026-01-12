@@ -22,6 +22,7 @@ mcpServer:
   enabled: true
   timeout: "60s"
   transport: http
+  path: /mcp
   description: "Noah MCP server providing runtime administration tools"
 
 # Resources
