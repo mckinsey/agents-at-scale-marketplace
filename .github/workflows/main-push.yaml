@@ -26,6 +26,7 @@ jobs:
         service:
           - { name: noah, path: agents/noah }
           - { name: ark-sandbox, path: services/ark-sandbox }
+          - { name: file-api, path: services/file-gateway/services/file-api }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -134,6 +135,7 @@ jobs:
         service:
           - { name: noah, path: agents/noah }
           - { name: ark-sandbox, path: services/ark-sandbox }
+          - { name: file-api, path: services/file-gateway/services/file-api }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}

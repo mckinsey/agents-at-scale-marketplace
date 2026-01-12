@@ -118,7 +118,7 @@ fileApi:
   replicaCount: 1
 
   image:
-    repository: file-api
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/file-api
     pullPolicy: IfNotPresent
     tag: "latest"
 
