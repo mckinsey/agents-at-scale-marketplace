@@ -1,0 +1,18 @@
+{{- if .Values.fileApi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "file-gateway.fullname" . }}-api
+  labels:
+    {{- include "file-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: file-api
+spec:
+  type: {{ .Values.fileApi.service.type }}
+  ports:
+  - port: {{ .Values.fileApi.service.port }}
+    targetPort: web
+    protocol: TCP
+    name: web
+  selector:
+    {{- include "file-gateway.fileApi.selectorLabels" . | nindent 4 }}
+{{- end }}

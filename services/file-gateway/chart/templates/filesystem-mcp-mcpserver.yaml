@@ -1,0 +1,21 @@
+{{- if .Values.filesystemMcp.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ include "file-gateway.fullname" . }}-mcpserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: filesystem-mcp
+spec:
+  description: "change-me"
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "file-gateway.fullname" . }}-filesystem-mcp
+        port: "web"
+        path: "/mcp"
+  transport: http
+  timeout: "5m"
+{{- end }}
+

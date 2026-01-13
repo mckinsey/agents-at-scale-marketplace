@@ -1,0 +1,77 @@
+{{- if .Values.fileApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "file-gateway.fullname" . }}-file-api
+  labels:
+    {{- include "file-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: file-api
+spec:
+  replicas: {{ .Values.fileApi.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "file-gateway.fileApi.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "file-gateway.fileApi.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "file-gateway.fileApi.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.fileApi.podSecurityContext | nindent 8 }}
+      containers:
+      - name: file-api
+        securityContext:
+          {{- toYaml .Values.fileApi.securityContext | nindent 12 }}
+        image: "{{ .Values.fileApi.image.repository }}:{{ .Values.fileApi.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.fileApi.image.pullPolicy }}
+        ports:
+        - name: web
+          containerPort: {{ .Values.fileApi.config.port | int }}
+          protocol: TCP
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "file-gateway.s3SecretName" . }}
+              key: access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "file-gateway.s3SecretName" . }}
+              key: secret-access-key
+        - name: AWS_ENDPOINT_URL
+          value: {{ printf "http://%s-versitygw:%d" (include "file-gateway.fullname" .) (.Values.versitygw.service.port | int) }}
+        - name: BUCKET_NAME
+          value: {{ .Values.filesystemMcp.config.bucketName | quote }}
+        - name: HOST
+          value: {{ .Values.fileApi.config.host | quote }}
+        - name: PORT
+          value: {{ .Values.fileApi.config.port | quote }}
+        - name: CORS_ORIGINS
+          value: {{ .Values.fileApi.cors.origins | quote }}
+        - name: CORS_ALLOW_CREDENTIALS
+          value: {{ .Values.fileApi.cors.allowCredentials | quote }}
+        - name: CORS_ALLOW_METHODS
+          value: {{ .Values.fileApi.cors.allowMethods | quote }}
+        - name: CORS_ALLOW_HEADERS
+          value: {{ .Values.fileApi.cors.allowHeaders | quote }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: web
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: web
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.fileApi.resources | nindent 12 }}
+{{- end }}
