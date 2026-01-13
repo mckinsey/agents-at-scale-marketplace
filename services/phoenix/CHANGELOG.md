@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/phoenix-v0.1.6...phoenix-v0.1.7) (2026-01-13)
+
+
+### Bug Fixes
+
+* **phoenix:** add OTEL_EXPORTER_OTLP_PROTOCOL to secrets ([#89](https://github.com/mckinsey/agents-at-scale-marketplace/issues/89)) ([d568637](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d568637c67ab0962cd4a2cdd3cc607f8acedc554))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/phoenix-v0.1.5...phoenix-v0.1.6) (2025-12-02)
 
 

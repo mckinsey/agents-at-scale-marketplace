@@ -2,6 +2,13 @@
 
 All notable changes to ARK Sandbox will be documented in this file.
 
+## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.1...ark-sandbox-v0.1.2) (2026-01-13)
+
+
+### Bug Fixes
+
+* add explicit MCP server path for Ark 0.1.50 compatibility ([#90](https://github.com/mckinsey/agents-at-scale-marketplace/issues/90)) ([c13f7e2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c13f7e23123bfafe1f95254f3615b7b80fef2690))
+
 ## [0.1.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.0...ark-sandbox-v0.1.1) (2025-12-12)
 
 
