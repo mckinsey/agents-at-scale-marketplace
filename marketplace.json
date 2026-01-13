@@ -163,6 +163,33 @@
         "k8sServicePort": 8639,
         "k8sDeploymentName": "noah-mcp"
       }
+    },
+    {
+      "name": "file-gateway",
+      "type": "service",
+      "displayName": "File Gateway",
+      "description": "S3-compatible file storage gateway with REST API for shared storage access",
+      "version": "0.1.1",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["s3", "storage", "mcp", "filesystem", "versitygw"],
+      "category": "storage",
+      "icon": "https://example.com/file-gateway-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/file-gateway/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/file-gateway",
+        "namespace": "default",
+        "helmReleaseName": "file-gateway",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "file-gateway-file-api",
+        "k8sServicePort": 8080,
+        "k8sDeploymentName": "file-gateway-file-api"
+      }
     }
   ]
 }
