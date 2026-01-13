@@ -50,6 +50,8 @@ jobs:
           - { name: ark-sandbox, path: services/ark-sandbox, namespace: default, run-deployment-test: false }
           # disable noah deployment tests for PRs to avoid hitting 5m limit
           - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
+          # disable file-gateway deployment tests for PRs to avoid hitting 5m limit
+          - { name: file-gateway, path: services/file-gateway, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -156,6 +158,7 @@ jobs:
           - { name: mcp-inspector, path: services/mcp-inspector, namespace: default }
           - { name: ark-sandbox, path: services/ark-sandbox, namespace: default }
           - { name: noah, path: agents/noah, namespace: noah }
+          - { name: file-gateway, path: services/file-gateway, namespace: default }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
