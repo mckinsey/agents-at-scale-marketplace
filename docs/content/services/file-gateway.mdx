@@ -15,6 +15,12 @@ File Gateway provides:
 - **VersityGW** - S3-compatible gateway for object storage backend
 - **Persistent Storage** - Kubernetes PVC-backed storage
 
+### File Size Limitations
+
+The Filesystem MCP is designed for small files that can be directly loaded into agent context. For this reason it enforces a **1MB file size** limit for uploads.
+
+For larger files or datasets, consider using RAG (Retrieval-Augmented Generation) or vectorization patterns.
+
 ## Install
 
 ```bash
