@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.6...noah-v0.1.7) (2025-12-12)
+
+
+### Bug Fixes
+
+* scope noah RBAC to namespace and add argo CLI ([#86](https://github.com/mckinsey/agents-at-scale-marketplace/issues/86)) ([33a2cd8](https://github.com/mckinsey/agents-at-scale-marketplace/commit/33a2cd84abca905f6d0f97c492600c5d3dee5049))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.5...noah-v0.1.6) (2025-12-05)
 
 

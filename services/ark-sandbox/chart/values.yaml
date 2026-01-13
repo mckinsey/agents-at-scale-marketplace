@@ -1,0 +1,83 @@
+# ARK Sandbox chart values
+
+# Global annotations added to all resources
+global:
+  annotations:
+    ark.mckinsey.com/service: ark-sandbox
+
+# Application configuration
+app:
+  name: ark-sandbox
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/ark-sandbox
+    pullPolicy: IfNotPresent
+    # tag: defaults to appVersion
+
+  env:
+    - name: DEFAULT_TTL_MINUTES
+      value: "120"
+    - name: DEFAULT_NAMESPACE
+      value: "default"
+    - name: MAX_SANDBOXES_PER_NAMESPACE
+      value: "50"
+    - name: DEFAULT_IMAGE
+      value: "python:3.12-slim"
+    - name: POD_READY_TIMEOUT_SECONDS
+      value: "60"
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Service configuration
+service:
+  name: ark-sandbox
+  type: ClusterIP
+  port: 80
+  targetPort: 2628
+
+# HTTPRoute configuration (Gateway API - modern routing method)
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  hostnames:
+    - "ark-sandbox.default.127.0.0.1.nip.io"
+
+# Service account configuration
+serviceAccount:
+  name: ark-sandbox-sa
+  create: true
+
+# MCPServer registration - creates an MCPServer CR for tool discovery
+mcpServer:
+  enabled: true
+  description: "ARK Sandbox MCP server for executing commands in sandbox containers"
+  pollInterval: "1m"
+  timeout: "120s"
+  path: /mcp
+
+# Sandbox defaults - used for documentation and reference
+sandboxDefaults:
+  # Default container images available for sandboxes
+  images:
+    - python:3.12-slim
+    - node:20-slim
+    - golang:1.24-bookworm
+    - ubuntu:22.04
+
+  # Resource limits for sandbox pods
+  resources:
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+

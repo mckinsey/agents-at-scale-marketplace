@@ -1,0 +1,9 @@
+apiVersion: v2
+name: ark-sandbox
+description: ARK Sandbox - Kubernetes controller and MCP server for isolated dev containers
+type: application
+version: 0.1.1
+appVersion: 0.1.0
+annotations:
+  ark.mckinsey.com/service: ark-sandbox
+  ark.mckinsey.com/resources: service,crds

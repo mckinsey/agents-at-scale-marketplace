@@ -2,13 +2,14 @@
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: MCPServer
 metadata:
-  name: {{ .Values.service.name }}
+  name: {{ .Values.app.name }}
   namespace: {{ .Release.Namespace }}
-  labels:
-    app.kubernetes.io/name: noah
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    mcp/server: {{ .Values.service.name }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
+  description: {{ .Values.mcpServer.description | quote }}
   address:
     valueFrom:
       serviceRef:
@@ -17,7 +18,8 @@ spec:
         {{- if .Values.mcpServer.path }}
         path: {{ .Values.mcpServer.path }}
         {{- end }}
+  transport: http
+  pollInterval: {{ .Values.mcpServer.pollInterval }}
   timeout: {{ .Values.mcpServer.timeout }}
-  transport: {{ .Values.mcpServer.transport }}
-  description: {{ .Values.mcpServer.description | quote }}
 {{- end }}
+

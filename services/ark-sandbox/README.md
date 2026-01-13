@@ -1,0 +1,132 @@
+# ARK Sandbox
+
+Isolated container environments for AI agent code execution with MCP tool access.
+
+## Overview
+
+ARK Sandbox provides:
+- **Sandbox CRDs** - Kubernetes-native sandbox lifecycle management
+- **MCP Server** - Tools for agents to execute commands, upload/download files
+- **Warm Pools** - Pre-created sandboxes for instant availability
+- **PVC Mounting** - Share files between workflows and sandboxes
+
+## Quickstart
+
+### Using ARK CLI (Recommended)
+
+```bash
+ark install marketplace/services/ark-sandbox
+```
+
+### Using DevSpace
+
+```bash
+# Deploy ARK Sandbox
+devspace deploy
+
+# Port-forward MCP server
+kubectl port-forward -n default svc/ark-sandbox 2628:80
+
+# Uninstall
+devspace purge
+```
+
+### Using Helm
+
+```bash
+# Install CRDs first
+kubectl apply -f chart/crds/
+
+# Install ARK Sandbox
+helm install ark-sandbox ./chart -n default
+
+# Uninstall
+helm uninstall ark-sandbox -n default
+```
+
+## MCP Tools
+
+The following tools are available to agents:
+
+| Tool | Description |
+|------|-------------|
+| `create_sandbox` | Create a new sandbox container |
+| `delete_sandbox` | Delete a sandbox |
+| `execute_command` | Execute a command in a sandbox |
+| `upload_file` | Upload a file to a sandbox |
+| `download_file` | Download a file from a sandbox |
+| `get_sandbox_logs` | Get logs from a sandbox |
+| `list_sandboxes` | List all sandboxes |
+
+## CRDs
+
+### Sandbox
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Sandbox
+metadata:
+  name: my-sandbox
+spec:
+  image: python:3.12-slim
+  ttlMinutes: 60
+  pvcName: my-shared-volume  # Optional
+```
+
+### SandboxTemplate
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: python-dev
+spec:
+  image: python:3.12-slim
+  ttlMinutes: 120
+  resources:
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+```
+
+### SandboxPool
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: SandboxPool
+metadata:
+  name: python-pool
+spec:
+  templateRef:
+    name: python-dev
+  minSize: 3
+  maxSize: 10
+```
+
+## Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `app.image.repository` | Container image | `ghcr.io/mckinsey/agents-at-scale-marketplace/ark-sandbox` |
+| `service.port` | Service port | `80` |
+| `mcpServer.enabled` | Register as MCPServer | `true` |
+| `httpRoute.enabled` | Enable Gateway API HTTPRoute | `false` |
+
+## Integration with Argo Workflows
+
+Use the included WorkflowTemplates:
+
+```yaml
+# Create a sandbox with PVC
+- name: create-sandbox
+  templateRef:
+    name: ark-sandbox-create
+    template: create-with-pvc
+  arguments:
+    parameters:
+      - name: pvc-name
+        value: "workflow-shared-storage"
+```
+
+See the [Argo templates](./templates/) directory for all available templates.
+
