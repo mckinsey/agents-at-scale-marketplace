@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.17](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.16...v0.1.17) (2026-01-13)
+
+
+### Bug Fixes
+
+* added file gateway limitation to docs ([#95](https://github.com/mckinsey/agents-at-scale-marketplace/issues/95)) ([b53a7a2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b53a7a202241c2f4af752212b9dbcec8b4886602))
+
 ## [0.1.16](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.15...v0.1.16) (2026-01-13)
 
 
