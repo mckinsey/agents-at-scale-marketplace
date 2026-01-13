@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.7...noah-v0.1.8) (2026-01-13)
+
+
+### Bug Fixes
+
+* add explicit MCP server path for Ark 0.1.50 compatibility ([#90](https://github.com/mckinsey/agents-at-scale-marketplace/issues/90)) ([c13f7e2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c13f7e23123bfafe1f95254f3615b7b80fef2690))
+
 ## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.6...noah-v0.1.7) (2025-12-12)
 
 

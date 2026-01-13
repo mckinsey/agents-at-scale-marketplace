@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.16](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.15...v0.1.16) (2026-01-13)
+
+
+### Features
+
+* file-gateway support ([#88](https://github.com/mckinsey/agents-at-scale-marketplace/issues/88)) ([d085164](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d085164260843698ecdb0d54c86af8877217a1b9))
+
+
+### Bug Fixes
+
+* add explicit MCP server path for Ark 0.1.50 compatibility ([#90](https://github.com/mckinsey/agents-at-scale-marketplace/issues/90)) ([c13f7e2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c13f7e23123bfafe1f95254f3615b7b80fef2690))
+* add file-gateway to release-please config ([#92](https://github.com/mckinsey/agents-at-scale-marketplace/issues/92)) ([8ac4311](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8ac43119f2d937f6e28da19fadd7e0269a285639))
+* **phoenix:** add OTEL_EXPORTER_OTLP_PROTOCOL to secrets ([#89](https://github.com/mckinsey/agents-at-scale-marketplace/issues/89)) ([d568637](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d568637c67ab0962cd4a2cdd3cc607f8acedc554))
+
 ## [0.1.15](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.14...v0.1.15) (2025-12-12)
 
 

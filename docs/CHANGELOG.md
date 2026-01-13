@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.8...marketplace-docs-v0.1.9) (2026-01-13)
+
+
+### Features
+
+* file-gateway support ([#88](https://github.com/mckinsey/agents-at-scale-marketplace/issues/88)) ([d085164](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d085164260843698ecdb0d54c86af8877217a1b9))
+
+
+### Bug Fixes
+
+* add explicit MCP server path for Ark 0.1.50 compatibility ([#90](https://github.com/mckinsey/agents-at-scale-marketplace/issues/90)) ([c13f7e2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c13f7e23123bfafe1f95254f3615b7b80fef2690))
+
 ## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.7...marketplace-docs-v0.1.8) (2025-12-12)
 
 

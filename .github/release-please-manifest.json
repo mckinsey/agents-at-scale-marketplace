@@ -1,11 +1,11 @@
 {
-  ".": "0.1.15",
-  "docs": "0.1.8",
+  ".": "0.1.16",
+  "docs": "0.1.9",
   "services/langfuse": "0.1.5",
-  "services/phoenix": "0.1.6",
+  "services/phoenix": "0.1.7",
   "services/a2a-inspector": "0.1.1",
   "services/mcp-inspector": "0.1.1",
-  "services/ark-sandbox": "0.1.1",
-  "agents/noah": "0.1.7",
-  "services/file-gateway": "0.1.0"
+  "services/ark-sandbox": "0.1.2",
+  "agents/noah": "0.1.8",
+  "services/file-gateway": "0.1.1"
 }
