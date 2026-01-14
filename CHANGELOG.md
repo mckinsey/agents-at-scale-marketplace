@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.18](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.17...v0.1.18) (2026-01-14)
+
+
+### Bug Fixes
+
+* add file-gateway to CI workflow matrices ([#99](https://github.com/mckinsey/agents-at-scale-marketplace/issues/99)) ([fa36b98](https://github.com/mckinsey/agents-at-scale-marketplace/commit/fa36b98533ee76117f060258df623cb11df3849d))
+* add file-gateway to marketplace.json ([#97](https://github.com/mckinsey/agents-at-scale-marketplace/issues/97)) ([89a7351](https://github.com/mckinsey/agents-at-scale-marketplace/commit/89a73510f5ffd77dbf0558e915976ef28ac739ba))
+
 ## [0.1.17](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.16...v0.1.17) (2026-01-13)
 
 
