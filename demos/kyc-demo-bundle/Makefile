@@ -14,7 +14,7 @@ help:
 
 install:
 	@echo "Installing KYC Demo Bundle..."
-	@helm upgrade --install $(RELEASE_NAME) . \
+	@helm upgrade --install $(RELEASE_NAME) chart/ \
 		--namespace $(NAMESPACE) \
 		--create-namespace \
 		--wait
@@ -22,7 +22,7 @@ install:
 
 install-with-argo:
 	@echo "Installing KYC Demo Bundle with Argo support..."
-	@helm upgrade --install $(RELEASE_NAME) . \
+	@helm upgrade --install $(RELEASE_NAME) chart/ \
 		--namespace $(NAMESPACE) \
 		--create-namespace \
 		--set argoWorkflows.rbac.enabled=true \

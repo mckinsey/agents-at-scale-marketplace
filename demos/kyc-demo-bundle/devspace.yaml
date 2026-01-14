@@ -11,5 +11,5 @@ deployments:
     namespace: default
     helm:
       chart:
-        path: .
+        path: chart
       values: {}
