@@ -34,6 +34,7 @@ Services are designed to integrate seamlessly with the [ARK platform](https://gi
 | --------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
 | [`a2a-inspector`](./services/a2a-inspector)   | Developer tool for testing and debugging A2A protocol agents               | [Chart](./services/a2a-inspector/chart)    |
 | [`ark-sandbox`](./services/ark-sandbox)       | Isolated container environments for AI agent code execution with MCP tools | [Chart](./services/ark-sandbox/chart)      |
+| [`file-gateway`](./services/file-gateway)     | S3-compatible file storage gateway with REST API for shared storage access | [Chart](./services/file-gateway/chart)     |
 | [`langfuse`](./services/langfuse)             | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart)         |
 | [`mcp-inspector`](./services/mcp-inspector)   | Developer tool for testing and debugging MCP servers                       | [Chart](./services/mcp-inspector/chart)    |
 | [`phoenix`](./services/phoenix)               | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)          |
@@ -56,6 +57,7 @@ The easiest way to install marketplace services and agents is using the [ARK CLI
 # Install services
 ark install marketplace/services/a2a-inspector
 ark install marketplace/services/ark-sandbox
+ark install marketplace/services/file-gateway
 ark install marketplace/services/langfuse
 ark install marketplace/services/mcp-inspector
 ark install marketplace/services/phoenix
