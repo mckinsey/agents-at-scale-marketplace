@@ -66,6 +66,11 @@
       "extra-files": [
         "chart/Chart.yaml"
       ]
+    },
+    "services/file-gateway/services/file-api": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "simple",
+      "package-name": "file-api"
     }
   }
 }
