@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.1.20](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.19...v0.1.20) (2026-01-14)
+
+
+### Features
+
+* add a2a-inspector service ([#79](https://github.com/mckinsey/agents-at-scale-marketplace/issues/79)) ([6ef6b68](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6ef6b68e18a0e16236d1441f32d443a96d4d7d46))
+* Add automated release management with Release Please and refactor CI/CD workflows ([#7](https://github.com/mckinsey/agents-at-scale-marketplace/issues/7)) ([a5edde7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a5edde7f937672bc1c45115f46bec049b8e50661))
+* Add chart artifact attachment to GitHub Releases ([#49](https://github.com/mckinsey/agents-at-scale-marketplace/issues/49)) ([1c3195d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1c3195d8054ffb535afbb62736460dbb0242d678))
+* Add Contributors Section and Contributing Guidelines ([#8](https://github.com/mckinsey/agents-at-scale-marketplace/issues/8)) ([5138db0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5138db06bbb90d4260302ca7abf9670b3854c981))
+* Add Helm NOTES.txt templates for langfuse and phoenix ([#64](https://github.com/mckinsey/agents-at-scale-marketplace/issues/64)) ([5ad1299](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5ad129904763cbcd9bfafbf68da2d2724169424c))
+* add httproute crd check ([#55](https://github.com/mckinsey/agents-at-scale-marketplace/issues/55)) ([88cbcf8](https://github.com/mckinsey/agents-at-scale-marketplace/commit/88cbcf8b643ee5a42220d5edead51645ad977402))
+* Add MCP Inspector service ([#68](https://github.com/mckinsey/agents-at-scale-marketplace/issues/68)) ([932bbe6](https://github.com/mckinsey/agents-at-scale-marketplace/commit/932bbe655cbc3f124132a03d530a16bde458ab02))
+* add Noah runtime administration agent service ([#69](https://github.com/mckinsey/agents-at-scale-marketplace/issues/69)) ([e21b306](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e21b306d2e98574c3156d9248c5eb9e888a23481))
+* add workflow to validate PR titles against conventional commits ([#3](https://github.com/mckinsey/agents-at-scale-marketplace/issues/3)) ([591fdf5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/591fdf5794454ec2c587f6da870f993fdce7f29a))
+* Ark Sandbox ([#83](https://github.com/mckinsey/agents-at-scale-marketplace/issues/83)) ([260097d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/260097dfe024ac8721e2d950c27e7bb3ae3e8f60))
+* docs & phoenix migration & CI/CD ([#2](https://github.com/mckinsey/agents-at-scale-marketplace/issues/2)) ([aa62bdb](https://github.com/mckinsey/agents-at-scale-marketplace/commit/aa62bdb244cdccc51897587c6e5ff287223bd42b))
+* Enhance ARK Platform Visibility ([#50](https://github.com/mckinsey/agents-at-scale-marketplace/issues/50)) ([78be24d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/78be24d51f085d03d12c6d050cdceaf9ad69b1e8))
+* file-gateway support ([#88](https://github.com/mckinsey/agents-at-scale-marketplace/issues/88)) ([d085164](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d085164260843698ecdb0d54c86af8877217a1b9))
+* langfuse docs and service migration ([#9](https://github.com/mckinsey/agents-at-scale-marketplace/issues/9)) ([8877603](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8877603701d45c8369b3df7c74c16897d8037cb0))
+* migrate ark marketplace following anthropic plugin marketplace ([#77](https://github.com/mckinsey/agents-at-scale-marketplace/issues/77)) ([115d3aa](https://github.com/mckinsey/agents-at-scale-marketplace/commit/115d3aa73ae13621180950769b3eeebcc3d8f2cc))
+* migrate contributor list from ark ([#67](https://github.com/mckinsey/agents-at-scale-marketplace/issues/67)) ([311aa95](https://github.com/mckinsey/agents-at-scale-marketplace/commit/311aa95d7b99ed13c4214c06348aa0533763118c))
+* trigger first release for file-gateway ([#100](https://github.com/mckinsey/agents-at-scale-marketplace/issues/100)) ([bcf32b7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/bcf32b77d1d611e023472fa7077719ee3d073a8f))
+* update CI/CD workflows and service configurations for Helm charts, add changelogs, and  documentation ([88b4714](https://github.com/mckinsey/agents-at-scale-marketplace/commit/88b4714942e014fe8a16d50717bc6f1cc1a6afce))
+* update docs with ark and trigger release ([#72](https://github.com/mckinsey/agents-at-scale-marketplace/issues/72)) ([0e55fb1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0e55fb12ae60c1b002adf830660b68f9b77c124c))
+* use matrix strategy for charts ([#4](https://github.com/mckinsey/agents-at-scale-marketplace/issues/4)) ([cc399f7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cc399f71244da01beb2f075114cc3452ac6c9592))
+
+
+### Bug Fixes
+
+* act condition to work in gh ([#10](https://github.com/mckinsey/agents-at-scale-marketplace/issues/10)) ([a9b5b29](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a9b5b29541571eb72706e0b0f1f57f05ba26603e))
+* add explicit MCP server path for Ark 0.1.50 compatibility ([#90](https://github.com/mckinsey/agents-at-scale-marketplace/issues/90)) ([c13f7e2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c13f7e23123bfafe1f95254f3615b7b80fef2690))
+* add file-gateway to CI workflow matrices ([#99](https://github.com/mckinsey/agents-at-scale-marketplace/issues/99)) ([fa36b98](https://github.com/mckinsey/agents-at-scale-marketplace/commit/fa36b98533ee76117f060258df623cb11df3849d))
+* add file-gateway to CI workflows and README ([637ea73](https://github.com/mckinsey/agents-at-scale-marketplace/commit/637ea73aac0def0456bc3eab9c59907cda508af6))
+* add file-gateway to marketplace.json ([#97](https://github.com/mckinsey/agents-at-scale-marketplace/issues/97)) ([89a7351](https://github.com/mckinsey/agents-at-scale-marketplace/commit/89a73510f5ffd77dbf0558e915976ef28ac739ba))
+* add file-gateway to release-please config ([#92](https://github.com/mckinsey/agents-at-scale-marketplace/issues/92)) ([8ac4311](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8ac43119f2d937f6e28da19fadd7e0269a285639))
+* added file gateway limitation to docs ([#95](https://github.com/mckinsey/agents-at-scale-marketplace/issues/95)) ([b53a7a2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b53a7a202241c2f4af752212b9dbcec8b4886602))
+* docker builds architecture and trigger noah release ([#75](https://github.com/mckinsey/agents-at-scale-marketplace/issues/75)) ([9b85a55](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9b85a55bd32c8488d9995ac28457da0671300608))
+* file api release ([#103](https://github.com/mckinsey/agents-at-scale-marketplace/issues/103)) ([e5cee4c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e5cee4cb1adde754b9ac904aca5a075fd81118b1))
+* improve Helm repository update logic in CI/CD workflow ([#57](https://github.com/mckinsey/agents-at-scale-marketplace/issues/57)) ([2e50adf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/2e50adf0bfdf1fdefe2c3b8206a90f9b534ce8e3))
+* noah agent skip validation for ark install ([#82](https://github.com/mckinsey/agents-at-scale-marketplace/issues/82)) ([f4cfef7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f4cfef79077585148632c317c81408e5b5760ddb))
+* noah context and tools ([#80](https://github.com/mckinsey/agents-at-scale-marketplace/issues/80)) ([f786ba9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f786ba99f3e3ae8a68843c2ccd315af4130bf263))
+* **phoenix:** add OTEL_EXPORTER_OTLP_PROTOCOL to secrets ([#89](https://github.com/mckinsey/agents-at-scale-marketplace/issues/89)) ([d568637](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d568637c67ab0962cd4a2cdd3cc607f8acedc554))
+* scope noah RBAC to namespace and add argo CLI ([#86](https://github.com/mckinsey/agents-at-scale-marketplace/issues/86)) ([33a2cd8](https://github.com/mckinsey/agents-at-scale-marketplace/commit/33a2cd84abca905f6d0f97c492600c5d3dee5049))
+* set NEXT_PUBLIC_BASE_PATH environment variable for documentation… ([#47](https://github.com/mckinsey/agents-at-scale-marketplace/issues/47)) ([538e9bd](https://github.com/mckinsey/agents-at-scale-marketplace/commit/538e9bd0f4eb5f45cebdea8b2ed4d1096ae799cd))
+* update ARK platform link in documentation and adjust formatting … ([#45](https://github.com/mckinsey/agents-at-scale-marketplace/issues/45)) ([325bdf0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/325bdf0d504cbcfeb3476b12ed8f48316f935707))
+* update phoenix-helm version and digest in Chart.lock and Chart.yaml ([#52](https://github.com/mckinsey/agents-at-scale-marketplace/issues/52)) ([d42a08f](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d42a08f45f8c310d0d3dacbb0708d9720ad01d79))
+
 ## [0.1.19](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.18...v0.1.19) (2026-01-14)
 
 
