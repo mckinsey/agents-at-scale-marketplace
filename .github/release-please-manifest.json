@@ -1,5 +1,5 @@
 {
-  ".": "0.1.18",
+  ".": "0.1.19",
   "docs": "0.1.10",
   "services/langfuse": "0.1.5",
   "services/phoenix": "0.1.7",
@@ -7,5 +7,5 @@
   "services/mcp-inspector": "0.1.1",
   "services/ark-sandbox": "0.1.2",
   "agents/noah": "0.1.8",
-  "services/file-gateway": "0.1.1"
+  "services/file-gateway": "0.1.2"
 }
