@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-git-push.sh"
+            "command": "cmd=$(jq -r '.tool_input.command // \"\"'); if echo \"$cmd\" | grep -Eq 'git\\s+push\\s+(origin\\s+)?(main|master)'; then echo 'BLOCKED: Direct push to main/master not allowed. Create a PR instead.' >&2; exit 2; fi",
+            "timeout": 5
           }
         ]
       }
