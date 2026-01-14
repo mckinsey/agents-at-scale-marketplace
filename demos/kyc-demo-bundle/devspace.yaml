@@ -1,0 +1,15 @@
+version: v2beta1
+
+pipelines:
+  deploy: |-
+    create_deployments --all
+  dev: |-
+    create_deployments --all
+
+deployments:
+  kyc-demo-bundle:
+    namespace: default
+    helm:
+      chart:
+        path: .
+      values: {}

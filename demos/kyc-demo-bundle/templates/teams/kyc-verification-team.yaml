@@ -1,0 +1,32 @@
+{{- if .Values.teams.kycVerificationTeam.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.kycVerificationTeam.name }}
+  labels:
+    category: kyc
+    workflow: sequential
+    use-case: full-kyc-verification
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Complete KYC verification team that performs end-to-end customer onboarding due diligence.
+
+    Workflow:
+    1. Document Verifier: Analyzes and validates customer identity documents
+    2. Risk Assessor: Evaluates customer risk profile and compliance requirements
+    3. Compliance Reporter: Generates comprehensive, audit-ready KYC report with onboarding decision
+
+    Use this team for new customer onboarding requiring full regulatory compliance.
+  members:
+    - name: {{ .Values.agents.documentVerifier.name }}
+      type: agent
+    - name: {{ .Values.agents.riskAssessor.name }}
+      type: agent
+    - name: {{ .Values.agents.complianceReporter.name }}
+      type: agent
+  strategy: {{ .Values.teams.kycVerificationTeam.strategy }}
+  maxTurns: {{ .Values.teams.kycVerificationTeam.maxTurns }}
+{{- end }}

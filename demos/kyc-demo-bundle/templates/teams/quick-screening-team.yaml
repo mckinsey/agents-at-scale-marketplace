@@ -1,0 +1,29 @@
+{{- if .Values.teams.quickScreeningTeam.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.quickScreeningTeam.name }}
+  labels:
+    category: kyc
+    workflow: sequential
+    use-case: quick-screening
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Streamlined KYC screening team for fast customer risk assessment.
+
+    Workflow:
+    1. Document Verifier: Quick document validation and information extraction
+    2. Risk Assessor: Risk screening and preliminary assessment
+
+    Use this team for quick screening, lower-risk customers, or initial triage.
+  members:
+    - name: {{ .Values.agents.documentVerifier.name }}
+      type: agent
+    - name: {{ .Values.agents.riskAssessor.name }}
+      type: agent
+  strategy: {{ .Values.teams.quickScreeningTeam.strategy }}
+  maxTurns: {{ .Values.teams.quickScreeningTeam.maxTurns }}
+{{- end }}

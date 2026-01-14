@@ -1,0 +1,42 @@
+# ARK Demo Bundle Configuration
+# Override these values during installation with --set or -f custom-values.yaml
+
+# Model reference for agents
+# You must create a Model resource before installing this bundle
+modelRef:
+  name: default
+
+# Agents configuration
+agents:
+  documentVerifier:
+    enabled: true
+    name: document-verifier
+  riskAssessor:
+    enabled: true
+    name: risk-assessor
+  complianceReporter:
+    enabled: true
+    name: compliance-reporter
+
+# Teams configuration
+teams:
+  kycVerificationTeam:
+    enabled: true
+    name: kyc-verification-team
+    strategy: sequential
+    maxTurns: 3
+  quickScreeningTeam:
+    enabled: true
+    name: quick-screening-team
+    strategy: sequential
+    maxTurns: 2
+
+# Labels to apply to all resources
+commonLabels:
+  bundle: ark-demo
+  managed-by: helm
+
+# Argo Workflows integration (optional)
+argoWorkflows:
+  rbac:
+    enabled: true

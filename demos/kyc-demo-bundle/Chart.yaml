@@ -1,0 +1,22 @@
+apiVersion: v2
+name: ark-demo-bundle
+description: Pre-configured KYC demo with specialized agents and multi-agent teams for customer onboarding
+version: 0.1.0
+type: application
+keywords:
+  - ark
+  - ai-agents
+  - demo
+  - kyc
+  - multi-agent
+home: https://github.com/mckinsey/agents-at-scale
+sources:
+  - https://github.com/mckinsey/agents-at-scale-marketplace
+maintainers:
+  - name: ARK Team
+    email: ark-team@mckinsey.com
+annotations:
+  ark.mckinsey.com/category: demo
+  ark.mckinsey.com/type: bundle
+  ark.mckinsey.com/use-case: kyc
+  ark.mckinsey.com/components: agents,teams
