@@ -1,5 +1,5 @@
 {
-  "name": "mcp-filesystem-sessions",
+  "name": "filesystem-mcp-server",
   "version": "1.0.0",
   "description": "MCP Filesystem server with session management",
   "main": "dist/index.js",

@@ -72,10 +72,10 @@
       "release-type": "simple",
       "package-name": "file-api"
     },
-    "mcps/filesystem-mcp": {
+    "mcps/filesystem-mcp-server": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
-      "package-name": "filesystem-mcp",
+      "package-name": "filesystem-mcp-server",
       "extra-files": [
         "chart/Chart.yaml"
       ]

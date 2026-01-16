@@ -30,7 +30,7 @@ deployments:
         filesystemMcp:
           enabled: true
           image:
-            repository: ghcr.io/mckinsey/agents-at-scale-ark/filesystem-mcp-server
+            repository: ghcr.io/mckinsey/agents-at-scale-marketplace/filesystem-mcp-server
             tag: latest
             pullPolicy: IfNotPresent
 
