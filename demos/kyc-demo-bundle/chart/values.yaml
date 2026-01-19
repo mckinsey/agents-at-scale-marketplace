@@ -40,3 +40,9 @@ commonLabels:
 argoWorkflows:
   rbac:
     enabled: true
+
+# File Gateway integration for file-based inputs/outputs
+file-gateway:
+  enabled: true
+  filesystemMcp:
+    enabled: true

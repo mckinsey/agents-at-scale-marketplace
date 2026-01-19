@@ -13,8 +13,18 @@ spec:
   description: Risk assessment agent that evaluates customer risk profiles based on verification data
   modelRef:
     name: {{ .Values.modelRef.name }}
+  maxCompletionTokens: 2048
+  tools:
+  - name: file-gateway-mcpserver-read-file
+    type: mcp
+  - name: file-gateway-mcpserver-write-file
+    type: mcp
+  - name: file-gateway-mcpserver-list-directory
+    type: mcp
   prompt: |
     You are a KYC risk assessment specialist who evaluates customer risk profiles for compliance and regulatory purposes.
+
+    You have access to filesystem tools to read customer data files and write risk assessment reports.
 
     Your responsibilities:
     - Analyze customer information against risk indicators

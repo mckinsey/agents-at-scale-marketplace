@@ -9,26 +9,10 @@ spec:
   serviceAccountName: argo-workflow
   arguments:
     parameters:
-      - name: customer-name
-        value: "John Michael Smith"
-      - name: customer-dob
-        value: "March 15, 1985"
-      - name: customer-nationality
-        value: "United States"
-      - name: customer-address
-        value: "123 Main Street, New York, NY 10001, USA"
-      - name: customer-contact
-        value: "+1-555-0123, john.smith@email.com"
-      - name: document-passport
-        value: "US Passport P123456789, issued 2020-01-15, expires 2030-01-15"
-      - name: document-drivers-license
-        value: "NY DL #123456789, issued 2019-05-10"
-      - name: business-purpose
-        value: "Opening personal investment account"
-      - name: expected-transactions
-        value: "$5,000 - $10,000 monthly deposits"
-      - name: source-of-funds
-        value: "Employment income (software engineer)"
+      - name: customer-data-file
+        value: "customers/john-doe.txt"
+      - name: output-report-file
+        value: "reports/john-doe-kyc-report.md"
   templates:
     - name: main
       steps:
@@ -36,48 +20,24 @@ spec:
             template: query-kyc-team
             arguments:
               parameters:
-                - name: customer-name
-                  value: "{{workflow.parameters.customer-name}}"
-                - name: customer-dob
-                  value: "{{workflow.parameters.customer-dob}}"
-                - name: customer-nationality
-                  value: "{{workflow.parameters.customer-nationality}}"
-                - name: customer-address
-                  value: "{{workflow.parameters.customer-address}}"
-                - name: customer-contact
-                  value: "{{workflow.parameters.customer-contact}}"
-                - name: document-passport
-                  value: "{{workflow.parameters.document-passport}}"
-                - name: document-drivers-license
-                  value: "{{workflow.parameters.document-drivers-license}}"
-                - name: business-purpose
-                  value: "{{workflow.parameters.business-purpose}}"
-                - name: expected-transactions
-                  value: "{{workflow.parameters.expected-transactions}}"
-                - name: source-of-funds
-                  value: "{{workflow.parameters.source-of-funds}}"
+                - name: customer-data-file
+                  value: "{{workflow.parameters.customer-data-file}}"
+                - name: output-report-file
+                  value: "{{workflow.parameters.output-report-file}}"
         - - name: process-results
             template: process-kyc-results
             arguments:
               parameters:
                 - name: kyc-report
                   value: "{{steps.full-kyc-verification.outputs.parameters.response}}"
-                - name: customer-name
-                  value: "{{workflow.parameters.customer-name}}"
+                - name: output-report-file
+                  value: "{{workflow.parameters.output-report-file}}"
 
     - name: query-kyc-team
       inputs:
         parameters:
-          - name: customer-name
-          - name: customer-dob
-          - name: customer-nationality
-          - name: customer-address
-          - name: customer-contact
-          - name: document-passport
-          - name: document-drivers-license
-          - name: business-purpose
-          - name: expected-transactions
-          - name: source-of-funds
+          - name: customer-data-file
+          - name: output-report-file
       script:
         image: alpine/k8s:1.28.13
         command: [sh]
@@ -98,26 +58,23 @@ spec:
             input: |
               New customer onboarding request:
 
-              Customer Information:
-              - Full Name: {{inputs.parameters.customer-name}}
-              - Date of Birth: {{inputs.parameters.customer-dob}}
-              - Nationality: {{inputs.parameters.customer-nationality}}
-              - Residential Address: {{inputs.parameters.customer-address}}
-              - Contact: {{inputs.parameters.customer-contact}}
+              IMPORTANT: Read the customer data from the file: {{inputs.parameters.customer-data-file}}
 
-              Documents Provided:
-              - {{inputs.parameters.document-passport}}
-              - {{inputs.parameters.document-drivers-license}}
+              The file contains complete customer information including:
+              - Personal information (name, DOB, nationality, address, contact)
+              - Identification documents (passport, driver's license)
+              - Business profile (purpose, expected transactions, source of funds, employment details)
 
-              Business Purpose:
-              - {{inputs.parameters.business-purpose}}
-              - Expected transactions: {{inputs.parameters.expected-transactions}}
-              - Source of funds: {{inputs.parameters.source-of-funds}}
+              Instructions:
+              1. Use the read_file tool to read the customer data from {{inputs.parameters.customer-data-file}}
+              2. Perform complete KYC verification based on the data in the file
+              3. Generate a comprehensive compliance report
+              4. Use the write_file tool to save the final compliance report to: {{inputs.parameters.output-report-file}}
 
               Please perform complete KYC verification and provide onboarding recommendation.
-            targets:
-              - name: kyc-verification-team
-                type: team
+            target:
+              type: team
+              name: kyc-verification-team
             timeout: 5m
             ttl: 24h
           EOF
@@ -144,7 +101,7 @@ spec:
       inputs:
         parameters:
           - name: kyc-report
-          - name: customer-name
+          - name: output-report-file
       script:
         image: alpine:3.19
         command: [sh]
@@ -154,16 +111,26 @@ spec:
           echo "================================================================================"
           echo "KYC ONBOARDING WORKFLOW COMPLETE"
           echo "================================================================================"
-          echo "Customer: \{{inputs.parameters.customer-name}}"
-          echo "Workflow: \{{workflow.name}}"
+          echo "Workflow: {{workflow.name}}"
           echo "Completed: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
           echo ""
           echo "================================================================================"
-          echo "FULL KYC COMPLIANCE REPORT"
+          echo "SUMMARY"
           echo "================================================================================"
           echo ""
-          echo "\{{inputs.parameters.kyc-report}}"
+          echo "The KYC verification team has completed the customer onboarding process."
+          echo ""
+          echo "Report saved to: {{inputs.parameters.output-report-file}}"
+          echo ""
+          echo "You can access the full compliance report using the file-gateway or"
+          echo "by querying the file-gateway MCP server."
           echo ""
           echo "================================================================================"
-          echo "END OF REPORT"
+          echo "WORKFLOW RESPONSE"
+          echo "================================================================================"
+          echo ""
+          echo "{{inputs.parameters.kyc-report}}"
+          echo ""
+          echo "================================================================================"
+          echo "END OF WORKFLOW"
           echo "================================================================================"

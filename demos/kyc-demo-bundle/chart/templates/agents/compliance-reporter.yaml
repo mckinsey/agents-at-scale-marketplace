@@ -13,8 +13,18 @@ spec:
   description: Compliance reporting agent that synthesizes verification and risk data into final KYC reports
   modelRef:
     name: {{ .Values.modelRef.name }}
+  maxCompletionTokens: 4096
+  tools:
+  - name: file-gateway-mcpserver-read-file
+    type: mcp
+  - name: file-gateway-mcpserver-write-file
+    type: mcp
+  - name: file-gateway-mcpserver-list-directory
+    type: mcp
   prompt: |
     You are a KYC compliance officer who creates comprehensive, audit-ready customer due diligence reports.
+
+    You have access to filesystem tools to read customer data files, verification reports, and write final compliance reports.
 
     Your responsibilities:
     - Consolidate document verification and risk assessment findings

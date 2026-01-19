@@ -1,124 +1,57 @@
 # KYC Demo Bundle
 
-Pre-configured KYC demo with specialized agents and multi-agent teams for customer onboarding.
+KYC customer onboarding demo with file-based multi-agent workflows.
 
 ## What's Included
 
-### Agents
-- **document-verifier** - Validates identity documents and performs fraud detection
-- **risk-assessor** - Evaluates customer risk profile and regulatory compliance
-- **compliance-reporter** - Synthesizes findings into audit-ready KYC reports
+- **3 agents**: document-verifier, risk-assessor, compliance-reporter
+- **2 teams**: kyc-verification-team, quick-screening-team
+- **file-gateway**: S3-compatible storage with filesystem MCP
+- **Argo workflow**: Automated KYC onboarding pipeline
 
-### Teams
-- **kyc-verification-team** - Full onboarding workflow with document, risk, and compliance review
-- **quick-screening-team** - Fast-track verification for low-risk customers
-
-### Workflow Example
-- **kyc-onboarding-workflow.yaml** - Complete KYC onboarding workflow example
+Agents read customer data from plain text files and write reports using MCP filesystem tools.
 
 ## Prerequisites
 
-### Required
-- Kubernetes cluster (minikube, kind, or cloud provider)
-- Ark controller installed (namespace: ark-system)
-- kubectl CLI configured and authenticated
-- helm CLI installed (v3.8+)
-- A Model resource configured in Ark (e.g., `default` model in `default` namespace)
+- Kubernetes cluster (minikube, kind, or cloud)
+- Ark controller installed
+- Argo Workflows installed
+- kubectl and helm CLI
 
-### Optional (for Argo Workflows)
-- Argo Workflows installed (namespace: argo-workflows)
-- Minio artifact storage configured
-- ServiceAccount `argo-workflow` in `argo-workflows` namespace
-
-## Installation
-
-### Local Development (Minikube/Kind)
-
-For local development with source code access:
+## Local Development
 
 ```bash
-# Clone marketplace repository
+# Clone and install
 git clone https://github.com/mckinsey/agents-at-scale-marketplace
 cd agents-at-scale-marketplace/demos/kyc-demo-bundle
 
-# Install bundle only
-make install
+make install-with-argo  # Install bundle
+make upload-data        # Upload example customer file
+make demo               # Submit workflow
 
-# Or install with Argo Workflows support
-make install-with-argo
+# View results
+kubectl get workflows -n default
+# Access Ark Dashboard → Files section to download report
 
-# Submit demo workflow
-make demo
-
-# Uninstall
+# Cleanup
 make uninstall
 ```
 
-#### Argo Workflows UI
-Instead of using CLI, you may manually create a Workflow on the Argo Workflows UI (that can be accessed on http://localhost:2746/), and submit the content of `demos/kyc-demo-bundle/examples/kyc-onboarding-workflow.yaml` there to run it. The logs will display the results, and you may also view them on Ark Dashboard Queries section as well.
-
-### Cloud Deployment
-
-For cloud deployments where an Ark instance is already running.
-
-**Step 1: Install Bundle**
+## Cloud Deployment
 
 ```bash
+# Install
 ark install marketplace/demos/kyc-demo-bundle
+
+# Upload customer data via Dashboard
+# 1. Go to Ark Dashboard → Files section
+# 2. Create folder: reports/
+# 3. Upload john-doe.txt to customers/
+
+# Submit workflow via Argo UI
+# Get workflow YAML from:
+# https://github.com/mckinsey/agents-at-scale-marketplace/blob/main/demos/kyc-demo-bundle/examples/kyc-onboarding-workflow.yaml
 ```
 
-This installs 3 agents and 2 teams in the default namespace. Argo Workflows RBAC is automatically configured to allow workflows to create and read Ark Queries.
-
-**Step 2: Verify Installation**
-
-```bash
-# Check agents are available
-kubectl get agents -n default
-
-# Check teams are available
-kubectl get teams -n default
-```
-
-**Step 3: Test Agents**
-
-```bash
-# Query individual agent
-ark query document-verifier "Verify passport AB123456 for John Doe"
-
-# Query team
-ark query kyc-verification-team "Complete KYC for John Doe, US citizen"
-```
-
-## Argo Workflows Integration
-
-To run automated KYC workflows using Argo:
-
-**Step 1: Access Argo UI**
-
-Inside of your cluster, access the Argo Workflows UI
-
-**Step 2: Get Workflow YAML**
-
-Go to the marketplace repository on GitHub:
-```
-https://github.com/mckinsey/agents-at-scale-marketplace/blob/main/demos/kyc-demo-bundle/examples/kyc-onboarding-workflow.yaml
-```
-
-Click **"Raw"** and copy the entire contents.
-
-**Step 3: Submit Workflow**
-
-1. In the Argo UI, click **"+ SUBMIT NEW WORKFLOW"**
-2. Paste the copied YAML content
-3. Click **"CREATE"**
-
-**Step 4: Monitor Execution**
-
-Watch the workflow execute in the UI. Results will appear in the logs and in the Ark Dashboard Queries section.
-
-## Support
-
-For issues or questions:
-- [Ark Documentation](https://github.com/mckinsey/agents-at-scale)
-- [Marketplace Repository](https://github.com/mckinsey/agents-at-scale-marketplace)
+See `examples/data/customers/john-doe.txt` for customer data format.
 

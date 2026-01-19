@@ -1,0 +1,39 @@
+{
+  "customer": {
+    "personalInfo": {
+      "fullName": "John Michael Smith",
+      "dateOfBirth": "March 15, 1985",
+      "nationality": "United States",
+      "residentialAddress": "123 Main Street, New York, NY 10001, USA",
+      "contactInfo": {
+        "phone": "+1-555-0123",
+        "email": "john.smith@email.com"
+      }
+    },
+    "identificationDocuments": {
+      "passport": {
+        "type": "US Passport",
+        "number": "P123456789",
+        "issuedDate": "2020-01-15",
+        "expiryDate": "2030-01-15",
+        "issuingAuthority": "United States Department of State"
+      },
+      "driversLicense": {
+        "type": "NY Driver's License",
+        "number": "123456789",
+        "issuedDate": "2019-05-10",
+        "issuingAuthority": "New York State DMV"
+      }
+    },
+    "businessProfile": {
+      "purpose": "Opening personal investment account",
+      "expectedTransactions": "$5,000 - $10,000 monthly deposits",
+      "sourceOfFunds": "Employment income (software engineer)",
+      "employmentDetails": {
+        "occupation": "Software Engineer",
+        "employer": "Tech Solutions Inc.",
+        "annualIncome": "$120,000"
+      }
+    }
+  }
+}

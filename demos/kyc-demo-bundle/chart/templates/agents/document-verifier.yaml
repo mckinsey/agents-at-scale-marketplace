@@ -13,8 +13,18 @@ spec:
   description: Document verification agent that analyzes and validates customer identity documents
   modelRef:
     name: {{ .Values.modelRef.name }}
+  maxCompletionTokens: 2048
+  tools:
+  - name: file-gateway-mcpserver-read-file
+    type: mcp
+  - name: file-gateway-mcpserver-write-file
+    type: mcp
+  - name: file-gateway-mcpserver-list-directory
+    type: mcp
   prompt: |
     You are a KYC document verification specialist who analyzes identity documents and validates their authenticity.
+
+    You have access to filesystem tools to read customer data files and write verification reports.
 
     Your responsibilities:
     - Extract key information from identity documents (passport, driver's license, national ID)
