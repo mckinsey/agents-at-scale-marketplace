@@ -17,7 +17,7 @@ File Gateway provides:
 
 ### File Size Limitations
 
-The Filesystem MCP is designed for small files that can be directly loaded into agent context. For this reason it enforces a **1MB file size** limit for uploads.
+The [Filesystem MCP Server](/docs/mcps/filesystem-mcp-server) is designed for small files that can be directly loaded into agent context. For this reason it enforces a **1MB file size** limit for uploads.
 
 For larger files or datasets, consider using RAG (Retrieval-Augmented Generation) or vectorization patterns.
 
@@ -56,6 +56,8 @@ FastAPI REST service for S3 file operations via VersityGW. Provides endpoints fo
 
 Model Context Protocol server that provides file system access tools for AI agents. Agents can interact with the file storage through MCP tools.
 
+For detailed documentation on available tools and usage, see the [Filesystem MCP Server documentation](/mcps/filesystem-mcp-server).
+
 **Port:** 8000
 
 ### VersityGW
@@ -80,24 +82,33 @@ S3-compatible gateway for object storage, providing the underlying storage backe
 
 ## Usage with Agents
 
-Agents can access files through the Filesystem MCP server. The MCP server is automatically registered with Ark and provides file operation tools to connected agents.
+Agents can access files through the [Filesystem MCP Server](/mcps/filesystem-mcp-server). The MCP server is automatically registered with Ark and provides file operation tools to connected agents.
+
+See the [Filesystem MCP Server documentation](/mcps/filesystem-mcp-server) for details on:
+- Available filesystem tools
+- Creating agents with filesystem access
+- Configuring workspaces
+- Example queries and operations
 
 Use the ark-dashboard to browse and manage files.
 
 ## Uninstall
 
-**Using DevSpace:**
+**Using ARK CLI:**
+
 ```bash
-cd services/file-gateway
-devspace purge
+ark uninstall marketplace/services/file-gateway
 ```
 
 **Using Helm:**
+
 ```bash
 helm uninstall file-gateway -n default
 ```
 
-## Additional Resources
+**Using DevSpace:**
 
-- [File Gateway README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/file-gateway)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
+```bash
+cd services/file-gateway
+devspace purge
+```
