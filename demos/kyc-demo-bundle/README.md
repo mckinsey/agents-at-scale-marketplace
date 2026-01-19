@@ -21,17 +21,17 @@ Agents read customer data from plain text files and write reports using MCP file
 ## Local Development
 
 ```bash
-# Clone and install
-git clone https://github.com/mckinsey/agents-at-scale-marketplace
+# 3 simple steps:
 cd agents-at-scale-marketplace/demos/kyc-demo-bundle
 
-make install-with-argo      # Install bundle
-make upload-data            # Upload example customer file
-make kyc-demo               # Submit workflow
+make install-with-argo      # 1. Install everything
+make upload-data            # 2. Upload example customer file
+make kyc-demo               # 3. Run KYC workflow
 
 # View results
 kubectl get workflows -n default
-# Access Ark Dashboard → Files section to download report
+# Access ARK Dashboard → Workflow Templates (template is visible)
+# Access ARK Dashboard → Files section (download report)
 
 # Cleanup
 make uninstall

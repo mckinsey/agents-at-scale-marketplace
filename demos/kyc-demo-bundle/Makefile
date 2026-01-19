@@ -1,4 +1,4 @@
-.PHONY: help install install-with-argo uninstall demo
+.PHONY: help install install-with-argo uninstall kyc-demo upload-data
 
 NAMESPACE ?= default
 RELEASE_NAME ?= kyc-demo-bundle
@@ -7,11 +7,10 @@ help:
 	@echo "KYC Demo Bundle"
 	@echo ""
 	@echo "Available commands:"
-	@echo "  make install              Install bundle (agents + teams + file-gateway)"
-	@echo "  make install-with-argo    Install bundle with Argo Workflows RBAC"
+	@echo "  make install-with-argo    Install everything (bundle + WorkflowTemplate)"
+	@echo "  make upload-data          Upload example customer data"
+	@echo "  make kyc-demo             Run KYC workflow"
 	@echo "  make uninstall            Remove bundle and cleanup"
-	@echo "  make demo                 Submit example workflow"
-	@echo "  make upload-data          Upload example customer data to file-gateway"
 
 install:
 	@echo "Installing KYC Demo Bundle..."
@@ -32,7 +31,12 @@ install-with-argo:
 		--create-namespace \
 		--set argoWorkflows.rbac.enabled=true \
 		--wait
-	@echo "Done. Argo Workflows RBAC configured."
+	@echo "Installing WorkflowTemplate..."
+	@kubectl apply -f examples/kyc-onboarding-template.yaml -n $(NAMESPACE)
+	@echo "Done! Installed:"
+	@echo "  ✓ Agents, teams, and file-gateway"
+	@echo "  ✓ Argo Workflows RBAC"
+	@echo "  ✓ WorkflowTemplate (visible in ARK Dashboard)"
 
 uninstall:
 	@echo "Uninstalling KYC Demo Bundle..."
@@ -41,9 +45,9 @@ uninstall:
 	@echo "Done."
 
 kyc-demo:
-	@echo "Submitting KYC workflow..."
-	@kubectl create -f examples/kyc-onboarding-workflow.yaml
-	@echo "Done. Monitor with: kubectl get workflows -n $(NAMESPACE)"
+	@echo "Submitting KYC workflow from template..."
+	@kubectl create -f examples/kyc-onboarding-from-template.yaml -n $(NAMESPACE)
+	@echo "Done. Monitor with: kubectl get workflows -n $(NAMESPACE) -w"
 
 upload-data:
 	@echo "Uploading example customer data to file-gateway..."

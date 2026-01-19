@@ -1,8 +1,9 @@
 apiVersion: argoproj.io/v1alpha1
-kind: Workflow
+kind: WorkflowTemplate
 metadata:
-  generateName: kyc-onboarding-
+  name: kyc-onboarding-template
   annotations:
+    workflows.argoproj.io/title: "KYC Customer Onboarding"
     workflows.argoproj.io/description: "Complete KYC customer onboarding workflow with document verification, risk assessment, and compliance reporting"
 spec:
   entrypoint: main
