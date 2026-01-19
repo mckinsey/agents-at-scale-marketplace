@@ -40,7 +40,7 @@ uninstall:
 	@kubectl delete rolebinding argo-workflow-default-access -n $(NAMESPACE) 2>/dev/null || true
 	@echo "Done."
 
-demo:
+kyc-demo:
 	@echo "Submitting KYC workflow..."
 	@kubectl create -f examples/kyc-onboarding-workflow.yaml
 	@echo "Done. Monitor with: kubectl get workflows -n $(NAMESPACE)"

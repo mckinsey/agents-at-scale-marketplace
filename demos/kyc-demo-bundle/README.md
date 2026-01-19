@@ -25,9 +25,9 @@ Agents read customer data from plain text files and write reports using MCP file
 git clone https://github.com/mckinsey/agents-at-scale-marketplace
 cd agents-at-scale-marketplace/demos/kyc-demo-bundle
 
-make install-with-argo  # Install bundle
-make upload-data        # Upload example customer file
-make demo               # Submit workflow
+make install-with-argo      # Install bundle
+make upload-data            # Upload example customer file
+make kyc-demo               # Submit workflow
 
 # View results
 kubectl get workflows -n default
