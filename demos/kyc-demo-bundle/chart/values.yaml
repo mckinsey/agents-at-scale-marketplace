@@ -11,6 +11,12 @@ agents:
   documentVerifier:
     enabled: true
     name: document-verifier
+  uboExtractor:
+    enabled: true
+    name: ubo-extractor
+  sanctionsScreener:
+    enabled: true
+    name: sanctions-screener
   riskAssessor:
     enabled: true
     name: risk-assessor
@@ -20,14 +26,24 @@ agents:
 
 # Teams configuration
 teams:
-  kycVerificationTeam:
+  identityVerificationTeam:
     enabled: true
-    name: kyc-verification-team
+    name: identity-verification-team
     strategy: sequential
-    maxTurns: 3
-  quickScreeningTeam:
+    maxTurns: 1
+  ownershipAnalysisTeam:
     enabled: true
-    name: quick-screening-team
+    name: ownership-analysis-team
+    strategy: sequential
+    maxTurns: 1
+  complianceScreeningTeam:
+    enabled: true
+    name: compliance-screening-team
+    strategy: sequential
+    maxTurns: 1
+  riskAssessmentTeam:
+    enabled: true
+    name: risk-assessment-team
     strategy: sequential
     maxTurns: 2
 

@@ -1,0 +1,33 @@
+{{- if .Values.teams.complianceScreeningTeam.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.complianceScreeningTeam.name }}
+  labels:
+    category: kyc
+    workflow: sequential
+    use-case: compliance-screening
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Compliance screening team that performs sanctions, watchlist, and PEP screening.
+
+    This team conducts comprehensive compliance checks on all identified individuals:
+    - Sanctions screening (OFAC SDN, UN Consolidated List, EU Sanctions, UK HM Treasury)
+    - Internal blacklist and watchlist screening
+    - Politically Exposed Persons (PEP) screening (current and former)
+    - Adverse media screening (negative news, financial crime allegations)
+    - Match quality assessment with confidence scores
+    - Risk classification for each individual
+
+    The team screens all UBOs, directors, and executives identified in the previous ownership analysis step.
+
+    Use this team after ownership analysis to ensure compliance with AML/CFT regulations.
+  members:
+    - name: {{ .Values.agents.sanctionsScreener.name }}
+      type: agent
+  strategy: {{ .Values.teams.complianceScreeningTeam.strategy }}
+  maxTurns: {{ .Values.teams.complianceScreeningTeam.maxTurns }}
+{{- end }}

@@ -1,0 +1,44 @@
+{{- if .Values.teams.riskAssessmentTeam.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.riskAssessmentTeam.name }}
+  labels:
+    category: kyc
+    workflow: sequential
+    use-case: risk-assessment
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Risk assessment team that synthesizes all verification findings and generates final compliance reports.
+
+    This team performs two critical final steps:
+
+    1. Risk Assessor: Calculates comprehensive risk score (0-100) based on:
+       - Geographic risk (jurisdiction, FATF status)
+       - Industry/business risk
+       - Ownership complexity
+       - Sanctions and watchlist hits
+       - PEP exposure levels
+       - Adverse media findings
+       - Transaction profile risk
+       Determines Enhanced Due Diligence (EDD) requirements and monitoring levels.
+
+    2. Compliance Reporter: Consolidates all findings into audit-ready KYC compliance report:
+       - Executive summary with key findings
+       - Complete verification history (documents, UBOs, screening, risk)
+       - Onboarding recommendation (APPROVE/APPROVE WITH CONDITIONS/REJECT/ESCALATE)
+       - Compliance requirements and monitoring plan
+       - Full audit trail
+
+    Use this team as the final step to generate customer onboarding decisions and compliance documentation.
+  members:
+    - name: {{ .Values.agents.riskAssessor.name }}
+      type: agent
+    - name: {{ .Values.agents.complianceReporter.name }}
+      type: agent
+  strategy: {{ .Values.teams.riskAssessmentTeam.strategy }}
+  maxTurns: {{ .Values.teams.riskAssessmentTeam.maxTurns }}
+{{- end }}
