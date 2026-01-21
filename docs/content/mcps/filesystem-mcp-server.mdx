@@ -1,0 +1,215 @@
+---
+title: Filesystem MCP Server
+description: MCP-compliant filesystem server with persistent session tracking and workspace management
+---
+
+# Filesystem MCP Server
+
+The Filesystem MCP Server is an MCP-compliant server that provides secure filesystem operations. It enables agents to read, write, edit, search, and manage files within controlled workspaces.
+
+## Available Tools
+
+The MCP server exposes the following tools (prefixed with `mcp-filesystem-`):
+
+- `mcp-filesystem-read-file` - Read file contents
+- `mcp-filesystem-write-file` - Write or overwrite files
+- `mcp-filesystem-edit-file` - Edit existing files
+- `mcp-filesystem-create-directory` - Create directories
+- `mcp-filesystem-list-directory` - List directory contents
+- `mcp-filesystem-move` - Move or rename files/directories
+- `mcp-filesystem-search` - Search for files and content
+- `mcp-filesystem-get-file-info` - Get file metadata
+- `mcp-filesystem-list-allowed-directories` - List accessible directories
+- `mcp-filesystem-directory-tree` - Get directory tree structure
+- `mcp-filesystem-set-base-directory` - Configure workspace directory
+
+## Quick Start
+
+### Installation
+
+**Using ARK CLI (Recommended):**
+
+```bash
+ark install marketplace/mcps/filesystem-mcp-server
+```
+
+**Using DevSpace (for Development):**
+
+```bash
+cd mcps/filesystem-mcp-server
+devspace deploy
+```
+
+**Using Helm:**
+
+```bash
+cd mcps/filesystem-mcp-server
+helm install mcp-filesystem ./chart -n default
+```
+
+### Creating an Agent with Filesystem Access
+
+Create an agent that uses the filesystem MCP server:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: filesystem-agent
+  namespace: default
+spec:
+  tools:
+    - name: mcp-filesystem-read-file
+      type: custom
+    - name: mcp-filesystem-write-file
+      type: custom
+    - name: mcp-filesystem-edit-file
+      type: custom
+    - name: mcp-filesystem-create-directory
+      type: custom
+    - name: mcp-filesystem-list-directory
+      type: custom
+```
+
+### Configuring Workspaces
+
+Workspaces are configured via ARK query annotations using the `set_base_directory` tool:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: my-query
+  annotations:
+    "ark.mckinsey.com/mcp-server-settings": |
+      {"default/mcp-filesystem": {
+        "toolCalls": [{
+          "name": "set_base_directory",
+          "arguments": {"path": "my-workspace"}
+        }]
+      }}
+spec:
+  input: "List all files in the current directory"
+  targets:
+    - name: filesystem-agent
+```
+
+This creates and configures `/data/my-workspace/` as the working directory for all filesystem operations in that query.
+
+## Examples
+
+**Basic File Operations**
+
+```bash
+# Create and write to a file
+ark query agent/filesystem-agent "Create a file hello.txt with content 'Hello World'"
+
+# Read a file
+ark query agent/filesystem-agent "Read the contents of hello.txt"
+
+# List files
+ark query agent/filesystem-agent "List all files in the current directory"
+```
+
+**Directory Operations**
+
+```bash
+# Create a directory structure
+ark query agent/filesystem-agent "Create a directory structure: project/src and project/tests"
+
+# Get directory tree
+ark query agent/filesystem-agent "Show me the directory tree of the project folder"
+```
+
+**Search Operations**
+
+```bash
+# Search for files
+ark query agent/filesystem-agent "Find all .txt files"
+
+# Search file contents
+ark query agent/filesystem-agent "Search for files containing 'TODO'"
+```
+
+## Configuration
+
+### Environment Variables
+
+Configured in `chart/values.yaml`:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | 8080 |
+| `BASE_DATA_DIR` | Base directory for filesystem operations | /data |
+| `SESSION_FILE` | Path to session metadata storage | /data/sessions/sessions.json |
+| `MAX_SESSIONS` | Maximum concurrent sessions | 1000 |
+
+### Helm Chart Options
+
+```yaml
+# Storage configuration
+persistence:
+  size: 10Gi
+  storageClass: standard
+
+# Resource limits
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+```
+
+## Architecture
+
+The server has a clean separation of concerns:
+
+### Session Wrapper (`src/index.ts`)
+- MCP protocol session lifecycle (ID generation, tracking)
+- Session metadata persistence (sessions.json)
+- LRU eviction and cleanup
+- Transport management
+- Generic and reusable across MCP servers
+
+### Filesystem Adapter (`src/adapters/filesystem/`)
+- MCP tool definitions and implementations
+- File operations (read, write, edit, search, list, tree)
+- Path validation and security
+- Workspace management via `set_base_directory`
+
+### Key Design Principles
+- **MCP sessions ≠ application state**: Sessions track connections, not configuration
+- **Annotations as source of truth**: Workspace configuration comes from ARK annotations
+- **Single base directory**: All sessions share `/data/` with user-specified subdirectories
+- **No per-session directories**: Workspaces are explicitly named and persistent
+
+## Security Considerations
+
+- All filesystem operations are restricted to the configured base directory (`/data/`)
+- Path traversal attacks are prevented through path validation
+- Each workspace is isolated within its subdirectory
+- Session limits prevent resource exhaustion
+- Persistent storage should be properly secured with appropriate access controls
+
+## Uninstallation
+
+**Using ARK CLI:**
+
+```bash
+ark uninstall marketplace/mcps/filesystem-mcp-server
+```
+
+**Using DevSpace:**
+
+```bash
+cd mcps/filesystem-mcp-server
+devspace purge
+```
+
+**Using Helm:**
+
+```bash
+helm uninstall mcp-filesystem -n default
+```

@@ -8,5 +8,6 @@
   "services/ark-sandbox": "0.1.2",
   "agents/noah": "0.1.8",
   "services/file-gateway": "0.1.3",
-  "services/file-gateway/services/file-api": "0.1.1"
+  "services/file-gateway/services/file-api": "0.1.1",
+  "mcps/filesystem-mcp-server": "0.1.50"
 }
