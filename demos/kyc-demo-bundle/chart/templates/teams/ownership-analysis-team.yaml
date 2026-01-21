@@ -1,0 +1,32 @@
+{{- if .Values.teams.ownershipAnalysisTeam.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.ownershipAnalysisTeam.name }}
+  labels:
+    category: kyc
+    workflow: sequential
+    use-case: ownership-analysis
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Ownership analysis team that extracts Ultimate Beneficial Owners (UBOs) and key controllers.
+
+    This team performs comprehensive corporate structure analysis:
+    - Identifies all Ultimate Beneficial Owners (individuals owning ≥25% directly or indirectly)
+    - Maps complete ownership structure and control chains
+    - Extracts Board of Directors and C-level executives
+    - Identifies all persons with significant control (PSCs)
+    - Generates hierarchical ownership tree structure
+
+    The output includes a JSON-formatted list of all individuals requiring sanctions and PEP screening.
+
+    Use this team after identity verification to understand corporate ownership structures.
+  members:
+    - name: {{ .Values.agents.uboExtractor.name }}
+      type: agent
+  strategy: {{ .Values.teams.ownershipAnalysisTeam.strategy }}
+  maxTurns: {{ .Values.teams.ownershipAnalysisTeam.maxTurns }}
+{{- end }}

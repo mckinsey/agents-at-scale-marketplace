@@ -4,10 +4,10 @@ KYC customer onboarding demo with file-based multi-agent workflows.
 
 ## What's Included
 
-- **3 agents**: document-verifier, risk-assessor, compliance-reporter
-- **2 teams**: kyc-verification-team, quick-screening-team
+- **5 agents**: document-verifier, ubo-extractor, sanctions-screener, risk-assessor, compliance-reporter
+- **4 teams**: identity-verification-team, ownership-analysis-team, compliance-screening-team, risk-assessment-team
 - **file-gateway**: S3-compatible storage with filesystem MCP
-- **Argo workflow**: Automated KYC onboarding pipeline
+- **Argo workflow**: 5-step automated KYC onboarding pipeline with UBO tree generation, sanctions/PEP screening, and risk assessment
 
 Agents read customer data from plain text files and write reports using MCP filesystem tools.
 
