@@ -51,8 +51,8 @@ jobs:
           - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
           # disable file-gateway deployment tests for PRs to avoid hitting 5m limit
           - { name: file-gateway, path: services/file-gateway, namespace: default, run-deployment-test: false }
-          # disable filesystem-mcp deployment tests for PRs to avoid hitting 5m limit
-          - { name: filesystem-mcp, path: mcps/filesystem-mcp-server, namespace: default, run-deployment-test: false }
+          # disable filesystem-mcp-server deployment tests for PRs to avoid hitting 5m limit
+          - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
