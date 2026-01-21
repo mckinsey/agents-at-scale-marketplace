@@ -113,8 +113,7 @@ export const createServer = async () => {
     path: z.string().nonempty(),
   });
 
-  const ToolInputSchema = ToolSchema.shape.inputSchema;
-  type ToolInput = z.infer<typeof ToolInputSchema>;
+  type ToolInput = any;
 
   // Server setup
   const server = new Server(
