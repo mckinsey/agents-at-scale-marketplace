@@ -5,12 +5,12 @@ Exposes the /execute endpoint required by ARK's ExecutionEngine interface.
 
 import os
 import logging
-from typing import Annotated, Any
+from typing import Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
@@ -35,18 +35,18 @@ logger = logging.getLogger(__name__)
 
 class ExecutionEngineModel(BaseModel):
     """Model configuration from ARK."""
-    name: Annotated[str, Field(default="claude-sonnet-4-20250514")]
-    type: Annotated[str | None, Field(default="anthropic")]
-    config: Annotated[dict[str, Any] | None, Field(default_factory=dict)]
+    name: str = "claude-sonnet-4-20250514"
+    type: str | None = "anthropic"
+    config: dict[str, Any] | None = None
 
 
 class AgentConfig(BaseModel):
     """Agent configuration from ARK."""
     name: str
-    namespace: Annotated[str, Field(default="default")]
-    prompt: Annotated[str | None, Field(default="")]
-    description: Annotated[str | None, Field(default="")]
-    parameters: Annotated[list[dict[str, Any]] | None, Field(default_factory=list)]
+    namespace: str = "default"
+    prompt: str | None = ""
+    description: str | None = ""
+    parameters: list[dict[str, Any]] | None = None
     model: ExecutionEngineModel | None = None
     outputSchema: dict[str, Any] | None = None
 
@@ -71,8 +71,8 @@ class ExecutionEngineRequest(BaseModel):
     """Request format for ARK ExecutionEngine."""
     agent: AgentConfig
     userInput: MessageInput
-    history: Annotated[list[MessageInput], Field(default_factory=list)]
-    tools: Annotated[list[ToolDefinition], Field(default_factory=list)]
+    history: list[MessageInput] = []
+    tools: list[ToolDefinition] = []
 
 
 class MessageOutput(BaseModel):
