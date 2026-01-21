@@ -25,7 +25,7 @@ jobs:
           - { name: noah, path: agents/noah }
           - { name: ark-sandbox, path: services/ark-sandbox }
           - { name: file-api, path: services/file-gateway/services/file-api }
-          - { name: filesystem-mcp, path: mcps/filesystem-mcp-server }
+          - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
