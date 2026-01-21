@@ -5,12 +5,13 @@ Exposes the /execute endpoint required by ARK's ExecutionEngine interface.
 
 import os
 import logging
-from typing import Any
+from typing import Annotated, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing_extensions import Doc
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
@@ -35,66 +36,66 @@ logger = logging.getLogger(__name__)
 
 class ExecutionEngineModel(BaseModel):
     """Model configuration from ARK."""
-    name: str = "claude-sonnet-4-20250514"
-    type: str | None = "anthropic"
-    config: dict[str, Any] | None = None
+    name: Annotated[str, Doc("Claude model identifier")] = "claude-sonnet-4-20250514"
+    type: Annotated[str | None, Doc("Provider type: anthropic or bedrock")] = "anthropic"
+    config: Annotated[dict[str, Any] | None, Doc("Additional model configuration")] = None
 
 
 class AgentConfig(BaseModel):
     """Agent configuration from ARK."""
-    name: str
-    namespace: str = "default"
-    prompt: str | None = ""
-    description: str | None = ""
-    parameters: list[dict[str, Any]] | None = None
-    model: ExecutionEngineModel | None = None
-    outputSchema: dict[str, Any] | None = None
+    name: Annotated[str, Doc("Unique agent identifier")]
+    namespace: Annotated[str, Doc("Kubernetes namespace")] = "default"
+    prompt: Annotated[str | None, Doc("System prompt for the agent")] = ""
+    description: Annotated[str | None, Doc("Human-readable agent description")] = ""
+    parameters: Annotated[list[dict[str, Any]] | None, Doc("Agent parameters")] = None
+    model: Annotated[ExecutionEngineModel | None, Doc("Model configuration")] = None
+    outputSchema: Annotated[dict[str, Any] | None, Doc("JSON schema for structured output")] = None
 
 
 class MessageInput(BaseModel):
     """Message format from ARK."""
-    role: str
-    content: str
-    name: str | None = None
-    tool_calls: list[dict[str, Any]] | None = None
-    tool_call_id: str | None = None
+    role: Annotated[str, Doc("Message role: user, assistant, or system")]
+    content: Annotated[str, Doc("Message content")]
+    name: Annotated[str | None, Doc("Optional sender name")] = None
+    tool_calls: Annotated[list[dict[str, Any]] | None, Doc("Tool calls made by assistant")] = None
+    tool_call_id: Annotated[str | None, Doc("ID of tool call this message responds to")] = None
 
 
 class ToolDefinition(BaseModel):
     """Tool definition from ARK."""
-    name: str
-    description: str | None = None
-    parameters: dict[str, Any] | None = None
+    name: Annotated[str, Doc("Tool name")]
+    description: Annotated[str | None, Doc("Tool description")] = None
+    parameters: Annotated[dict[str, Any] | None, Doc("JSON schema for tool parameters")] = None
 
 
 class ExecutionEngineRequest(BaseModel):
     """Request format for ARK ExecutionEngine."""
-    agent: AgentConfig
-    userInput: MessageInput
-    history: list[MessageInput] = []
-    tools: list[ToolDefinition] = []
+    agent: Annotated[AgentConfig, Doc("Agent configuration")]
+    userInput: Annotated[MessageInput, Doc("Current user message")]
+    history: Annotated[list[MessageInput], Doc("Conversation history")] = []
+    tools: Annotated[list[ToolDefinition], Doc("Available tools")] = []
 
 
 class MessageOutput(BaseModel):
     """Message output format for ARK."""
-    role: str
-    content: str
-    name: str | None = None
-    tool_calls: list[dict[str, Any]] | None = None
-    tool_call_id: str | None = None
+    role: Annotated[str, Doc("Message role")]
+    content: Annotated[str, Doc("Message content")]
+    name: Annotated[str | None, Doc("Agent name")] = None
+    tool_calls: Annotated[list[dict[str, Any]] | None, Doc("Tool calls")] = None
+    tool_call_id: Annotated[str | None, Doc("Tool call ID")] = None
 
 
 class TokenUsage(BaseModel):
     """Token usage metrics."""
-    inputTokens: int = 0
-    outputTokens: int = 0
+    inputTokens: Annotated[int, Doc("Input tokens consumed")] = 0
+    outputTokens: Annotated[int, Doc("Output tokens generated")] = 0
 
 
 class ExecutionEngineResponse(BaseModel):
     """Response format for ARK ExecutionEngine."""
-    messages: list[MessageOutput]
-    error: str | None = None
-    tokenUsage: TokenUsage | None = None
+    messages: Annotated[list[MessageOutput], Doc("Response messages")]
+    error: Annotated[str | None, Doc("Error message if execution failed")] = None
+    tokenUsage: Annotated[TokenUsage | None, Doc("Token usage statistics")] = None
 
 
 # ============================================================================
