@@ -138,6 +138,142 @@ spec:
 | claude-3-haiku | us.anthropic.claude-3-haiku-20240307-v1:0 |
 | claude-3-opus | us.anthropic.claude-3-opus-20240229-v1:0 |
 
+## Integration with ARK Sandbox
+
+The executor-claude-agent is stateless by design. For file operations and code execution capabilities, integrate with [ark-sandbox](../ark-sandbox/).
+
+### Prerequisites
+
+Install both services:
+
+```bash
+ark marketplace install ark-sandbox
+ark marketplace install executor-claude-agent
+```
+
+### Creating an Agent with Sandbox Access
+
+Create an agent that references both the executor and the ark-sandbox MCP server:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: claude-developer-with-sandbox
+spec:
+  description: "Claude developer with file and code execution capabilities"
+  executionEngine:
+    name: executor-claude-agent
+  modelRef:
+    name: claude-bedrock
+  mcpServers:
+    - name: ark-sandbox
+  prompt: |
+    You are an expert developer with access to sandbox tools.
+
+    Available tools:
+    - create_sandbox: Create an isolated container environment
+    - execute_command: Run shell commands in the sandbox
+    - upload_file: Write files to the sandbox
+    - download_file: Read files from the sandbox
+    - get_sandbox_logs: View container logs
+    - delete_sandbox: Clean up when done
+
+    Always create a sandbox before executing code, and clean up after.
+```
+
+### Sandbox Tools Reference
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `create_sandbox` | Create isolated container | `image`, `ttl_minutes`, `pvc_name` |
+| `execute_command` | Run shell commands | `sandbox_id`, `command`, `working_dir` |
+| `upload_file` | Write file to sandbox | `sandbox_id`, `path`, `content` |
+| `download_file` | Read file from sandbox | `sandbox_id`, `path` |
+| `get_sandbox_logs` | Get container logs | `sandbox_id`, `tail_lines` |
+| `delete_sandbox` | Remove sandbox | `sandbox_id` |
+| `list_sandboxes` | List all sandboxes | `namespace` |
+| `claim_sandbox_from_pool` | Get pre-warmed sandbox | `pool_name` |
+
+### Using Shared Storage (PVC)
+
+For workflows that need persistent storage across sandbox sessions:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workflow-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: code-task
+spec:
+  type: user
+  input: |
+    Create a sandbox with the workflow-storage PVC mounted.
+    Write a Python script to /shared/analysis.py that processes data.
+    Execute it and save results to /shared/results.json.
+  targets:
+    - name: claude-developer-with-sandbox
+      type: agent
+```
+
+The PVC will be mounted at `/shared` in the sandbox, allowing data persistence.
+
+### Warm Pools for Fast Startup
+
+Pre-create sandboxes for instant availability:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: python-dev
+spec:
+  image: python:3.13-slim
+  ttlMinutes: 120
+  resources:
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: SandboxPool
+metadata:
+  name: python-pool
+spec:
+  templateRef:
+    name: python-dev
+  minSize: 3
+  maxSize: 10
+```
+
+Then use `claim_sandbox_from_pool` instead of `create_sandbox` for faster startup.
+
+### Architecture with Sandbox
+
+```
+                                    ┌─────────────────┐
+                                    │   ark-sandbox   │
+                                    │   (MCP Server)  │
+                                    └────────▲────────┘
+                                             │ MCP tools
+┌───────┐    ┌───────┐    ┌─────────────────┴────────────────┐    ┌──────────┐
+│ Query │───►│ Agent │───►│ executor-claude-agent            │───►│ Bedrock/ │
+└───────┘    └───────┘    │ (ExecutionEngine)                │    │ Anthropic│
+                          └──────────────────────────────────┘    └──────────┘
+```
+
+The executor receives tool definitions from ARK, calls Claude, and Claude can invoke sandbox tools through ARK's MCP integration.
+
 ## Architecture
 
 ```
