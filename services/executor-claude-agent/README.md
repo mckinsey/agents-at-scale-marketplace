@@ -151,9 +151,79 @@ ark marketplace install ark-sandbox
 ark marketplace install executor-claude-agent
 ```
 
-### Creating an Agent with Sandbox Access
+### Integration Options
 
-Create an agent that references both the executor and the ark-sandbox MCP server:
+There are three ways to integrate executor-claude-agent with ark-sandbox:
+
+| Method | Description | Use Case |
+|--------|-------------|----------|
+| **Direct MCP** (Recommended) | Executor connects directly to ark-sandbox MCP server | Tight integration, lower latency |
+| **ARK MCP Routing** | ARK passes MCP tools to executor via Agent CRD | Flexible, declarative configuration |
+| **HTTP API** | Executor calls ark-sandbox REST endpoints | Custom integrations, non-MCP clients |
+
+---
+
+### Option 1: Direct MCP Integration (Recommended)
+
+The executor connects directly to the ark-sandbox MCP server for sandbox operations.
+
+**Configuration:**
+
+```yaml
+# values.yaml
+sandbox:
+  enabled: true
+  mcpEndpoint: "http://ark-sandbox.default.svc.cluster.local:80/mcp"
+```
+
+**Or via environment variable:**
+
+```yaml
+env:
+  - name: SANDBOX_MCP_ENDPOINT
+    value: "http://ark-sandbox.default.svc.cluster.local:80/mcp"
+```
+
+**Architecture:**
+
+```
+┌───────┐    ┌───────┐    ┌──────────────────────┐    ┌──────────┐
+│ Query │───►│ Agent │───►│ executor-claude-agent│───►│ Bedrock/ │
+└───────┘    └───────┘    └──────────┬───────────┘    │ Anthropic│
+                                     │                └──────────┘
+                                     │ MCP (direct)
+                                     ▼
+                          ┌─────────────────┐
+                          │   ark-sandbox   │
+                          │   (MCP Server)  │
+                          └─────────────────┘
+```
+
+**Agent CRD:**
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: claude-developer
+spec:
+  description: "Claude developer with sandbox capabilities"
+  executionEngine:
+    name: executor-claude-agent
+  modelRef:
+    name: claude-bedrock
+  prompt: |
+    You are an expert developer with access to sandbox tools for
+    file operations and code execution.
+```
+
+---
+
+### Option 2: ARK MCP Routing
+
+ARK passes MCP tools from ark-sandbox to the executor via the Agent's mcpServers configuration.
+
+**Agent CRD:**
 
 ```yaml
 apiVersion: ark.mckinsey.com/v1alpha1
@@ -181,6 +251,54 @@ spec:
 
     Always create a sandbox before executing code, and clean up after.
 ```
+
+**Architecture:**
+
+```
+┌───────┐    ┌───────┐    ┌──────────────────────┐    ┌──────────┐
+│ Query │───►│ Agent │───►│ executor-claude-agent│───►│ Bedrock/ │
+└───────┘    └───────┘    └──────────────────────┘    │ Anthropic│
+                │                   ▲                 └──────────┘
+                │ tool definitions  │ tool results
+                ▼                   │
+         ┌─────────────┐    ┌───────┴───────┐
+         │ ARK Broker  │───►│  ark-sandbox  │
+         └─────────────┘    │  (MCP Server) │
+                            └───────────────┘
+```
+
+---
+
+### Option 3: HTTP API Integration
+
+For custom integrations, ark-sandbox exposes REST endpoints that can be called directly.
+
+**Endpoints:**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/sandboxes` | POST | Create sandbox |
+| `/api/sandboxes/{id}` | GET | Get sandbox info |
+| `/api/sandboxes/{id}` | DELETE | Delete sandbox |
+| `/api/sandboxes/{id}/exec` | POST | Execute command |
+| `/api/sandboxes/{id}/files` | POST | Upload file |
+| `/api/sandboxes/{id}/files/{path}` | GET | Download file |
+
+**Example:**
+
+```bash
+# Create sandbox
+curl -X POST http://ark-sandbox/api/sandboxes \
+  -H "Content-Type: application/json" \
+  -d '{"image": "python:3.13-slim", "ttlMinutes": 60}'
+
+# Execute command
+curl -X POST http://ark-sandbox/api/sandboxes/{id}/exec \
+  -H "Content-Type: application/json" \
+  -d '{"command": "python --version"}'
+```
+
+---
 
 ### Sandbox Tools Reference
 
@@ -257,22 +375,6 @@ spec:
 ```
 
 Then use `claim_sandbox_from_pool` instead of `create_sandbox` for faster startup.
-
-### Architecture with Sandbox
-
-```
-                                    ┌─────────────────┐
-                                    │   ark-sandbox   │
-                                    │   (MCP Server)  │
-                                    └────────▲────────┘
-                                             │ MCP tools
-┌───────┐    ┌───────┐    ┌─────────────────┴────────────────┐    ┌──────────┐
-│ Query │───►│ Agent │───►│ executor-claude-agent            │───►│ Bedrock/ │
-└───────┘    └───────┘    │ (ExecutionEngine)                │    │ Anthropic│
-                          └──────────────────────────────────┘    └──────────┘
-```
-
-The executor receives tool definitions from ARK, calls Claude, and Claude can invoke sandbox tools through ARK's MCP integration.
 
 ## Architecture
 
