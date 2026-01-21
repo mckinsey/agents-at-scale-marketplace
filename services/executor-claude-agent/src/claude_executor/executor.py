@@ -7,9 +7,11 @@ and autonomous task execution.
 
 import os
 import logging
-from typing import Any
+from typing import Annotated, Any
 
 from opentelemetry import trace
+from pydantic import BaseModel
+from typing_extensions import Doc
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer("executor-claude")
@@ -19,32 +21,13 @@ DEFAULT_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 DEFAULT_MAX_TURNS = int(os.getenv("CLAUDE_MAX_TURNS", "10"))
 
 
-class Message:
+class Message(BaseModel):
     """ARK-compatible message format."""
-
-    def __init__(
-        self,
-        role: str,
-        content: str,
-        name: str | None = None,
-        tool_calls: list[dict] | None = None,
-        tool_call_id: str | None = None,
-    ):
-        self.role = role
-        self.content = content
-        self.name = name
-        self.tool_calls = tool_calls
-        self.tool_call_id = tool_call_id
-
-    def to_dict(self) -> dict[str, Any]:
-        result = {"role": self.role, "content": self.content}
-        if self.name:
-            result["name"] = self.name
-        if self.tool_calls:
-            result["tool_calls"] = self.tool_calls
-        if self.tool_call_id:
-            result["tool_call_id"] = self.tool_call_id
-        return result
+    role: Annotated[str, Doc("Message role")]
+    content: Annotated[str, Doc("Message content")]
+    name: Annotated[str | None, Doc("Sender name")] = None
+    tool_calls: Annotated[list[dict] | None, Doc("Tool calls")] = None
+    tool_call_id: Annotated[str | None, Doc("Tool call ID")] = None
 
 
 class ClaudeAgentExecutor:
