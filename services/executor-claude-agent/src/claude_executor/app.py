@@ -5,7 +5,7 @@ Exposes the /execute endpoint required by ARK's ExecutionEngine interface.
 
 import os
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Annotated, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -35,53 +35,53 @@ logger = logging.getLogger(__name__)
 
 class ExecutionEngineModel(BaseModel):
     """Model configuration from ARK."""
-    name: str = Field(default="claude-sonnet-4-20250514")
-    type: Optional[str] = Field(default="anthropic")
-    config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    name: Annotated[str, Field(default="claude-sonnet-4-20250514")]
+    type: Annotated[str | None, Field(default="anthropic")]
+    config: Annotated[dict[str, Any] | None, Field(default_factory=dict)]
 
 
 class AgentConfig(BaseModel):
     """Agent configuration from ARK."""
     name: str
-    namespace: str = Field(default="default")
-    prompt: Optional[str] = Field(default="")
-    description: Optional[str] = Field(default="")
-    parameters: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
-    model: Optional[ExecutionEngineModel] = Field(default=None)
-    outputSchema: Optional[Dict[str, Any]] = Field(default=None)
+    namespace: Annotated[str, Field(default="default")]
+    prompt: Annotated[str | None, Field(default="")]
+    description: Annotated[str | None, Field(default="")]
+    parameters: Annotated[list[dict[str, Any]] | None, Field(default_factory=list)]
+    model: ExecutionEngineModel | None = None
+    outputSchema: dict[str, Any] | None = None
 
 
 class MessageInput(BaseModel):
     """Message format from ARK."""
     role: str
     content: str
-    name: Optional[str] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
-    tool_call_id: Optional[str] = None
+    name: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
+    tool_call_id: str | None = None
 
 
 class ToolDefinition(BaseModel):
     """Tool definition from ARK."""
     name: str
-    description: Optional[str] = None
-    parameters: Optional[Dict[str, Any]] = None
+    description: str | None = None
+    parameters: dict[str, Any] | None = None
 
 
 class ExecutionEngineRequest(BaseModel):
     """Request format for ARK ExecutionEngine."""
     agent: AgentConfig
     userInput: MessageInput
-    history: List[MessageInput] = Field(default_factory=list)
-    tools: List[ToolDefinition] = Field(default_factory=list)
+    history: Annotated[list[MessageInput], Field(default_factory=list)]
+    tools: Annotated[list[ToolDefinition], Field(default_factory=list)]
 
 
 class MessageOutput(BaseModel):
     """Message output format for ARK."""
     role: str
     content: str
-    name: Optional[str] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
-    tool_call_id: Optional[str] = None
+    name: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
+    tool_call_id: str | None = None
 
 
 class TokenUsage(BaseModel):
@@ -92,9 +92,9 @@ class TokenUsage(BaseModel):
 
 class ExecutionEngineResponse(BaseModel):
     """Response format for ARK ExecutionEngine."""
-    messages: List[MessageOutput]
-    error: Optional[str] = None
-    tokenUsage: Optional[TokenUsage] = None
+    messages: list[MessageOutput]
+    error: str | None = None
+    tokenUsage: TokenUsage | None = None
 
 
 # ============================================================================
@@ -135,7 +135,7 @@ def init_otel():
 # ============================================================================
 
 # Global executor instance
-executor: Optional[ClaudeAgentExecutor] = None
+executor: ClaudeAgentExecutor | None = None
 
 
 @asynccontextmanager

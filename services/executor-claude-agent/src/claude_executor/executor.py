@@ -7,8 +7,7 @@ and autonomous task execution.
 
 import os
 import logging
-import asyncio
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 from opentelemetry import trace
 
@@ -27,9 +26,9 @@ class Message:
         self,
         role: str,
         content: str,
-        name: Optional[str] = None,
-        tool_calls: Optional[List[Dict]] = None,
-        tool_call_id: Optional[str] = None,
+        name: str | None = None,
+        tool_calls: list[dict] | None = None,
+        tool_call_id: str | None = None,
     ):
         self.role = role
         self.content = content
@@ -37,7 +36,7 @@ class Message:
         self.tool_calls = tool_calls
         self.tool_call_id = tool_call_id
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {"role": self.role, "content": self.content}
         if self.name:
             result["name"] = self.name
@@ -64,7 +63,7 @@ class ClaudeAgentExecutor:
         self.description = "Claude Agent SDK Executor with full agentic capabilities"
         logger.info(f"Initialized {self.name} executor")
 
-    async def execute_agent(self, request: Dict[str, Any]) -> List[Message]:
+    async def execute_agent(self, request: dict[str, Any]) -> list[Message]:
         """
         Execute an agent request using Claude Agent SDK.
 
@@ -120,12 +119,12 @@ class ClaudeAgentExecutor:
         self,
         agent_name: str,
         system_prompt: str,
-        model_config: Dict[str, Any],
-        user_input: Dict[str, Any],
-        history: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]],
+        model_config: dict[str, Any],
+        user_input: dict[str, Any],
+        history: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
         span,
-    ) -> List[Message]:
+    ) -> list[Message]:
         """Execute with full Claude Agent SDK agentic loop."""
         try:
             from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions
@@ -194,7 +193,7 @@ class ClaudeAgentExecutor:
                 agent_name, system_prompt, model_config, user_input, history, span
             )
 
-    def _get_provider(self, model_config: Dict[str, Any]) -> str:
+    def _get_provider(self, model_config: dict[str, Any]) -> str:
         """Determine the provider from model config or environment."""
         # Check model config first
         provider = model_config.get("type", "").lower()
@@ -237,11 +236,11 @@ class ClaudeAgentExecutor:
         self,
         agent_name: str,
         system_prompt: str,
-        model_config: Dict[str, Any],
-        user_input: Dict[str, Any],
-        history: List[Dict[str, Any]],
+        model_config: dict[str, Any],
+        user_input: dict[str, Any],
+        history: list[dict[str, Any]],
         span,
-    ) -> List[Message]:
+    ) -> list[Message]:
         """Execute with Anthropic API or Bedrock (no agentic loop)."""
         model = model_config.get("name", DEFAULT_MODEL)
         provider = self._get_provider(model_config)
@@ -279,9 +278,9 @@ class ClaudeAgentExecutor:
         agent_name: str,
         system_prompt: str,
         model: str,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         span,
-    ) -> List[Message]:
+    ) -> list[Message]:
         """Execute using AWS Bedrock."""
         try:
             import boto3
@@ -347,9 +346,9 @@ class ClaudeAgentExecutor:
         agent_name: str,
         system_prompt: str,
         model: str,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         span,
-    ) -> List[Message]:
+    ) -> list[Message]:
         """Execute using direct Anthropic API."""
         try:
             import anthropic
@@ -396,7 +395,7 @@ class ClaudeAgentExecutor:
                 name=agent_name,
             )]
 
-    def _map_tools_to_claude(self, ark_tools: List[Dict[str, Any]]) -> List[str]:
+    def _map_tools_to_claude(self, ark_tools: list[dict[str, Any]]) -> list[str]:
         """Map ARK tool definitions to Claude Agent SDK tool names."""
         # Claude Agent SDK built-in tools
         claude_tools = {
@@ -426,7 +425,7 @@ class ClaudeAgentExecutor:
 
         return allowed
 
-    def _format_history(self, history: List[Dict[str, Any]]) -> str:
+    def _format_history(self, history: list[dict[str, Any]]) -> str:
         """Format conversation history as context string."""
         lines = []
         for msg in history:
