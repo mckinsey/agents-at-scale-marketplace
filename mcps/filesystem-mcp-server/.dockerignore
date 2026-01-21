@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.log
+.git/
+.github/
+.gitignore
+.dockerignore
+.eslintrc.json
+jest.config.js
+README.md
+*.md
+*.spec.ts
+mock-llm.yaml
