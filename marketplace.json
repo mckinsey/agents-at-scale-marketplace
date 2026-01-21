@@ -138,6 +138,33 @@
       }
     },
     {
+      "name": "executor-claude-agent",
+      "type": "service",
+      "displayName": "Claude Agent Executor",
+      "description": "ARK ExecutionEngine using Claude Agent SDK for agentic task execution with Anthropic API and AWS Bedrock support",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["executor", "claude", "anthropic", "bedrock", "agent-sdk", "ai"],
+      "category": "executors",
+      "icon": "https://example.com/claude-agent-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/executor-claude-agent/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/executor-claude-agent",
+        "namespace": "default",
+        "helmReleaseName": "executor-claude-agent",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "executor-claude-agent",
+        "k8sServicePort": 8000,
+        "k8sDeploymentName": "executor-claude-agent"
+      }
+    },
+    {
       "name": "noah",
       "type": "agent",
       "displayName": "Noah",
