@@ -27,6 +27,7 @@ jobs:
           - { name: noah, path: agents/noah }
           - { name: ark-sandbox, path: services/ark-sandbox }
           - { name: file-api, path: services/file-gateway/services/file-api }
+          - { name: langchain-executor, path: execution-engines/langchain-executor }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -52,6 +53,8 @@ jobs:
           - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
           # disable file-gateway deployment tests for PRs to avoid hitting 5m limit
           - { name: file-gateway, path: services/file-gateway, namespace: default, run-deployment-test: false }
+          # disable langchain-executor deployment tests for PRs to avoid hitting 5m limit
+          - { name: langchain-executor, path: execution-engines/langchain-executor, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -138,6 +141,7 @@ jobs:
           - { name: noah, path: agents/noah }
           - { name: ark-sandbox, path: services/ark-sandbox }
           - { name: file-api, path: services/file-gateway/services/file-api }
+          - { name: langchain-executor, path: execution-engines/langchain-executor }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -159,6 +163,7 @@ jobs:
           - { name: ark-sandbox, path: services/ark-sandbox, namespace: default }
           - { name: noah, path: agents/noah, namespace: noah }
           - { name: file-gateway, path: services/file-gateway, namespace: default }
+          - { name: langchain-executor, path: execution-engines/langchain-executor, namespace: default }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}

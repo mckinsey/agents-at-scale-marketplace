@@ -71,6 +71,14 @@
       "changelog-path": "CHANGELOG.md",
       "release-type": "simple",
       "package-name": "file-api"
+    },
+    "execution-engines/langchain-executor": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "langchain-executor",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
     }
   }
 }

@@ -1,0 +1,22 @@
+apiVersion: ark.mckinsey.com/v1prealpha1
+kind: ExecutionEngine
+metadata:
+  name: {{ include "langchain-executor.fullname" . }}
+  labels:
+    {{- include "langchain-executor.labels" . | nindent 4 }}
+spec:
+  type: "langchain"
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "langchain-executor.fullname" . }}
+        {{- if .Values.executionEngine.address.serviceRef.namespace }}
+        namespace: {{ .Values.executionEngine.address.serviceRef.namespace }}
+        {{- end }}
+        {{- if .Values.executionEngine.address.serviceRef.port }}
+        port: "{{ .Values.executionEngine.address.serviceRef.port }}"
+        {{- end }}
+        {{- if .Values.executionEngine.address.serviceRef.path }}
+        path: {{ .Values.executionEngine.address.serviceRef.path }}
+        {{- end }}
+  description: {{ .Values.executionEngine.description | quote }}

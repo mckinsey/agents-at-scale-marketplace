@@ -1,0 +1,107 @@
+---
+title: LangChain Executor
+description: Reference implementation of a LangChain-based execution engine for Ark agents
+---
+
+# LangChain Executor
+
+A reference implementation demonstrating how to build an execution engine for Ark using the LangChain framework.
+
+## Overview
+
+This execution engine serves as an example of how to run Ark agents with an alternative framework. It demonstrates:
+
+- **LangChain Integration**: Using LangChain to process agent queries
+- **RAG Support**: Optional retrieval-augmented generation with embeddings
+- **Model Compatibility**: Works with Azure OpenAI, OpenAI, and Ollama
+
+Use this as a starting point for building custom execution engines or for workloads that benefit from LangChain's capabilities.
+
+## Installation
+
+**Using ARK CLI (Recommended):**
+```bash
+ark install marketplace/execution-engines/langchain-executor
+```
+
+**Using Helm:**
+```bash
+cd execution-engines/langchain-executor
+helm dependency update chart/
+helm install langchain-executor ./chart --create-namespace
+```
+
+**Using DevSpace:**
+```bash
+cd execution-engines/langchain-executor
+devspace deploy
+```
+
+### Uninstallation
+
+**Using Helm:**
+```bash
+helm uninstall langchain-executor
+```
+
+**Using DevSpace:**
+```bash
+cd execution-engines/langchain-executor
+devspace purge
+```
+
+## Usage
+
+### Basic Agent
+
+Reference the execution engine in your Agent:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: langchain-agent
+spec:
+  executionEngine:
+    name: langchain-executor
+  modelRef:
+    name: default
+  prompt: |
+    You are a helpful AI assistant.
+```
+
+### RAG-Enabled Agent
+
+Enable RAG by adding the `langchain: rag` label:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: rag-agent
+  labels:
+    langchain: rag
+spec:
+  executionEngine:
+    name: langchain-executor
+  modelRef:
+    name: default
+  prompt: |
+    You are a code expert. Use the provided context to answer questions.
+```
+
+### Custom Embeddings Model
+
+Specify a custom embeddings model:
+
+```yaml
+metadata:
+  labels:
+    langchain: rag
+    langchain-embeddings-model: text-embedding-3-small
+```
+
+## Resources
+
+- [README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/execution-engines/langchain-executor) - Technical details, configuration options, and development setup
+- [Ark Documentation](https://mckinsey.github.io/agents-at-scale-ark/) - Complete platform documentation

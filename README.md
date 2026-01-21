@@ -39,6 +39,14 @@ Services are designed to integrate seamlessly with the [ARK platform](https://gi
 | [`mcp-inspector`](./services/mcp-inspector)   | Developer tool for testing and debugging MCP servers                       | [Chart](./services/mcp-inspector/chart)    |
 | [`phoenix`](./services/phoenix)               | AI/ML observability and evaluation platform with OpenTelemetry integration | [Chart](./services/phoenix/chart)          |
 
+## Execution Engines
+
+Alternative execution engines for running Ark agents with different frameworks.
+
+| Execution Engine                                              | Description                                                       | Chart                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
+| [`langchain-executor`](./execution-engines/langchain-executor) | LangChain-based execution engine with RAG support                 | [Chart](./execution-engines/langchain-executor/chart)  |
+
 ## Agents
 
 Pre-built agents that can be deployed to your ARK cluster for various operational tasks.
@@ -61,6 +69,9 @@ ark install marketplace/services/file-gateway
 ark install marketplace/services/langfuse
 ark install marketplace/services/mcp-inspector
 ark install marketplace/services/phoenix
+
+# Install execution engines
+ark install marketplace/execution-engines/langchain-executor
 
 # Install agents
 ark install marketplace/agents/noah
@@ -130,6 +141,7 @@ This marketplace will include:
 
 - Additional observability services
 - Pre-built agents and agent templates
+- Additional execution engines (AutoGen, CrewAI, etc.)
 - Reusable tools and utilities
 
 ## Related Projects
