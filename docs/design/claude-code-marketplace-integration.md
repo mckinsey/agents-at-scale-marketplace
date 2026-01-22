@@ -14,6 +14,56 @@ ark install marketplace/claude-code
 - Marketplace CI/CD auto-detects new agents and publishes to GHCR
 - Agent executes via pod lifecycle: create → logs → JQ filter → cleanup
 
+### High-level overview
+
+```
+┌───────────────────────────┐
+│   ark/agents/claude-code  │
+│   └── Dockerfile          │
+└───────────┬───────────────┘
+            │ MOVE + PACKAGE
+            ▼
+┌─────────────────────────────────────────┐
+│   agents-at-scale-marketplace           │
+│                                         │
+│   agents/claude-code/                   │
+│   ├── Dockerfile                        │
+│   └── chart/                            │
+│       ├── values.yaml                   │
+│       └── templates/                    │
+│           ├── agent.yaml (type: pod)    │
+│           ├── secret.yaml               │
+│           └── pvc.yaml                  │
+│                                         │
+│   marketplace.json (+ entry)            │
+└───────────┬─────────────────────────────┘
+            │ CI/CD
+            ▼
+┌────────────────────────────────────────────┐
+│   GHCR (GitHub Container Registry)         │
+│   ├── Image: claude-code:latest            │
+│   └── Chart: oci://ghcr.io/.../claude-code │
+└───────────┬────────────────────────────────┘
+            │ INSTALL
+            ▼
+┌─────────────────────────────────────────┐
+│   Kubernetes Cluster                    │
+│                                         │
+│   $ ark install marketplace/claude-code │
+│     --set anthropic.apiKey=$KEY         │
+│                                         │
+│   Creates:                              │
+│   • Agent CRD (type: pod)               │
+│   • Secret (API key)                    │
+│   • PVC (workspace)                     │
+│                                         │
+│   $ ark agent claude "your query"       │
+│                                         │
+│   ARK Controller:                       │
+│   Pod → Logs → JQ Filter → Result       │
+└─────────────────────────────────────────┘
+```
+
 ---
 
 ## 2. Dependencies
@@ -63,8 +113,6 @@ agents/claude-code/
 - Node.js 22 base image
 - Claude Code CLI via NPM
 - Non-root user setup
-
-**Note**: Dockerfile includes private plugin installation via `GITHUB_TOKEN`. Confirm CI/CD secret configuration.
 
 ---
 
