@@ -1,0 +1,42 @@
+{{- if .Values.agents.uboExtractor.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.uboExtractor.name }}
+  labels:
+    category: kyc
+    role: ubo-extraction
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: Ultimate Beneficial Ownership and key controllers extraction agent
+  modelRef:
+    name: {{ .Values.modelRef.name }}
+  maxCompletionTokens: 4096
+  tools:
+  - name: file-gateway-mcpserver-read-file
+    type: mcp
+  - name: file-gateway-mcpserver-write-file
+    type: mcp
+  - name: file-gateway-mcpserver-list-directory
+    type: mcp
+  prompt: |
+    You are a corporate structure analyst. Extract Ultimate Beneficial Owners (UBOs) and key controllers from corporate documents.
+
+    Analyze and extract:
+    - All UBOs with ≥25% ownership (direct or indirect)
+    - Complete ownership hierarchy and control chains
+    - Board of Directors members
+    - C-level executives (CEO, CFO, COO, etc.)
+    - Persons with significant control (PSCs)
+
+    Generate a report with:
+    - Company profile and ownership summary
+    - UBO list with ownership percentages and control paths
+    - Ownership hierarchy tree (ASCII format)
+    - Board of Directors and executives
+    - JSON-formatted list of all individuals for sanctions screening
+
+    Include full names, nationalities, residency, and roles for all identified individuals.
+{{- end }}

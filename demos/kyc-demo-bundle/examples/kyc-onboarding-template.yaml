@@ -1,0 +1,214 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: kyc-onboarding-template
+  annotations:
+    workflows.argoproj.io/title: "KYC Customer Onboarding"
+    workflows.argoproj.io/description: "Complete KYC customer onboarding workflow with 4 specialized teams: Identity Verification → Ownership Analysis (UBO Tree) → Compliance Screening (Sanctions/PEP) → Risk Assessment & Reporting"
+spec:
+  entrypoint: main
+  serviceAccountName: argo-workflow
+  arguments:
+    parameters:
+      - name: customer-data-file
+        value: "customers/john-doe.txt"
+      - name: output-report-file
+        value: "reports/john-doe-kyc-report.md"
+      - name: doc-verification-file
+        value: "reports/john-doe-doc-verification.md"
+      - name: ubo-extraction-file
+        value: "reports/john-doe-ubo-extraction.md"
+      - name: sanctions-screening-file
+        value: "reports/john-doe-sanctions-screening.md"
+      - name: risk-assessment-file
+        value: "reports/john-doe-risk-assessment.md"
+  templates:
+    - name: main
+      steps:
+        - - name: identity-verification
+            template: query-team
+            arguments:
+              parameters:
+                - name: team-name
+                  value: "identity-verification-team"
+                - name: input-file
+                  value: "{{workflow.parameters.customer-data-file}}"
+                - name: output-file
+                  value: "{{workflow.parameters.doc-verification-file}}"
+                - name: task-description
+                  value: |
+                    Read the customer data from file: {{workflow.parameters.customer-data-file}}
+
+                    Perform complete document verification including identity documents, corporate documents, and financial documents.
+
+                    Generate a comprehensive document verification report and save it to: {{workflow.parameters.doc-verification-file}}
+
+        - - name: ownership-analysis
+            template: query-team
+            arguments:
+              parameters:
+                - name: team-name
+                  value: "ownership-analysis-team"
+                - name: input-file
+                  value: "{{workflow.parameters.customer-data-file}}"
+                - name: output-file
+                  value: "{{workflow.parameters.ubo-extraction-file}}"
+                - name: task-description
+                  value: |
+                    Read the customer data and corporate documents from file: {{workflow.parameters.customer-data-file}}
+
+                    Perform Ultimate Beneficial Ownership analysis. Extract all UBOs with ≥25% ownership, map ownership structure, identify Board of Directors and C-level executives.
+
+                    Generate a comprehensive UBO extraction report with JSON-formatted list of individuals for screening.
+                    Save the report to: {{workflow.parameters.ubo-extraction-file}}
+
+        - - name: compliance-screening
+            template: query-team
+            arguments:
+              parameters:
+                - name: team-name
+                  value: "compliance-screening-team"
+                - name: input-file
+                  value: "{{workflow.parameters.ubo-extraction-file}}"
+                - name: output-file
+                  value: "{{workflow.parameters.sanctions-screening-file}}"
+                - name: task-description
+                  value: |
+                    Read the UBO extraction report from: {{workflow.parameters.ubo-extraction-file}}
+
+                    Extract the list of individuals for screening and perform sanctions screening (OFAC SDN, UN, EU, UK HM Treasury), internal blacklist screening, PEP screening, and adverse media screening.
+
+                    Generate a comprehensive sanctions and PEP screening report with risk classification.
+                    Save the report to: {{workflow.parameters.sanctions-screening-file}}
+
+        - - name: risk-assessment-and-reporting
+            template: query-team
+            arguments:
+              parameters:
+                - name: team-name
+                  value: "risk-assessment-team"
+                - name: input-file
+                  value: "{{workflow.parameters.customer-data-file}}"
+                - name: output-file
+                  value: "{{workflow.parameters.output-report-file}}"
+                - name: task-description
+                  value: |
+                    Read all previous verification reports:
+                    - Document verification: {{workflow.parameters.doc-verification-file}}
+                    - UBO extraction: {{workflow.parameters.ubo-extraction-file}}
+                    - Sanctions & PEP screening: {{workflow.parameters.sanctions-screening-file}}
+                    - Customer data: {{workflow.parameters.customer-data-file}}
+
+                    First, perform comprehensive risk assessment and calculate risk score (0-100). Save intermediate risk assessment to: {{workflow.parameters.risk-assessment-file}}
+
+                    Then, consolidate all findings into a comprehensive, audit-ready KYC compliance report with onboarding recommendation.
+
+                    Save the final KYC compliance report to: {{workflow.parameters.output-report-file}}
+
+        - - name: process-results
+            template: process-kyc-results
+            arguments:
+              parameters:
+                - name: kyc-report
+                  value: "{{steps.risk-assessment-and-reporting.outputs.parameters.response}}"
+                - name: output-report-file
+                  value: "{{workflow.parameters.output-report-file}}"
+
+    - name: query-team
+      inputs:
+        parameters:
+          - name: team-name
+          - name: input-file
+          - name: output-file
+          - name: task-description
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eux
+
+          QUERY_NAME="kyc-{{workflow.name}}-{{inputs.parameters.team-name}}-$(date +%s%N)"
+          TEAM_NAME="{{inputs.parameters.team-name}}"
+
+          # Write task description to a temp file
+          cat > /tmp/task-description.txt <<'TASKEOF'
+          {{inputs.parameters.task-description}}
+          TASKEOF
+
+          # Create Query YAML using printf with proper indentation
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+            labels:
+              workflow: "{{workflow.name}}"
+              team: "$TEAM_NAME"
+              use-case: kyc-onboarding
+          spec:
+            input: |
+          $(cat /tmp/task-description.txt | sed 's/^/      /')
+            target:
+              type: team
+              name: $TEAM_NAME
+            timeout: 10m
+            ttl: 24h
+          EOF
+
+          kubectl apply -n default -f /tmp/query.yaml
+
+          kubectl wait --for=condition=Completed --timeout=10m -n default query/$QUERY_NAME || true
+
+          kubectl get query $QUERY_NAME -n default -o json > /tmp/query.json
+          PHASE=$(jq -r '.status.phase' /tmp/query.json)
+
+          if [ "$PHASE" = "error" ]; then
+            ERROR_MESSAGE=$(jq -r '.status.responses[0].content // .status.error // "Unknown error"' /tmp/query.json)
+            echo "$ERROR_MESSAGE"
+            exit 1
+          fi
+
+          jq -r '.status.responses[0].content // ""' /tmp/query.json | tee /tmp/response.txt
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              path: /tmp/response.txt
+
+    - name: process-kyc-results
+      inputs:
+        parameters:
+          - name: kyc-report
+          - name: output-report-file
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          set -e
+
+          echo "================================================================================"
+          echo "KYC ONBOARDING WORKFLOW COMPLETE"
+          echo "================================================================================"
+          echo "Workflow: {{workflow.name}}"
+          echo "Completed: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "================================================================================"
+          echo "SUMMARY"
+          echo "================================================================================"
+          echo ""
+          echo "The KYC verification team has completed the customer onboarding process."
+          echo ""
+          echo "Report saved to: {{inputs.parameters.output-report-file}}"
+          echo ""
+          echo "You can access the full compliance report using the file-gateway or"
+          echo "by querying the file-gateway MCP server."
+          echo ""
+          echo "================================================================================"
+          echo "WORKFLOW RESPONSE"
+          echo "================================================================================"
+          echo ""
+          echo "{{inputs.parameters.kyc-report}}"
+          echo ""
+          echo "================================================================================"
+          echo "END OF WORKFLOW"
+          echo "================================================================================"

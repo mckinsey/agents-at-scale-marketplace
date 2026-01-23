@@ -1,0 +1,64 @@
+# ARK Demo Bundle Configuration
+# Override these values during installation with --set or -f custom-values.yaml
+
+# Model reference for agents
+# You must create a Model resource before installing this bundle
+modelRef:
+  name: default
+
+# Agents configuration
+agents:
+  documentVerifier:
+    enabled: true
+    name: document-verifier
+  uboExtractor:
+    enabled: true
+    name: ubo-extractor
+  sanctionsScreener:
+    enabled: true
+    name: sanctions-screener
+  riskAssessor:
+    enabled: true
+    name: risk-assessor
+  complianceReporter:
+    enabled: true
+    name: compliance-reporter
+
+# Teams configuration
+teams:
+  identityVerificationTeam:
+    enabled: true
+    name: identity-verification-team
+    strategy: sequential
+    maxTurns: 1
+  ownershipAnalysisTeam:
+    enabled: true
+    name: ownership-analysis-team
+    strategy: sequential
+    maxTurns: 1
+  complianceScreeningTeam:
+    enabled: true
+    name: compliance-screening-team
+    strategy: sequential
+    maxTurns: 1
+  riskAssessmentTeam:
+    enabled: true
+    name: risk-assessment-team
+    strategy: sequential
+    maxTurns: 2
+
+# Labels to apply to all resources
+commonLabels:
+  bundle: ark-demo
+  managed-by: helm
+
+# Argo Workflows integration (optional)
+argoWorkflows:
+  rbac:
+    enabled: true
+
+# File Gateway integration for file-based inputs/outputs
+file-gateway:
+  enabled: true
+  filesystemMcp:
+    enabled: true
