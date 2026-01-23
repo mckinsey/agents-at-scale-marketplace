@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.21](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.20...v0.1.21) (2026-01-23)
+
+
+### Features
+
+* kyc demo bundle with agents, teams and charts ([#104](https://github.com/mckinsey/agents-at-scale-marketplace/issues/104)) ([2f7375a](https://github.com/mckinsey/agents-at-scale-marketplace/commit/2f7375a823034a300309a27d4f3c84d3255664b2))
+* trigger first release filesystem mcp server ([#110](https://github.com/mckinsey/agents-at-scale-marketplace/issues/110)) ([02a0f59](https://github.com/mckinsey/agents-at-scale-marketplace/commit/02a0f59fe12e15bc458c7a4d3554d009927c9de9))
+
 ## [0.1.20](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.19...v0.1.20) (2026-01-14)
 
 
