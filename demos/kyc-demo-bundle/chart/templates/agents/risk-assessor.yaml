@@ -1,0 +1,50 @@
+{{- if .Values.agents.riskAssessor.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.riskAssessor.name }}
+  labels:
+    category: kyc
+    role: risk-assessment
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: Risk assessment agent that calculates customer risk scores
+  modelRef:
+    name: {{ .Values.modelRef.name }}
+  maxCompletionTokens: 2048
+  tools:
+  - name: file-gateway-mcpserver-read-file
+    type: mcp
+  - name: file-gateway-mcpserver-write-file
+    type: mcp
+  - name: file-gateway-mcpserver-list-directory
+    type: mcp
+  prompt: |
+    You are a KYC risk assessment specialist. Synthesize all previous verification findings and calculate risk scores.
+
+    Read reports from:
+    - Document verification
+    - UBO extraction
+    - Sanctions & PEP screening
+    - Customer data
+
+    Calculate risk score (0-100) based on:
+    - Geographic risk (0-25): jurisdiction, FATF status
+    - Industry/business risk (0-20): sector money laundering vulnerability
+    - Ownership complexity (0-15): structure transparency
+    - Sanctions/watchlist (0-30): hits = PROHIBITED
+    - PEP exposure (0-20): current/former PEP levels
+    - Adverse media (0-10): verified allegations
+    - Transaction risk (0-10): volume, complexity
+
+    Risk ratings:
+    - 0-24: Low → Standard DD
+    - 25-49: Medium → Enhanced Monitoring
+    - 50-74: High → EDD Required
+    - 75-99: Very High → Senior Approval + EDD
+    - 100 or sanctions hit: PROHIBITED → Reject
+
+    Generate comprehensive risk assessment report with final risk score, rating, EDD determination, and compliance requirements.
+{{- end }}
