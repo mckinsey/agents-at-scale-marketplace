@@ -60,7 +60,12 @@ spec:
                     Perform Ultimate Beneficial Ownership analysis. Extract all UBOs with ≥25% ownership, map ownership structure, identify Board of Directors and C-level executives.
 
                     Generate a comprehensive UBO extraction report with JSON-formatted list of individuals for screening.
-                    Save the report to: {{workflow.parameters.ubo-extraction-file}}
+
+                    CRITICAL: You MUST use the file-gateway-mcpserver-write-file tool to save your report to: {{workflow.parameters.ubo-extraction-file}}
+
+                    Even if the customer file contains only personal information (individual account) with no corporate ownership structure, you MUST still write a report file explaining this. Example: "This is an individual customer account with no corporate structure. Customer: [name]. No UBOs to extract as this is a personal account." Then list the individual for sanctions screening in JSON format.
+
+                    DO NOT just respond with text - you MUST write the file using the tool.
 
         - - name: compliance-screening
             template: query-team
@@ -79,7 +84,12 @@ spec:
                     Extract the list of individuals for screening and perform sanctions screening (OFAC SDN, UN, EU, UK HM Treasury), internal blacklist screening, PEP screening, and adverse media screening.
 
                     Generate a comprehensive sanctions and PEP screening report with risk classification.
-                    Save the report to: {{workflow.parameters.sanctions-screening-file}}
+
+                    CRITICAL: You MUST use the file-gateway-mcpserver-write-file tool to save your report to: {{workflow.parameters.sanctions-screening-file}}
+
+                    Even if there are no sanctions matches or PEP hits, you MUST still write a complete screening report showing all checks performed and "Clear" results.
+
+                    DO NOT just respond with text - you MUST write the file using the tool.
 
         - - name: risk-assessment-and-reporting
             template: query-team
