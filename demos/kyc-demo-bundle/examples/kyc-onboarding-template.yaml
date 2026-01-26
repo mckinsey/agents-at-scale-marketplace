@@ -151,6 +151,7 @@ spec:
             target:
               type: team
               name: $TEAM_NAME
+            serviceAccount: argo-workflow
             timeout: 10m
             ttl: 24h
           EOF
