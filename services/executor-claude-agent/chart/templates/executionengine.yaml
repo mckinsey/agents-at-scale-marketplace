@@ -1,0 +1,16 @@
+{{- if .Values.executionEngine.enabled }}
+apiVersion: ark.mckinsey.com/v1prealpha1
+kind: ExecutionEngine
+metadata:
+  name: {{ .Values.executionEngine.name | default (include "executor-claude.fullname" .) }}
+  labels:
+    {{- include "executor-claude.labels" . | nindent 4 }}
+spec:
+  type: "claude"
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "executor-claude.fullname" . }}
+        port: {{ .Values.service.port | quote }}
+  description: {{ .Values.executionEngine.description | quote }}
+{{- end }}
