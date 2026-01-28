@@ -11,5 +11,5 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: argo-workflow
-    namespace: argo-workflows
+    namespace: {{ .Release.Namespace }}
 {{- end }}
