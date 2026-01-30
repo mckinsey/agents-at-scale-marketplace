@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     ark.mckinsey.com/skip-webhook-validation: "true"
 spec:
+  description: "Ark Runtime Administrator - Infrastructure agent with kubectl, helm, bash, and python tools for Kubernetes and Ark management"
   tools:
     - type: custom
       name: {{ .Values.service.name }}-ark-status
