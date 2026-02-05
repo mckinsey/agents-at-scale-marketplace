@@ -1,0 +1,55 @@
+# COBOL Modernization Bundle Configuration
+# Override these values during installation with --set or -f custom-values.yaml
+
+# Model reference for agents
+# You must create a Model resource before installing this bundle
+modelRef:
+  name: default
+
+# Agents configuration (matching LegacyX Groups)
+agents:
+  # Audio Transcription And Documentation
+  audioTranscriber:
+    enabled: true
+    name: audio-transcriber
+
+  # Cobol Code Documentation
+  cobolCodeDocumenter:
+    enabled: true
+    name: cobol-code-documenter
+
+  # Cobol Codebase Summary
+  cobolCodebaseSummarizer:
+    enabled: true
+    name: cobol-codebase-summarizer
+
+  # Cobol Pseudocode Documentation
+  cobolPseudocodeDocumenter:
+    enabled: true
+    name: cobol-pseudocode-documenter
+
+  # Diagram Creation
+  diagramCreator:
+    enabled: true
+    name: diagram-creator
+
+  # Pseudo Python Modernizer
+  pseudoPythonModernizer:
+    enabled: true
+    name: pseudo-python-modernizer
+
+# Labels to apply to all resources
+commonLabels:
+  bundle: cobol-modernization
+  managed-by: helm
+
+# Argo Workflows integration
+argoWorkflows:
+  rbac:
+    enabled: true
+
+# File Gateway integration for file-based inputs/outputs
+file-gateway:
+  enabled: true
+  filesystemMcp:
+    enabled: true
