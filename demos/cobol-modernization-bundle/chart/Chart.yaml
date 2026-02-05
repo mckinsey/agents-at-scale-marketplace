@@ -1,0 +1,27 @@
+apiVersion: v2
+name: cobol-modernization-bundle
+description: COBOL modernization demo with agents for reverse engineering, pseudocode generation, Python conversion, and documentation
+version: 0.1.0
+type: application
+keywords:
+  - ark
+  - ai-agents
+  - demo
+  - cobol
+  - cobol-modernization
+  - multi-agent
+home: https://github.com/mckinsey/agents-at-scale
+sources:
+  - https://github.com/mckinsey/agents-at-scale-marketplace
+maintainers:
+  - name: ARK Team
+    email: ark-team@mckinsey.com
+annotations:
+  ark.mckinsey.com/category: demo
+  ark.mckinsey.com/type: bundle
+  ark.mckinsey.com/use-case: cobol-modernization
+  ark.mckinsey.com/components: agents
+dependencies:
+  - name: file-gateway
+    version: 0.1.3
+    repository: file://../../../services/file-gateway/chart
