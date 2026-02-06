@@ -1,0 +1,23 @@
+{{- if .Values.speechMcp.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ .Values.speechMcp.name }}
+  labels:
+    category: cobol-modernization
+    app.kubernetes.io/component: speech-mcp
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: "Speech MCP Server - audio transcription via Whisper"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ .Values.speechMcp.name }}
+        port: http
+        path: /mcp
+  pollInterval: 1m
+  timeout: 10m
+{{- end }}

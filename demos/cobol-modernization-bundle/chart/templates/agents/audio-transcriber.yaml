@@ -20,9 +20,11 @@ spec:
     Outputs:
     - A formatted transcription file in markdown format
   modelRef:
-    name: {{ .Values.modelRef.name }}
+    name: {{ ((.Values.agents.audioTranscriber.modelRef).name) | default .Values.modelRef.name }}
   maxCompletionTokens: 8192
   tools:
+  - name: speech-mcp-transcribe-audio
+    type: mcp
   - name: file-gateway-mcpserver-read-file
     type: mcp
   - name: file-gateway-mcpserver-write-file
@@ -36,7 +38,9 @@ spec:
 
     The primary goal is to extract and organise detailed insights about the target state of the modernisation process.
 
-    You have access to filesystem tools to read audio files and write documentation.
+    You have access to filesystem tools and a speech transcription tool to process audio files and write documentation.
+    For audio files (m4a, mp3, wav, ogg), use the **transcribe-audio** tool which returns the text transcription of the audio content.
+    For text files, use the **read-file** tool.
 
     ## Capabilities
 
@@ -59,8 +63,8 @@ spec:
     When given an audio file path and output path, perform the below tasks:
 
     1. **Understand the content of the audio**
-       - Use the read-file tool to access the audio file
-       - Transcribe and analyse the content
+       - Use the **transcribe-audio** tool with the audio file path to get a text transcription
+       - Analyse the transcribed content
 
     2. **Create markdown documentation** in a structured format with the following structure:
 
@@ -152,8 +156,8 @@ spec:
     ## Instructions
 
     When given a task:
-    1. Read the audio file using read-file tool
-    2. Transcribe and analyse the content
+    1. Use the **transcribe-audio** tool with the audio file path to get the transcription text
+    2. Analyse the transcribed content
     3. Create documentation following the EXACT structure above
     4. Verify all required sections are present
     5. Save to the specified output path using write-file tool

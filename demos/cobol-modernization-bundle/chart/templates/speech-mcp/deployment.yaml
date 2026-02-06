@@ -1,0 +1,76 @@
+{{- if .Values.speechMcp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.speechMcp.name }}
+  labels:
+    category: cobol-modernization
+    app.kubernetes.io/component: speech-mcp
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.speechMcp.name }}
+      app.kubernetes.io/component: speech-mcp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.speechMcp.name }}
+        app.kubernetes.io/component: speech-mcp
+    spec:
+      serviceAccountName: {{ .Values.speechMcp.name }}-sa
+      automountServiceAccountToken: false
+      containers:
+        - name: speech-mcp
+          image: "{{ .Values.speechMcp.image.repository }}:{{ .Values.speechMcp.image.tag }}"
+          imagePullPolicy: {{ .Values.speechMcp.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: BASE_DATA_DIR
+              value: "/data/aas-files"
+            - name: WHISPER_MODEL
+              value: {{ .Values.speechMcp.whisperModel | quote }}
+            - name: CACHE_DIR
+              value: "/data/whisper-cache"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.speechMcp.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            {{- if .Values.speechMcp.sharedPvcName }}
+            claimName: {{ .Values.speechMcp.sharedPvcName }}
+            {{- else }}
+            {{- $pvcs := (lookup "v1" "PersistentVolumeClaim" .Release.Namespace "").items }}
+            {{- $pvcName := "" }}
+            {{- range $pvcs }}
+            {{- if hasPrefix "file-gateway-storage" .metadata.name }}
+            {{- $pvcName = .metadata.name }}
+            {{- end }}
+            {{- end }}
+            claimName: {{ $pvcName | default "file-gateway-storage" }}
+            {{- end }}
+{{- end }}
