@@ -1,12 +1,14 @@
-.PHONY: help install install-with-argo uninstall cobol-demo upload-data clean
+.PHONY: help build install install-with-argo uninstall cobol-demo upload-data clean
 
 NAMESPACE ?= default
 RELEASE_NAME ?= cobol-modernization-bundle
+SPEECH_MCP_IMAGE ?= speech-mcp-server:latest
 
 help:
 	@echo "COBOL Modernization Demo Bundle"
 	@echo ""
 	@echo "Available commands:"
+	@echo "  make build              Build speech-mcp-server Docker image"
 	@echo "  make install            Install bundle (agents + file-gateway)"
 	@echo "  make install-with-argo  Install everything (bundle + WorkflowTemplate)"
 	@echo "  make upload-data        Upload sample COBOL files and audio"
@@ -14,7 +16,12 @@ help:
 	@echo "  make uninstall          Remove bundle and cleanup"
 	@echo ""
 	@echo "Quick Start:"
-	@echo "  make install-with-argo && make upload-data && make cobol-demo"
+	@echo "  make build && make install-with-argo && make upload-data && make cobol-demo"
+
+build:
+	@echo "Building speech-mcp-server image..."
+	@docker build -t $(SPEECH_MCP_IMAGE) ../../mcps/speech-mcp-server/
+	@echo "Done. Image: $(SPEECH_MCP_IMAGE)"
 
 install:
 	@echo "Installing COBOL Modernization Bundle..."
@@ -29,7 +36,7 @@ install:
 	@echo "Installed agents:"
 	@kubectl get agents -n $(NAMESPACE) -l bundle=cobol-modernization
 
-install-with-argo:
+install-with-argo: build
 	@echo "Installing COBOL Modernization Bundle with Argo support..."
 	@echo "Building Helm dependencies..."
 	@helm dependency build chart/
@@ -42,6 +49,7 @@ install-with-argo:
 	@kubectl apply -f examples/cobol-modernization-workflow.yaml -n $(NAMESPACE)
 	@echo ""
 	@echo "Done! Installed:"
+	@echo "  ✓ Speech MCP Server (Whisper audio transcription)"
 	@echo "  ✓ Agents (pseudocode-generator, python-modernizer, audio-transcriber, diagram-creator)"
 	@echo "  ✓ File-gateway with MCP tools"
 	@echo "  ✓ Argo Workflows RBAC"
