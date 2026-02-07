@@ -16,6 +16,7 @@ This bundle deploys **6 AI agents** that mirror the LegacyX Groups:
 | `pseudo-python-modernizer` | Pseudo Python Modernizer | Converts pseudocode to Python/PySpark |
 
 Plus supporting infrastructure:
+- `speech-mcp-server` for local audio transcription via Whisper
 - `file-gateway` MCP server for file operations (read/write/list)
 - Argo Workflow RBAC for orchestration
 
@@ -24,22 +25,30 @@ Plus supporting infrastructure:
 - ARK cluster with `default` Model configured (Azure OpenAI)
 - Argo Workflows installed
 - `file-gateway` service (installed as dependency)
+- Docker (to build the speech-mcp-server image)
 - `kubectl` and `helm` CLI tools
 
 ## Quick Start
 
 ```bash
-# Install the bundle (agents + file-gateway)
-make install
+# Build, install, upload data, and run the workflow
+make build && make install-with-argo && make upload-data && make cobol-demo
+```
 
-# Install with Argo WorkflowTemplate
-make install-workflow
+### Step by step
+
+```bash
+# 1. Build the speech-mcp-server Docker image
+make build
+
+# 2. Install the bundle (agents + file-gateway + speech-mcp + WorkflowTemplate)
+make install-with-argo
 
 # Upload sample COBOL files
 make upload-data
 
-# Run the full pipeline
-make run
+# 4. Run the COBOL modernization workflow
+make cobol-demo
 ```
 
 ## Sample Data
@@ -112,6 +121,10 @@ modelRef:
 agents:
   audioTranscriber:
     enabled: false
+
+# Change Whisper model (tiny, base, small, medium, large)
+speechMcp:
+  whisperModel: "small"
 ```
 
 ## Troubleshooting
@@ -120,6 +133,11 @@ agents:
 ```bash
 kubectl get agent -n default
 kubectl describe agent cobol-pseudocode-documenter -n default
+```
+
+**Audio transcription failing:**
+```bash
+kubectl logs deploy/speech-mcp -n default
 ```
 
 **File operations failing:**

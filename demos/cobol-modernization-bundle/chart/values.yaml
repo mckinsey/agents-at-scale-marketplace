@@ -48,8 +48,28 @@ argoWorkflows:
   rbac:
     enabled: true
 
+# Speech MCP Server - local audio transcription via Whisper
+speechMcp:
+  enabled: true
+  name: speech-mcp
+  whisperModel: "tiny"
+  image:
+    repository: speech-mcp-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  sharedPvcName: ""
+  resources:
+    limits:
+      cpu: "2"
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
 # File Gateway integration for file-based inputs/outputs
 file-gateway:
   enabled: true
+  storage:
+    pvcName: "file-gateway-storage"  # Fixed name to survive helm upgrades
   filesystemMcp:
     enabled: true

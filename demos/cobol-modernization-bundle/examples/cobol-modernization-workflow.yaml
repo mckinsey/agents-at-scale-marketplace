@@ -146,7 +146,6 @@ spec:
         source: |
           set -e
           
-          # Create a Query to list directory using the file-gateway MCP
           QUERY_NAME="list-files-$(date +%s%N)"
           
           cat > /tmp/query.yaml <<EOF
@@ -170,11 +169,8 @@ spec:
           kubectl apply -n default -f /tmp/query.yaml
           kubectl wait --for=condition=Completed --timeout=2m -n default query/$QUERY_NAME || true
           
-          # Extract the file list from the response
-          RESPONSE=$(kubectl get query $QUERY_NAME -n default -o jsonpath='{.status.responses[0].content}')
-          
-          # Try to extract JSON array from response
-          echo "$RESPONSE" | grep -o '\[.*\]' | head -1 > /tmp/files.json || echo '[]' > /tmp/files.json
+          kubectl get query $QUERY_NAME -n default -o json | jq -r '.status.response.content' > /tmp/response_content.txt
+          jq -c '.' /tmp/response_content.txt > /tmp/files.json 2>/dev/null || echo '[]' > /tmp/files.json
           
           cat /tmp/files.json
       outputs:
@@ -232,12 +228,12 @@ spec:
           PHASE=$(jq -r '.status.phase' /tmp/query.json)
 
           if [ "$PHASE" = "error" ]; then
-            ERROR_MESSAGE=$(jq -r '.status.responses[0].content // .status.error // "Unknown error"' /tmp/query.json)
+            ERROR_MESSAGE=$(jq -r '.status.response.content // .status.error // "Unknown error"' /tmp/query.json)
             echo "Error: $ERROR_MESSAGE"
             exit 1
           fi
 
-          jq -r '.status.responses[0].content // ""' /tmp/query.json | tee /tmp/response.txt
+          jq -r '.status.response.content // ""' /tmp/query.json | tee /tmp/response.txt
       outputs:
         parameters:
           - name: response

@@ -1,0 +1,35 @@
+replicaCount: 1
+
+image:
+  repository: speech-mcp-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+whisperModel: "tiny"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  limits:
+    cpu: "2"
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+dataVolume:
+  claimName: ""
+
+env:
+  baseDateDir: /data/aas-files
+  cacheDir: /data/whisper-cache
+
+mcpServer:
+  enabled: true
+  pollInterval: 1m
+  timeout: 10m
