@@ -49,15 +49,15 @@ argoWorkflows:
     enabled: true
 
 # Speech MCP Server - local audio transcription via Whisper
-speechMcp:
+speech-mcp-server:
   enabled: true
-  name: speech-mcp
   whisperModel: "tiny"
   image:
     repository: speech-mcp-server
     tag: latest
     pullPolicy: IfNotPresent
-  sharedPvcName: ""
+  dataVolume:
+    claimName: "file-gateway-storage"
   resources:
     limits:
       cpu: "2"
