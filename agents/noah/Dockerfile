@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Declare build arguments for multi-arch support
+ARG TARGETARCH
+
 # Install all system dependencies in one layer
 RUN apt-get update && apt-get install -y \
     curl \
@@ -10,19 +13,21 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install kubectl
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+# Install kubectl (architecture-aware)
+RUN KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
+    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/
 
-# Install helm
+# Install helm (auto-detects architecture)
 RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-# Install argo CLI
-RUN curl -sLO https://github.com/argoproj/argo-workflows/releases/latest/download/argo-linux-amd64.gz \
-    && gunzip argo-linux-amd64.gz \
-    && chmod +x argo-linux-amd64 \
-    && mv argo-linux-amd64 /usr/local/bin/argo
+# Install argo CLI (architecture-aware)
+RUN ARGO_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "amd64") && \
+    curl -sLO "https://github.com/argoproj/argo-workflows/releases/latest/download/argo-linux-${ARGO_ARCH}.gz" \
+    && gunzip "argo-linux-${ARGO_ARCH}.gz" \
+    && chmod +x "argo-linux-${ARGO_ARCH}" \
+    && mv "argo-linux-${ARGO_ARCH}" /usr/local/bin/argo
 
 # Install uv for Python package management
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
