@@ -8,7 +8,7 @@ help:
 	@echo "COBOL Modernization Demo Bundle"
 	@echo ""
 	@echo "Available commands:"
-	@echo "  make build              Build speech-mcp-server Docker image"
+	@echo "  make build              Build speech-mcp-server Docker image (auto-loads into minikube)"
 	@echo "  make install            Install bundle (agents + file-gateway)"
 	@echo "  make install-with-argo  Install everything (bundle + WorkflowTemplate)"
 	@echo "  make upload-data        Upload sample COBOL files and audio"
@@ -22,6 +22,11 @@ build:
 	@echo "Building speech-mcp-server image..."
 	@docker build -t $(SPEECH_MCP_IMAGE) ../../mcps/speech-mcp-server/
 	@echo "Done. Image: $(SPEECH_MCP_IMAGE)"
+	@if kubectl config current-context 2>/dev/null | grep -q minikube; then \
+		echo "Detected minikube - loading image into cluster..."; \
+		minikube image load $(SPEECH_MCP_IMAGE); \
+		echo "Image loaded into minikube."; \
+	fi
 
 install:
 	@echo "Installing COBOL Modernization Bundle..."
@@ -99,7 +104,7 @@ cobol-demo:
 	@echo "Done. Monitor with:"
 	@echo "  kubectl get workflows -n $(NAMESPACE) -w"
 	@echo ""
-	@echo "Or view in ARK Dashboard → Workflows"
+	@echo "Or view in ARK Dashboard → Argo Workflows"
 
 clean:
 	@echo "Cleaning up workflow artifacts..."

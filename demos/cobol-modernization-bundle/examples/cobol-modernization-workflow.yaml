@@ -169,8 +169,17 @@ spec:
           kubectl apply -n default -f /tmp/query.yaml
           kubectl wait --for=condition=Completed --timeout=2m -n default query/$QUERY_NAME || true
           
-          kubectl get query $QUERY_NAME -n default -o json | jq -r '.status.response.content' > /tmp/response_content.txt
-          jq -c '.' /tmp/response_content.txt > /tmp/files.json 2>/dev/null || echo '[]' > /tmp/files.json
+          # Get the query response
+          kubectl get query $QUERY_NAME -n default -o json > /tmp/query.json
+          
+          # Try different response paths (API might vary)
+          CONTENT=$(jq -r '.status.response.content // .status.responses[0].content // empty' /tmp/query.json)
+          
+          # Extract JSON array from the content (might be embedded in text)
+          echo "$CONTENT" | grep -oE '\[("[^"]*"(,\s*"[^"]*")*)?\]' | head -1 > /tmp/files.json
+          
+          # Validate it's valid JSON, otherwise use empty array
+          jq -c '.' /tmp/files.json > /tmp/validated.json 2>/dev/null && mv /tmp/validated.json /tmp/files.json || echo '[]' > /tmp/files.json
           
           cat /tmp/files.json
       outputs:
@@ -216,13 +225,13 @@ spec:
               type: agent
               name: $AGENT_NAME
             serviceAccount: argo-workflow
-            timeout: 15m
+            timeout: 35m
             ttl: 24h
           EOF
 
           kubectl apply -n default -f /tmp/query.yaml
 
-          kubectl wait --for=condition=Completed --timeout=15m -n default query/$QUERY_NAME || true
+          kubectl wait --for=condition=Completed --timeout=35m -n default query/$QUERY_NAME || true
 
           kubectl get query $QUERY_NAME -n default -o json > /tmp/query.json
           PHASE=$(jq -r '.status.phase' /tmp/query.json)
@@ -230,6 +239,12 @@ spec:
           if [ "$PHASE" = "error" ]; then
             ERROR_MESSAGE=$(jq -r '.status.response.content // .status.error // "Unknown error"' /tmp/query.json)
             echo "Error: $ERROR_MESSAGE"
+            exit 1
+          fi
+
+          # Check if query is still running (timeout case)
+          if [ "$PHASE" = "running" ] || [ "$PHASE" = "pending" ]; then
+            echo "Error: Query timed out - still in phase: $PHASE"
             exit 1
           fi
 

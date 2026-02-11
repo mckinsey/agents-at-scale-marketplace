@@ -23,7 +23,7 @@ spec:
     name: {{ ((.Values.agents.audioTranscriber.modelRef).name) | default .Values.modelRef.name }}
   maxCompletionTokens: 8192
   tools:
-  - name: speech-mcp-transcribe-audio
+  - name: {{ .Release.Name }}-speech-mcp-server-transcribe-audio
     type: mcp
   - name: file-gateway-mcpserver-read-file
     type: mcp
