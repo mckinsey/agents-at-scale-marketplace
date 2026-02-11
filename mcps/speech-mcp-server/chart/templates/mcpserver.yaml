@@ -1,0 +1,19 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ include "speech-mcp.fullname" . }}
+  labels:
+    {{- include "speech-mcp.labels" . | nindent 4 }}
+spec:
+  description: "Speech MCP Server - audio transcription via Whisper"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "speech-mcp.fullname" . }}
+        port: http
+        path: /mcp
+  pollInterval: {{ .Values.mcpServer.pollInterval }}
+  timeout: {{ .Values.mcpServer.timeout }}
+{{- end }}

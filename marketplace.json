@@ -214,6 +214,58 @@
         "helmReleaseName": "kyc-demo-bundle",
         "installArgs": ["--create-namespace"]
       }
+    },
+    {
+      "name": "speech-mcp-server",
+      "type": "mcp",
+      "displayName": "Speech MCP Server",
+      "description": "MCP server for audio transcription via OpenAI Whisper - supports m4a, mp3, wav, ogg formats",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["mcp", "speech", "transcription", "whisper", "audio", "ai"],
+      "category": "mcps",
+      "icon": "https://example.com/speech-mcp-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/speech-mcp-server/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/speech-mcp-server",
+        "namespace": "default",
+        "helmReleaseName": "speech-mcp-server",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "speech-mcp-server",
+        "k8sServicePort": 8080,
+        "k8sDeploymentName": "speech-mcp-server"
+      }
+    },
+    {
+      "name": "cobol-modernization-bundle",
+      "type": "demo",
+      "displayName": "COBOL Modernization Bundle",
+      "description": "Complete COBOL modernization pipeline with agents for reverse engineering, pseudocode generation, audio transcription, diagram creation, and Python/PySpark conversion",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["demo", "cobol", "modernization", "agents", "multi-agent", "legacy", "python", "pyspark", "transcription"],
+      "category": "demos",
+      "icon": "https://example.com/cobol-modernization-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/demos/cobol-modernization-bundle/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/cobol-modernization-bundle",
+        "namespace": "default",
+        "helmReleaseName": "cobol-modernization-bundle",
+        "installArgs": ["--create-namespace"],
+        "dependencies": ["file-gateway", "speech-mcp-server"]
+      }
     }
   ]
 }

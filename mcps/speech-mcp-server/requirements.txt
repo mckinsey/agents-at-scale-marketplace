@@ -1,0 +1,4 @@
+openai-whisper
+starlette
+uvicorn[standard]
+httptools

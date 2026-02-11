@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: cobol-modernization-
+  labels:
+    use-case: cobol-modernization
+spec:
+  workflowTemplateRef:
+    name: cobol-modernization-template
+  arguments:
+    parameters:
+      - name: cobol-source-dir
+        value: "cobol-source"
+      - name: output-dir
+        value: "output"
+      - name: audio-file
+        value: "cobol-source/carddemo-interview.m4a"
