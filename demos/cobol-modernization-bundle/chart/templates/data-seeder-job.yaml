@@ -1,0 +1,33 @@
+{{- if .Values.dataSeeder.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: data-seeder
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: data-seeder
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: data-seeder
+          image: "{{ .Values.dataSeeder.image.repository }}:{{ .Values.dataSeeder.image.tag }}"
+          imagePullPolicy: {{ .Values.dataSeeder.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              for file in /data/*; do
+                curl --fail -X POST "http://file-gateway-api:80/files" -F "file=@${file}" -F "prefix=cobol-source/"
+              done
+{{- end }}

@@ -18,7 +18,9 @@ This bundle deploys **6 AI agents** that mirror the LegacyX Groups:
 Plus supporting infrastructure:
 - `speech-mcp-server` for local audio transcription via Whisper
 - `file-gateway` MCP server for file operations (read/write/list)
-- Argo Workflow RBAC for orchestration
+- Argo Workflow RBAC (ServiceAccount + Role + RoleBinding)
+- Data seeder (Helm post-install hook that uploads sample files automatically)
+- WorkflowTemplate for the full COBOL modernization pipeline
 
 ## Prerequisites
 
@@ -32,24 +34,24 @@ Plus supporting infrastructure:
 
 ```bash
 # Build, install, upload data, and run the workflow
-make build && make install-with-argo && make upload-data && make cobol-demo
+make build && make install-with-argo && make cobol-demo
 ```
 
 ### Step by step
 
 ```bash
-# 1. Build the speech-mcp-server Docker image
+# 1. Build Docker images (speech-mcp-server + data-seeder)
 make build
 
-# 2. Install the bundle (agents + file-gateway + speech-mcp + WorkflowTemplate)
+# 2. Install the bundle (agents + file-gateway + speech-mcp + RBAC + WorkflowTemplate)
+#    Sample data is uploaded automatically via Helm post-install hook (data-seeder)
 make install-with-argo
 
-# Upload sample COBOL files
-make upload-data
-
-# 4. Run the COBOL modernization workflow
+# 3. Run the COBOL modernization workflow
 make cobol-demo
 ```
+
+> `make upload-data` is still available for manually re-uploading sample files if needed.
 
 ## Sample Data
 
@@ -131,23 +133,23 @@ speechMcp:
 
 **Agent not responding:**
 ```bash
-kubectl get agent -n default
-kubectl describe agent cobol-pseudocode-documenter -n default
+kubectl get agent -n cobol-demo
+kubectl describe agent cobol-pseudocode-documenter -n cobol-demo
 ```
 
 **Audio transcription failing:**
 ```bash
-kubectl logs deploy/speech-mcp -n default
+kubectl logs deploy/speech-mcp -n cobol-demo
 ```
 
 **File operations failing:**
 ```bash
-kubectl get mcpserver -n default
-kubectl logs -l app=file-gateway -n default
+kubectl get mcpserver -n cobol-demo
+kubectl logs -l app=file-gateway -n cobol-demo
 ```
 
 **Workflow errors:**
 ```bash
-argo list -n default
-argo logs <workflow-name> -n default
+argo list -n cobol-demo
+argo logs <workflow-name> -n cobol-demo
 ```

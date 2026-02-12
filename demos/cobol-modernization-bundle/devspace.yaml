@@ -8,7 +8,7 @@ pipelines:
 
 deployments:
   cobol-modernization-bundle:
-    namespace: default
+    namespace: cobol-demo
     helm:
       chart:
         path: chart

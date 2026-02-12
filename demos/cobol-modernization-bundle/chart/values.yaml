@@ -47,6 +47,8 @@ commonLabels:
 argoWorkflows:
   rbac:
     enabled: true
+  workflowTemplate:
+    enabled: true
 
 # Speech MCP Server - local audio transcription via Whisper
 speech-mcp-server:
@@ -60,11 +62,19 @@ speech-mcp-server:
     claimName: "file-gateway-storage"
   resources:
     limits:
-      cpu: "2"
-      memory: 2Gi
+      cpu: "4"
+      memory: 4Gi
     requests:
       cpu: 500m
       memory: 1Gi
+
+# Data seeder - uploads sample data to file-gateway after install
+dataSeeder:
+  enabled: true
+  image:
+    repository: cobol-demo-data-seeder
+    tag: latest
+    pullPolicy: IfNotPresent
 
 # File Gateway integration for file-based inputs/outputs
 file-gateway:
