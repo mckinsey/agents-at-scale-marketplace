@@ -1,0 +1,28 @@
+entities_vessels:
+  subsidiary_entities:
+    objective: |
+      Identify all subsidiary entities associated with the company, including their legal names, jurisdictions of incorporation, percentage of ownership by the parent company, and primary activities (if available).
+
+      Definition: Subsidiary entities are legal entities that are owned or controlled by the parent company, either wholly or partially. They may operate in various industries or regions and contribute to the overall business operations of the parent company.
+
+      Example output: "The company operates the following subsidiary entities:
+      - ABC Holdings Ltd. (Incorporated in the United Kingdom, 100% owned, primary activity: financial services)
+      - XYZ Manufacturing Inc. (Incorporated in the United States, 80% owned, primary activity: industrial goods production)
+      - DEF Real Estate GmbH (Incorporated in Germany, 60% owned, primary activity: property management)
+      - ... "
+
+      Keywords: subsidiaries, subsidiary undertakings, subsidiary entities, legal entities, operational scope, geographic focus
+
+  vessels:
+    objective: |
+      Identify all vessels owned or operated by the company, including their names, IMO numbers, flag states, vessel types, and any relevant operational details such as their primary use or routes (if available). Provide information on the ownership status (e.g., fully owned, chartered), if available.
+
+      Definition: Vessels refer to maritime assets owned or operated by the company, typically used for transportation, logistics, or other maritime operations. They are often registered under specific flag states and have unique identifiers like IMO numbers.
+
+      Example output: "The company operates the following vessels:
+      - MV Ocean Explorer (IMO: 1234567, flag state: Panama, vessel type: bulk carrier, ownership: fully owned)
+      - SS Maritime Pioneer (IMO: 7654321, flag state: Liberia, vessel type: container ship, ownership: chartered)
+      - MV Global Voyager (IMO: 9876543, flag state: Singapore, vessel type: oil tanker, ownership: fully owned)
+      - ... "
+
+      Keywords: vessels, maritime assets, IMO number, flag state, vessel type, ownership status, operational scope, shipping, logistics

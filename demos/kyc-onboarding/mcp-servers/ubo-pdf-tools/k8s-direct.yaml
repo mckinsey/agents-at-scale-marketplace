@@ -1,0 +1,137 @@
+# UBO PDF Tools MCP Server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ubo-pdf-tools-config
+data:
+  # OpenAI endpoint for gpt-4.1 (from .env)
+  OPENAI_BASE_URL: "$OPENAI_BASE_URL"
+  # Anthropic endpoint for Claude (from .env)
+  ANTHROPIC_BASE_URL: "$ANTHROPIC_BASE_URL"
+  # LLM provider and model configuration (from .env)
+  UBO_LLM_DEFAULT_PROVIDER: "$UBO_LLM_DEFAULT_PROVIDER"
+  UBO_LLM_DEFAULT_MODEL: "$UBO_LLM_DEFAULT_MODEL"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ubo-pdf-tools
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ubo-pdf-tools
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: ubo-pdf-tools
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ubo-pdf-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ubo-pdf-tools
+  template:
+    metadata:
+      labels:
+        app: ubo-pdf-tools
+    spec:
+      serviceAccountName: ubo-pdf-tools
+      containers:
+      - name: ubo-pdf-tools
+        image: ubo-pdf-tools:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        # Server config
+        - name: FASTMCP_HOST
+          value: "0.0.0.0"
+        - name: FASTMCP_PORT
+          value: "8080"
+        
+        # API Keys from Secret (sensitive, rotates daily)
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aigw-secret
+              key: api-key
+        # Use same AIGW key for all providers (AIGW proxies all)
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aigw-secret
+              key: api-key
+        
+        # Base URLs from ConfigMap (per-server, not shared)
+        - name: OPENAI_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-pdf-tools-config
+              key: OPENAI_BASE_URL
+        - name: ANTHROPIC_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-pdf-tools-config
+              key: ANTHROPIC_BASE_URL
+        
+        # Default LLM settings from ConfigMap
+        - name: UBO_LLM_DEFAULT_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-pdf-tools-config
+              key: UBO_LLM_DEFAULT_PROVIDER
+        - name: UBO_LLM_DEFAULT_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-pdf-tools-config
+              key: UBO_LLM_DEFAULT_MODEL
+        
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: artifacts
+          mountPath: /app/artifacts
+        - name: shared-pdfs
+          mountPath: /mnt/output
+          readOnly: true
+      volumes:
+      - name: artifacts
+        emptyDir: {}
+      - name: shared-pdfs
+        hostPath:
+          path: /mnt/output
+          type: DirectoryOrCreate
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: ubo-pdf-tools-server
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: ubo-pdf-tools
+        namespace: default
+        port: http
+        path: /mcp
+  transport: http
+  timeout: "300s"
+  description: "PDF-based UBO extraction tools"

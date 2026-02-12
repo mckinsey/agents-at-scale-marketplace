@@ -1,0 +1,43 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: scout-rag-team
+  labels:
+    project: ubo-resolver
+    workflow: smart-extraction
+spec:
+  description: |
+    Two-stage PDF ownership extraction:
+    1. Scout Agent - Scans PDF to find ownership content and generate queries
+    2. RAG Agent - Uses targeted queries for better chunk retrieval and extraction
+  strategy: graph
+  maxTurns: 5
+  members:
+    - name: scout-agent
+      type: agent
+    - name: rag-agent
+      type: agent
+  graph:
+    edges:
+      - from: scout-agent
+        to: rag-agent
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: scout-rag-template
+spec:
+  input: |
+    Analyze ownership structure from PDF: {{.pdf_url}}
+    Company: {{.company_name}}
+    
+    STEP 1: Scout the PDF to find ownership-related pages and entities.
+    STEP 2: Use the suggested queries for targeted extraction.
+  parameters:
+    - name: pdf_url
+      value: "http://host.containers.internal:9000/heineken_n_v_annual_report_2024_final_20feb2025.pdf"
+    - name: company_name
+      value: "Heineken N.V."
+  target:
+    type: team
+    name: scout-rag-team

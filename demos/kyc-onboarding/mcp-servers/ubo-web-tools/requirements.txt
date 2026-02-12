@@ -1,0 +1,21 @@
+# UBO Web Tools MCP Server Dependencies
+# Pinned for reproducibility
+
+# MCP Framework
+mcp>=1.0.0
+
+# HTTP client
+httpx>=0.27.0
+
+# Environment management
+python-dotenv>=1.0.0
+
+# LangChain for extraction
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+
+# Pydantic for data validation
+pydantic>=2.0.0
+
+# Note: ubo-resolver package is installed separately via pip install .

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "2"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"mcp-filesystem","namespace":"default"},"spec":{"replicas":1,"selector":{"matchLabels":{"app.kubernetes.io/instance":"mcp-filesystem","app.kubernetes.io/name":"filesystem-mcp"}},"template":{"metadata":{"labels":{"app.kubernetes.io/instance":"mcp-filesystem","app.kubernetes.io/name":"filesystem-mcp"}},"spec":{"containers":[{"env":[{"name":"FASTMCP_HOST","value":"0.0.0.0"},{"name":"FASTMCP_PORT","value":"8080"},{"name":"OUTPUT_DIR","value":"/mnt/output"},{"name":"ALLOWED_DIRECTORIES","value":"/mnt/output"},{"name":"BASE_DIR","value":"/mnt/output"},{"name":"SESSION_FILE","value":"/mnt/output/.sessions/sessions.json"}],"image":"filesystem-mcp:latest","imagePullPolicy":"Never","name":"filesystem-mcp","ports":[{"containerPort":8080,"name":"http","protocol":"TCP"}],"resources":{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}},"volumeMounts":[{"mountPath":"/mnt/output","name":"minikube-mount"}]}],"volumes":[{"hostPath":{"path":"/mnt/output","type":"DirectoryOrCreate"},"name":"minikube-mount"}]}}}}
+  name: mcp-filesystem
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: mcp-filesystem
+      app.kubernetes.io/name: filesystem-mcp
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2026-02-06T14:46:13+01:00"
+      labels:
+        app.kubernetes.io/instance: mcp-filesystem
+        app.kubernetes.io/name: filesystem-mcp
+    spec:
+      containers:
+      - env:
+        - name: FASTMCP_HOST
+          value: 0.0.0.0
+        - name: FASTMCP_PORT
+          value: "8080"
+        - name: OUTPUT_DIR
+          value: /mnt/output
+        - name: ALLOWED_DIRECTORIES
+          value: /mnt/output
+        - name: BASE_DIR
+          value: /mnt/output
+        - name: SESSION_FILE
+          value: /mnt/output/.sessions/sessions.json
+        image: filesystem-mcp:latest
+        imagePullPolicy: Never
+        name: filesystem-mcp
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /mnt/output
+          name: minikube-mount
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /mnt/output
+          type: DirectoryOrCreate
+        name: minikube-mount
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2026-02-06T13:46:13Z"
+    lastUpdateTime: "2026-02-06T13:46:16Z"
+    message: ReplicaSet "mcp-filesystem-c9cdbd5cf" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    type: Progressing
+  - lastTransitionTime: "2026-02-09T16:16:54Z"
+    lastUpdateTime: "2026-02-09T16:16:54Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    type: Available
+  observedGeneration: 2
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1

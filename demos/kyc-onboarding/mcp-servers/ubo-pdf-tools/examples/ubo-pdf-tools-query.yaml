@@ -1,0 +1,24 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: test-ubo-pdf-tools-query
+  labels:
+    app.kubernetes.io/name: ubo-pdf-tools
+    app.kubernetes.io/component: query
+spec:
+  agents:
+    - name: sample-ubo-pdf-tools-agent
+  
+  query: |
+{{- if .Values.sampleQuery }}
+    Test the MCP server by using the available tools: example_tool. Please demonstrate how each tool works.
+{{- else }}
+    Test the ubo-pdf-tools MCP server by using its available tools.
+    {{- range .Values.tools }}
+    Please try using the {{ .name }} tool.
+    {{- end }}
+{{- end }}
+  
+  parameters:
+    timeout: "5m"
+    maxTokens: 1000

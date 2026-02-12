@@ -1,0 +1,33 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: sample-ubo-pdf-tools-agent
+  labels:
+    app.kubernetes.io/name: ubo-pdf-tools
+    app.kubernetes.io/component: agent
+spec:
+  model:
+    name: default
+  system: |
+    You are an AI assistant that can use ubo-pdf-tools tools to help users.
+    
+    Available tools from ubo-pdf-tools:
+{{- range .Values.tools }}
+    - {{ .name }}: {{ .description }}
+{{- end }}
+    
+    Use these tools when appropriate to help users with their requests.
+  
+  tools:
+    - mcpServers:
+        - name: ubo-pdf-tools-server
+{{- if .Values.toolConfigurations }}
+{{- range .Values.toolConfigurations }}
+    - name: {{ .name }}
+      description: {{ .description }}
+{{- if .parameters }}
+      parameters:
+{{- toYaml .parameters | nindent 8 }}
+{{- end }}
+{{- end }}
+{{- end }}

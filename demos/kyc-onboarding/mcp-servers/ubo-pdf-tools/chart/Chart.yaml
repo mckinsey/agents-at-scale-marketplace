@@ -1,0 +1,14 @@
+apiVersion: v2
+name: ubo-pdf-tools
+description: PDF-based UBO extraction and analysis MCP server
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - mcp
+  - ubo
+  - ownership
+  - extraction
+  - agent
+maintainers:
+  - name: QBAF Team

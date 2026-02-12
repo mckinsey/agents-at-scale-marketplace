@@ -1,0 +1,779 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-retrieve-entities-vessels
+  annotations:
+    workflows.argoproj.io/title: "Phase II - Customer Due Diligence - Ownership Structure"
+    workflows.argoproj.io/description: "Retrieve subsidiary entities and vessels information from annual reports and web sources, then consolidate findings"
+    workflows.argoproj.io/version: "v0.0.1"
+spec:
+  entrypoint: main
+  serviceAccountName: argo-workflow
+  
+  volumes:
+    - name: mcp-filesystem-volume
+      hostPath:
+        path: /mnt/output
+        type: DirectoryOrCreate
+  
+  arguments:
+    parameters:
+      - name: company-name
+        value: "ASSOCIATED BRITISH FOODS PLC"
+      - name: company-number
+        value: "00293262"
+      - name: country
+        value: "United Kingdom"
+      - name: file-access-mode
+        value: "http"  # Options: http (recommended - stable), mount (requires minikube mount)
+        enum:
+          - http
+          - mount
+      - name: document-file-http
+        value: "http://host.docker.internal:8000/abf-annual-report-2024.pdf"
+      - name: document-file-mount
+        value: "/mnt/output/source_code_files/data/abf-annual-report-2024.pdf"
+      - name: output-base-dir
+        value: "source_code_files/2-customer-due-diligence"
+      - name: execution-mode
+        value: "fake"  # Options: sequential (default for local), parallel (for production), fake (for testing)
+        enum:
+          - sequential
+          - parallel
+          - fake
+  
+  templates:
+    # ============================================================
+    # MAIN WORKFLOW - Sequential Steps
+    # ============================================================
+    - name: main
+      steps:
+        # Step 0: Set document file path based on file-access-mode
+        - - name: set-document-file
+            template: set-document-file-script
+        
+        # Step 1: Get current date
+        - - name: get-current-date
+            template: get-current-date-script
+        
+        # Step 2: Parse prompts from YAML file  
+        - - name: get-entities-vessels-prompts
+            template: read-prompts-file
+            arguments:
+              parameters:
+                - name: prompts-file-path
+                  value: "{{workflow.parameters.output-base-dir}}/input/prompts_entities_vessels.yml"
+        
+        # Step 3: Collect information from annual report (conditional execution)
+        - - name: collect-info-from-annual-report-sequential
+            when: "{{workflow.parameters.execution-mode}} == sequential"
+            template: collect-info-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}"
+                - name: document-file
+                  value: "{{steps.set-document-file.outputs.result}}"
+                - name: output-dir
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate/entities_vessels"
+        
+          - name: collect-info-from-annual-report-parallel
+            when: "{{workflow.parameters.execution-mode}} == parallel"
+            template: collect-info-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}"
+                - name: document-file
+                  value: "{{steps.set-document-file.outputs.result}}"
+                - name: output-dir
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate/entities_vessels"
+        
+          - name: collect-info-from-annual-report-fake
+            when: "{{workflow.parameters.execution-mode}} == fake"
+            template: collect-info-fake
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}"
+                - name: output-dir
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate/entities_vessels"
+        
+        # Step 4: Collect web data (conditional execution)
+        - - name: collect-web-data-sequential
+            when: "{{workflow.parameters.execution-mode}} == sequential"
+            template: collect-web-data-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}"
+                - name: company-name
+                  value: "{{workflow.parameters.company-name}}"
+                - name: output-dir
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate"
+        
+          - name: collect-web-data-parallel
+            when: "{{workflow.parameters.execution-mode}} == parallel"
+            template: collect-web-data-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}"
+                - name: company-name
+                  value: "{{workflow.parameters.company-name}}"
+                - name: output-dir
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate"
+        
+          - name: collect-web-data-fake
+            when: "{{workflow.parameters.execution-mode}} == fake"
+            template: collect-web-data-fake
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}"
+                - name: output-dir
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate"
+        
+        # Step 5: List all generated JSON files
+        - - name: read-info-json-directory
+            template: readdir-script
+            arguments:
+              parameters:
+                - name: pattern
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate/entities_vessels/**/*.json"
+        
+        # Step 6: Combine JSON files into one
+        - - name: append-info-files
+            template: combine-json-script
+            arguments:
+              parameters:
+                - name: file-paths-json
+                  value: "{{steps.read-info-json-directory.outputs.parameters.file-paths}}"
+                - name: outfile
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate/tmp/entities_vessels_unconsolidated.json"
+        
+        # Step 7: Consolidate information using ARK team
+        - - name: consolidate-information
+            template: query-consolidation-team
+            arguments:
+              parameters:
+                - name: company-name
+                  value: "{{workflow.parameters.company-name}}"
+                - name: input-file
+                  value: "{{workflow.parameters.output-base-dir}}/intermediate/tmp/entities_vessels_unconsolidated.json"
+                - name: output-file
+                  value: "{{workflow.parameters.output-base-dir}}/profile_sections/entities_vessels.json"
+                - name: current-date
+                  value: "{{steps.get-current-date.outputs.result}}"
+        
+        # Step 8: Process and display results
+        - - name: process-results
+            template: process-results
+            arguments:
+              parameters:
+                - name: final-output
+                  value: "{{steps.consolidate-information.outputs.parameters.response}}"
+                - name: output-file
+                  value: "{{workflow.parameters.output-base-dir}}/profile_sections/entities_vessels.json"
+
+    # ============================================================
+    # TRANSFORMER TEMPLATES - Script-based implementations
+    # ============================================================
+    
+    # Template: Set document file path based on file-access-mode
+    - name: set-document-file-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          MODE="{{workflow.parameters.file-access-mode}}"
+          
+          if [ "$MODE" = "http" ]; then
+            echo "{{workflow.parameters.document-file-http}}"
+          else
+            echo "{{workflow.parameters.document-file-mount}}"
+          fi
+    
+    # Template: Get current date (simple stdout capture)
+    - name: get-current-date-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          date +"%Y-%m-%d"
+    
+    # Template: Read prompts file and return hardcoded list of prompts
+    - name: read-prompts-file
+      inputs:
+        parameters:
+          - name: prompts-file-path
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+          
+          # For now, return the two known prompts from the YAML structure
+          # In future, could use agent to read and parse dynamically
+          cat > /tmp/prompts.json <<'EOF'
+          ["subsidiary_entities: Identify all subsidiary entities associated with the company, including their legal names, jurisdictions of incorporation, percentage of ownership by the parent company, and primary activities (if available).", "vessels: Identify all vessels owned or operated by the company, including their names, IMO numbers, flag states, vessel types, and any relevant operational details."]
+          EOF
+          
+          cat /tmp/prompts.json
+      outputs:
+        parameters:
+          - name: prompts-list
+            valueFrom:
+              path: /tmp/prompts.json
+    
+    # Template: List files matching glob pattern (readdir)
+    - name: readdir-script
+      inputs:
+        parameters:
+          - name: pattern
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+          
+          PATTERN="{{inputs.parameters.pattern}}"
+          
+          # Extract base directory from glob pattern
+          BASE_DIR=$(echo "$PATTERN" | sed 's|\*\*.*||' | sed 's|/$||')
+          
+          # Use kubectl exec to list files via mcp-filesystem deployment
+          # This avoids volume mount issues in Argo script pods
+          kubectl exec deployment/mcp-filesystem -- \
+            find "/mnt/output/$BASE_DIR" -type f -name "*.json" 2>/dev/null | \
+            sed 's|^|"|; s|$|"|' | \
+            sed '1s|^|[|; $!s|$|,|; $s|$|]|' > /tmp/file-paths.json || echo "[]" > /tmp/file-paths.json
+          
+          cat /tmp/file-paths.json
+      outputs:
+        parameters:
+          - name: file-paths
+            valueFrom:
+              path: /tmp/file-paths.json
+    
+    # Template: Combine multiple JSON files
+    - name: combine-json-script
+      inputs:
+        parameters:
+          - name: file-paths-json  # JSON array of file paths
+          - name: outfile
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+          
+          FILE_PATHS='{{inputs.parameters.file-paths-json}}'
+          OUTFILE='{{inputs.parameters.outfile}}'
+          
+          echo "Combining JSON files into: $OUTFILE"
+          echo "File paths: $FILE_PATHS"
+          
+          # Compact JSON to single line to avoid YAML parsing issues
+          FILE_PATHS_COMPACT=$(echo "$FILE_PATHS" | tr -d '\n' | tr -s ' ')
+          
+          # Use file-gateway to read and combine files via ARK Query
+          QUERY_NAME="combine-json-$(date +%s%N)"
+          
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+          spec:
+            input: |
+              Read all JSON files from this list and combine them into a single JSON object:
+              $FILE_PATHS_COMPACT
+              
+              Merge all entries, combining arrays under the same keys.
+              
+              Save the combined result to: /mnt/output/$OUTFILE
+            target:
+              type: agent
+              name: companies-house-enricher
+            timeout: 15m
+          EOF
+          
+          kubectl apply -n default -f /tmp/query.yaml
+          kubectl wait --for=condition=Completed --timeout=15m -n default query/$QUERY_NAME || true
+          
+          echo "JSON files combined successfully"
+
+    # ============================================================
+    # GROUP/TEAM TEMPLATES - ARK Query implementations
+    # ============================================================
+    
+    # Template: Collect info from document - Sequential
+    - name: collect-info-sequential
+      inputs:
+        parameters:
+          - name: prompts-json  # JSON array of prompts
+          - name: document-file
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -eux
+          
+          PROMPTS='{{inputs.parameters.prompts-json}}'
+          DOC_FILE='{{inputs.parameters.document-file}}'
+          OUTPUT_DIR='{{inputs.parameters.output-dir}}'
+          
+          # Process each prompt sequentially
+          echo "$PROMPTS" | jq -r '.[]' | while IFS= read -r prompt; do
+            QUERY_NAME="doc-extract-$(date +%s%N)"
+            PROMPT_HASH=$(echo "$prompt" | md5sum | cut -d' ' -f1)
+            OUTPUT_FILE="/mnt/output/$OUTPUT_DIR/${PROMPT_HASH}.json"
+            
+            echo "Processing prompt: $prompt"
+            
+            cat > /tmp/query-$QUERY_NAME.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+          spec:
+            input: |
+              Extract information from document: $DOC_FILE
+              
+              Prompt: $prompt
+              
+              INSTRUCTIONS:
+              1. Use the 'analyze_pdf_ownership' tool to search the document and extract relevant information
+              2. After extraction, save the results as JSON using the 'mcp-filesystem-write-file' tool
+              3. Save to this exact path: $OUTPUT_FILE
+              
+              The JSON should include the extracted data and source page numbers.
+            target:
+              type: agent
+              name: rag-agent
+            timeout: 30m
+          EOF
+            
+            kubectl apply -n default -f /tmp/query-$QUERY_NAME.yaml
+            kubectl wait --for=condition=Completed --timeout=30m -n default query/$QUERY_NAME || true
+            
+            PHASE=$(kubectl get query $QUERY_NAME -n default -o jsonpath='{.status.phase}')
+            if [ "$PHASE" = "error" ]; then
+              echo "Error processing prompt: $prompt"
+              kubectl get query $QUERY_NAME -n default -o yaml
+            else
+              echo "Successfully processed: $prompt → $OUTPUT_FILE"
+              echo "================================================================================"
+              echo "DOCUMENT EXTRACTION RESPONSE - Query: $QUERY_NAME"
+              echo "================================================================================"
+              kubectl get query $QUERY_NAME -n default -o jsonpath='{.status.responses[0].content}' 2>/dev/null || echo "No response content available"
+              echo ""
+              echo "================================================================================"
+              echo ""
+            fi
+          done
+          
+          echo "All prompts processed sequentially"
+    
+    # Template: Collect info from document - Fake (for testing)
+    - name: collect-info-fake
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -eux
+          
+          PROMPTS='{{inputs.parameters.prompts-json}}'
+          OUTPUT_DIR='{{inputs.parameters.output-dir}}'
+          
+          echo "$PROMPTS" | jq -r '.[]' | while IFS= read -r prompt; do
+            PROMPT_HASH=$(echo "$prompt" | md5sum | cut -d' ' -f1)
+            OUTPUT_FILE="/mnt/output/$OUTPUT_DIR/${PROMPT_HASH}.json"
+            
+            echo "Creating fake file for: $prompt"
+            
+            # Create placeholder JSON via mcp-filesystem
+            kubectl exec deployment/mcp-filesystem -- sh -c "mkdir -p /mnt/output/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<'EOF'
+          {
+            "extraction_status": "fake_test_data",
+            "subsidiaries": [
+              {"legal_name": "Test Subsidiary 1", "jurisdiction": "UK", "ownership_pct": 100},
+              {"legal_name": "Test Subsidiary 2", "jurisdiction": "US", "ownership_pct": 75}
+            ],
+            "vessels": [
+              {"name": "Test Vessel 1", "imo": "1234567", "flag": "UK"},
+              {"name": "Test Vessel 2", "imo": "7654321", "flag": "US"}
+            ]
+          }
+          EOF
+            
+            echo "Created: $OUTPUT_FILE"
+            echo "================================================================================"
+            echo "DOCUMENT EXTRACTION RESPONSE (FAKE DATA) - Prompt: $(echo "$prompt" | cut -d: -f1)"
+            echo "================================================================================"
+            kubectl exec deployment/mcp-filesystem -- cat "$OUTPUT_FILE" 2>/dev/null || echo "Could not read fake data"
+            echo ""
+            echo "================================================================================"
+            echo ""
+          done
+          
+          echo "All fake files created"
+    
+    # Template: Collect info from document - Parallel
+    - name: collect-info-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: document-file
+          - name: output-dir
+      steps:
+        - - name: process-each-prompt
+            template: query-rag-agent
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{item}}"
+                - name: document-file
+                  value: "{{inputs.parameters.document-file}}"
+                - name: output-dir
+                  value: "{{inputs.parameters.output-dir}}"
+            withParam: "{{inputs.parameters.prompts-json}}"
+    
+    # Template: Collect web data - Sequential
+    - name: collect-web-data-sequential
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: company-name
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -eux
+          
+          PROMPTS='{{inputs.parameters.prompts-json}}'
+          COMPANY='{{inputs.parameters.company-name}}'
+          OUTPUT_DIR='{{inputs.parameters.output-dir}}'
+          
+          echo "$PROMPTS" | jq -r '.[]' | while IFS= read -r prompt; do
+            QUERY_NAME="web-data-$(date +%s%N)"
+            PROMPT_HASH=$(echo "$prompt" | md5sum | cut -d' ' -f1)
+            OUTPUT_FILE="/mnt/output/$OUTPUT_DIR/web_${PROMPT_HASH}.json"
+            
+            echo "Collecting web data for: $prompt"
+            
+            cat > /tmp/query-$QUERY_NAME.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+          spec:
+            input: |
+              Research information about: $COMPANY
+              
+              Prompt: $prompt
+              
+              INSTRUCTIONS:
+              1. Use the 'ubo-web-tools-server-research-ubo-web' tool to find relevant information via web search
+              2. After research, save the findings as JSON using the 'mcp-filesystem-write-file' tool
+              3. Save to this exact path: $OUTPUT_FILE
+              
+              The JSON should include the researched data and source URLs.
+            target:
+              type: agent
+              name: profile-web-enricher
+            timeout: 30m
+          EOF
+            
+            kubectl apply -n default -f /tmp/query-$QUERY_NAME.yaml
+            kubectl wait --for=condition=Completed --timeout=30m -n default query/$QUERY_NAME || true
+            
+            echo "Completed web research: $prompt → $OUTPUT_FILE"
+            echo "================================================================================"
+            echo "WEB RESEARCH RESPONSE - Query: $QUERY_NAME"
+            echo "================================================================================"
+            kubectl get query $QUERY_NAME -n default -o jsonpath='{.status.responses[0].content}' 2>/dev/null || echo "No response content available"
+            echo ""
+            echo "================================================================================"
+            echo ""
+          done
+    
+    # Template: Collect web data - Fake (for testing)
+    - name: collect-web-data-fake
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -eux
+          
+          PROMPTS='{{inputs.parameters.prompts-json}}'
+          OUTPUT_DIR='{{inputs.parameters.output-dir}}'
+          
+          echo "$PROMPTS" | jq -r '.[]' | while IFS= read -r prompt; do
+            PROMPT_HASH=$(echo "$prompt" | md5sum | cut -d' ' -f1)
+            OUTPUT_FILE="/mnt/output/$OUTPUT_DIR/web_${PROMPT_HASH}.json"
+            
+            echo "Creating fake web data for: $prompt"
+            
+            # Create placeholder JSON via mcp-filesystem
+            kubectl exec deployment/mcp-filesystem -- sh -c "mkdir -p /mnt/output/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<'EOF'
+          {
+            "research_status": "fake_test_data",
+            "findings": [
+              {"source": "test.com", "info": "Fake web finding 1"},
+              {"source": "example.org", "info": "Fake web finding 2"}
+            ]
+          }
+          EOF
+            
+            echo "Created: $OUTPUT_FILE"
+            echo "================================================================================"
+            echo "WEB RESEARCH RESPONSE (FAKE DATA) - Prompt: $(echo "$prompt" | cut -d: -f1)"
+            echo "================================================================================"
+            kubectl exec deployment/mcp-filesystem -- cat "$OUTPUT_FILE" 2>/dev/null || echo "Could not read fake data"
+            echo ""
+            echo "================================================================================"
+            echo ""
+          done
+          
+          echo "All fake web files created"
+    
+    # Template: Collect web data - Parallel
+    - name: collect-web-data-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: company-name
+          - name: output-dir
+      steps:
+        - - name: process-each-prompt
+            template: query-web-enricher
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{item}}"
+                - name: company-name
+                  value: "{{inputs.parameters.company-name}}"
+                - name: output-dir
+                  value: "{{inputs.parameters.output-dir}}"
+            withParam: "{{inputs.parameters.prompts-json}}"
+    
+    # Template: Query RAG agent for document extraction
+    - name: query-rag-agent
+      inputs:
+        parameters:
+          - name: prompt
+          - name: document-file
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eux
+          
+          QUERY_NAME="rag-query-$(date +%s%N)"
+          PROMPT='{{inputs.parameters.prompt}}'
+          DOC_FILE='{{inputs.parameters.document-file}}'
+          OUTPUT_DIR='{{inputs.parameters.output-dir}}'
+          PROMPT_HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
+          OUTPUT_FILE="/mnt/output/$OUTPUT_DIR/${PROMPT_HASH}.json"
+          
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+          spec:
+            input: |
+              Extract information from document: $DOC_FILE
+              
+              Prompt: $PROMPT
+              
+              Save extracted data to: $OUTPUT_FILE
+            target:
+              type: agent
+              name: rag-agent
+            timeout: 30m
+          EOF
+          
+          kubectl apply -n default -f /tmp/query.yaml
+          kubectl wait --for=condition=Completed --timeout=30m -n default query/$QUERY_NAME || true
+          
+          echo "================================================================================"
+          echo "DOCUMENT EXTRACTION RESPONSE - Query: $QUERY_NAME"
+          echo "================================================================================"
+          kubectl get query $QUERY_NAME -n default -o jsonpath='{.status.responses[0].content}' 2>/dev/null || echo "No response content available"
+          echo ""
+          echo "================================================================================"
+    
+    # Template: Query web enricher agent
+    - name: query-web-enricher
+      inputs:
+        parameters:
+          - name: prompt
+          - name: company-name
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eux
+          
+          QUERY_NAME="web-query-$(date +%s%N)"
+          PROMPT='{{inputs.parameters.prompt}}'
+          COMPANY='{{inputs.parameters.company-name}}'
+          OUTPUT_DIR='{{inputs.parameters.output-dir}}'
+          PROMPT_HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
+          OUTPUT_FILE="/mnt/output/$OUTPUT_DIR/web_${PROMPT_HASH}.json"
+          
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+          spec:
+            input: |
+              Research: $COMPANY
+              
+              Prompt: $PROMPT
+              
+              Save findings to: $OUTPUT_FILE
+            target:
+              type: agent
+              name: profile-web-enricher
+            timeout: 30m
+          EOF
+          
+          kubectl apply -n default -f /tmp/query.yaml
+          kubectl wait --for=condition=Completed --timeout=30m -n default query/$QUERY_NAME || true
+          
+          echo "================================================================================"
+          echo "WEB RESEARCH RESPONSE - Query: $QUERY_NAME"
+          echo "================================================================================"
+          kubectl get query $QUERY_NAME -n default -o jsonpath='{.status.responses[0].content}' 2>/dev/null || echo "No response content available"
+          echo ""
+          echo "================================================================================"
+    
+    # Template: Query consolidation team (2-agent team with critic)
+    - name: query-consolidation-team
+      inputs:
+        parameters:
+          - name: company-name
+          - name: input-file
+          - name: output-file
+          - name: current-date
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eux
+          
+          QUERY_NAME="consolidation-{{workflow.name}}-$(date +%s%N)"
+          TEAM_NAME="entities-vessels-consolidation-team"
+          
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+            labels:
+              workflow: "{{workflow.name}}"
+              team: "$TEAM_NAME"
+              use-case: ownership-structure
+          spec:
+            input: |
+              Company: {{inputs.parameters.company-name}}
+              Date: {{inputs.parameters.current-date}}
+              
+              Read the unconsolidated data from: {{inputs.parameters.input-file}}
+              
+              Consolidate all information about subsidiary entities and vessels.
+              Create a comprehensive profile section covering:
+              - Subsidiary entities list
+              - Vessel ownership
+              - Corporate structure
+              
+              The consolidated report should merge findings from both document extraction 
+              and web research, removing duplicates and reconciling conflicts.
+              
+              Save the final consolidated JSON to: {{inputs.parameters.output-file}}
+            target:
+              type: team
+              name: $TEAM_NAME
+            serviceAccount: argo-workflow
+            timeout: 15m
+            ttl: 24h
+          EOF
+          
+          kubectl apply -n default -f /tmp/query.yaml
+          kubectl wait --for=condition=Completed --timeout=15m -n default query/$QUERY_NAME || true
+          
+          kubectl get query $QUERY_NAME -n default -o json > /tmp/query.json
+          PHASE=$(jq -r '.status.phase' /tmp/query.json)
+          
+          if [ "$PHASE" = "error" ]; then
+            ERROR_MESSAGE=$(jq -r '.status.responses[0].content // .status.error // "Unknown error"' /tmp/query.json)
+            echo "$ERROR_MESSAGE"
+            exit 1
+          fi
+          
+          jq -r '.status.responses[0].content // ""' /tmp/query.json | tee /tmp/response.txt
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              path: /tmp/response.txt
+    
+    # Template: Process and display final results
+    - name: process-results
+      inputs:
+        parameters:
+          - name: final-output
+          - name: output-file
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          set -e
+          
+          echo "================================================================================"
+          echo "RETRIEVE ENTITIES/VESSELS WORKFLOW COMPLETE"
+          echo "================================================================================"
+          echo "Workflow: {{workflow.name}}"
+          echo "Completed: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "================================================================================"
+          echo "SUMMARY"
+          echo "================================================================================"
+          echo ""
+          echo "Successfully retrieved and consolidated subsidiary entities/vessels information."
+          echo ""
+          echo "Final report saved to: {{inputs.parameters.output-file}}"
+          echo ""
+          echo "================================================================================"
+          echo "CONSOLIDATED RESPONSE"
+          echo "================================================================================"
+          echo ""
+          echo "{{inputs.parameters.final-output}}"
+          echo ""
+          echo "================================================================================"
+          echo "END OF WORKFLOW"
+          echo "================================================================================"

@@ -1,0 +1,121 @@
+# UBO Web Tools MCP Server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ubo-web-tools-config
+data:
+  # Use the same AI Gateway project as PDF tools
+  OPENAI_BASE_URL: "${OPENAI_BASE_URL}"
+  PERPLEXITY_BASE_URL: "${PERPLEXITY_BASE_URL}"
+  ANTHROPIC_BASE_URL: "${ANTHROPIC_BASE_URL}"
+  UBO_LLM_DEFAULT_PROVIDER: "${UBO_LLM_DEFAULT_PROVIDER}"
+  UBO_LLM_DEFAULT_MODEL: "${UBO_LLM_DEFAULT_MODEL}"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ubo-web-tools
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ubo-web-tools
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+      name: http
+  selector:
+    app: ubo-web-tools
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ubo-web-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ubo-web-tools
+  template:
+    metadata:
+      labels:
+        app: ubo-web-tools
+    spec:
+      serviceAccountName: ubo-web-tools
+      containers:
+      - name: ubo-web-tools
+        image: ubo-web-tools:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8081
+          protocol: TCP
+        env:
+        - name: FASTMCP_HOST
+          value: "0.0.0.0"
+        - name: FASTMCP_PORT
+          value: "8081"
+        # API Keys from Secret
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aigw-secret
+              key: api-key
+        - name: PERPLEXITY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aigw-secret
+              key: api-key
+        - name: TAVILY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aigw-secret
+              key: api-key
+        # Config from ConfigMap
+        - name: OPENAI_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-web-tools-config
+              key: OPENAI_BASE_URL
+        - name: PERPLEXITY_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-web-tools-config
+              key: PERPLEXITY_BASE_URL
+        - name: UBO_LLM_DEFAULT_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-web-tools-config
+              key: UBO_LLM_DEFAULT_PROVIDER
+        - name: UBO_LLM_DEFAULT_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: ubo-web-tools-config
+              key: UBO_LLM_DEFAULT_MODEL
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: ubo-web-tools-server
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: ubo-web-tools
+        namespace: default
+        port: http
+        path: /mcp
+  transport: http
+  timeout: "600s"
+  description: "Web-based UBO research tools"

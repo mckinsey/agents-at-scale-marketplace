@@ -1,0 +1,22 @@
+{{- if .Values.mcpServer.create }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ .Values.mcpServer.name | default (include "ubo-pdf-tools.fullname" .) }}
+  labels:
+    {{- include "ubo-pdf-tools.labels" . | nindent 4 }}
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "ubo-pdf-tools.fullname" . }}
+        port: http
+        namespace: {{ .Release.Namespace }}
+  transport: http
+  {{- if .Values.mcpServer.timeout }}
+  timeout: {{ .Values.mcpServer.timeout | quote }}
+  {{- end }}
+  {{- if .Values.mcpServer.description }}
+  description: {{ .Values.mcpServer.description | quote }}
+  {{- end }}
+{{- end }}
