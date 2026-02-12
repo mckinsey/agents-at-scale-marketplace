@@ -1,0 +1,14 @@
+apiVersion: v2
+name: executor-claude-agent
+description: ARK ExecutionEngine using Claude Agent SDK for agentic task execution
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ark
+  - claude
+  - agent
+  - execution-engine
+  - ai
+maintainers:
+  - name: ARK Team
