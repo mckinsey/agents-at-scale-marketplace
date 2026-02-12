@@ -37,6 +37,8 @@ install:
 		--namespace $(NAMESPACE) \
 		--create-namespace \
 		--wait
+	@echo "Applying namespace discovery labels..."
+	@kubectl apply -f ../../namespaces/cobol-demo.yaml
 	@echo "Done. Agents and file-gateway are now available."
 	@echo ""
 	@echo "Installed agents:"
@@ -50,6 +52,8 @@ install-with-argo: build
 		--namespace $(NAMESPACE) \
 		--create-namespace \
 		--wait
+	@echo "Applying namespace discovery labels..."
+	@kubectl apply -f ../../namespaces/cobol-demo.yaml
 	@echo ""
 	@echo "Done! Installed:"
 	@echo "  ✓ Speech MCP Server (Whisper audio transcription)"

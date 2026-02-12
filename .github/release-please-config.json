@@ -79,6 +79,27 @@
       "extra-files": [
         "chart/Chart.yaml"
       ]
+    },
+    "demos/cobol-modernization-bundle": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "cobol-modernization-bundle",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
+    },
+    "demos/cobol-modernization-bundle/examples/data": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "simple",
+      "package-name": "cobol-demo-data-seeder"
+    },
+    "mcps/speech-mcp-server": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "speech-mcp-server",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
     }
   }
 }

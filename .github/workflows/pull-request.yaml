@@ -26,6 +26,8 @@ jobs:
           - { name: ark-sandbox, path: services/ark-sandbox }
           - { name: file-api, path: services/file-gateway/services/file-api }
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server }
+          - { name: speech-mcp-server, path: mcps/speech-mcp-server }
+          - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -55,6 +57,8 @@ jobs:
           - { name: file-gateway, path: services/file-gateway, namespace: default, run-deployment-test: false }
           # disable filesystem-mcp-server deployment tests for PRs to avoid hitting 5m limit
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server, namespace: default, run-deployment-test: false }
+          # disable cobol-modernization-bundle deployment tests for PRs to avoid hitting 5m limit
+          - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
