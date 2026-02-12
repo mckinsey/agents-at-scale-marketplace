@@ -76,6 +76,11 @@ dataSeeder:
     tag: latest
     pullPolicy: IfNotPresent
 
+# Demo discovery labels applied to the namespace
+demo:
+  name: "COBOL Modernization"
+  description: "COBOL modernization with agents for reverse engineering, pseudocode generation, Python conversion, and documentation"
+
 # File Gateway integration for file-based inputs/outputs
 file-gateway:
   enabled: true
