@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cobol-demo
+  labels:
+    ark.mckinsey.com/demo: "true"
+  annotations:
+    ark.mckinsey.com/demo-name: "COBOL Modernization"
+    ark.mckinsey.com/demo-description: "COBOL modernization with agents for reverse engineering, pseudocode generation, Python conversion, and documentation"

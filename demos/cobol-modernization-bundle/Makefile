@@ -1,8 +1,9 @@
-.PHONY: help build install install-with-argo uninstall cobol-demo upload-data clean
+.PHONY: help build build-data-seeder install install-with-argo uninstall cobol-demo upload-data clean
 
-NAMESPACE ?= default
+NAMESPACE ?= cobol-demo
 RELEASE_NAME ?= cobol-modernization-bundle
 SPEECH_MCP_IMAGE ?= speech-mcp-server:latest
+DATA_SEEDER_IMAGE ?= cobol-demo-data-seeder:latest
 
 help:
 	@echo "COBOL Modernization Demo Bundle"
@@ -18,7 +19,7 @@ help:
 	@echo "Quick Start:"
 	@echo "  make build && make install-with-argo && make upload-data && make cobol-demo"
 
-build:
+build: build-data-seeder
 	@echo "Building speech-mcp-server image..."
 	@docker build -t $(SPEECH_MCP_IMAGE) ../../mcps/speech-mcp-server/
 	@echo "Done. Image: $(SPEECH_MCP_IMAGE)"
@@ -36,6 +37,8 @@ install:
 		--namespace $(NAMESPACE) \
 		--create-namespace \
 		--wait
+	@echo "Applying namespace discovery labels..."
+	@kubectl apply -f ../namespaces/cobol-demo.yaml
 	@echo "Done. Agents and file-gateway are now available."
 	@echo ""
 	@echo "Installed agents:"
@@ -48,16 +51,15 @@ install-with-argo: build
 	@helm upgrade --install $(RELEASE_NAME) chart/ \
 		--namespace $(NAMESPACE) \
 		--create-namespace \
-		--set argoWorkflows.rbac.enabled=true \
 		--wait
-	@echo "Installing WorkflowTemplate..."
-	@kubectl apply -f examples/cobol-modernization-workflow.yaml -n $(NAMESPACE)
+	@echo "Applying namespace discovery labels..."
+	@kubectl apply -f ../namespaces/cobol-demo.yaml
 	@echo ""
 	@echo "Done! Installed:"
 	@echo "  ✓ Speech MCP Server (Whisper audio transcription)"
 	@echo "  ✓ Agents (pseudocode-generator, python-modernizer, audio-transcriber, diagram-creator)"
 	@echo "  ✓ File-gateway with MCP tools"
-	@echo "  ✓ Argo Workflows RBAC"
+	@echo "  ✓ Argo Workflows RBAC + ServiceAccount"
 	@echo "  ✓ WorkflowTemplate (visible in ARK Dashboard)"
 
 uninstall:
@@ -105,6 +107,16 @@ cobol-demo:
 	@echo "  kubectl get workflows -n $(NAMESPACE) -w"
 	@echo ""
 	@echo "Or view in ARK Dashboard → Argo Workflows"
+
+build-data-seeder:
+	@echo "Building data-seeder image..."
+	@docker build -t $(DATA_SEEDER_IMAGE) examples/data/
+	@echo "Done. Image: $(DATA_SEEDER_IMAGE)"
+	@if kubectl config current-context 2>/dev/null | grep -q minikube; then \
+		echo "Detected minikube - loading image into cluster..."; \
+		minikube image load $(DATA_SEEDER_IMAGE); \
+		echo "Image loaded into minikube."; \
+	fi
 
 clean:
 	@echo "Cleaning up workflow artifacts..."

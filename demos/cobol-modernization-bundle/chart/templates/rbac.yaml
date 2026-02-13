@@ -1,8 +1,44 @@
 {{- if .Values.argoWorkflows.rbac.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-workflow-ark-access
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+rules:
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["queries"]
+    verbs: ["create", "get", "list", "watch", "patch", "update", "delete"]
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["agents", "models", "tools", "mcpservers", "a2aservers", "teams", "memories"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets", "services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: argo-workflow-cobol-mod-access
+  name: argo-workflow-ark-access
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-workflow-ark-access
+subjects:
+  - kind: ServiceAccount
+    name: argo-workflow
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-workflow-edit-access
   labels:
     {{- with .Values.commonLabels }}
     {{- toYaml . | nindent 4 }}
@@ -10,7 +46,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: ark-query-submitter
+  name: argo-workflows-edit
 subjects:
   - kind: ServiceAccount
     name: argo-workflow
