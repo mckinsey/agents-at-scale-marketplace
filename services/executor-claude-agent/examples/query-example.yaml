@@ -1,0 +1,45 @@
+---
+# Example Query to the developer agent
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: implement-feature
+spec:
+  type: user
+  input: |
+    Create a Python function that validates email addresses.
+    The function should:
+    - Accept a string input
+    - Return True if valid, False otherwise
+    - Handle edge cases properly
+    - Include comprehensive tests
+
+  targets:
+    - type: agent
+      name: developer
+
+  timeout: 5m
+  ttl: 1h
+---
+# Example Query to the team
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: team-feature-request
+spec:
+  type: user
+  input: |
+    Add a new REST API endpoint for user authentication.
+    Requirements:
+    - POST /api/auth/login
+    - Accept email and password
+    - Return JWT token on success
+    - Proper error handling
+    - Rate limiting
+
+  targets:
+    - type: team
+      name: sdlc-team
+
+  timeout: 15m
+  ttl: 2h

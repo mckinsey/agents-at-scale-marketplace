@@ -1,0 +1,27 @@
+# ARK SDK for executor framework
+ark-sdk @ https://github.com/mckinsey/agents-at-scale-ark/releases/download/v0.1.31/ark_sdk-0.1.31-py3-none-any.whl
+
+# Claude Agent SDK for agentic execution
+claude-agent-sdk>=0.1.19
+
+# Anthropic SDK for direct API access
+anthropic>=0.40.0
+
+# AWS Bedrock support
+boto3>=1.34.0
+
+# FastAPI and dependencies (included in ark-sdk but explicit for clarity)
+fastapi>=0.115.0
+uvicorn>=0.32.0
+
+# Pydantic for data validation
+pydantic>=2.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# OpenTelemetry for observability
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-exporter-otlp-proto-grpc>=1.20.0
+opentelemetry-instrumentation-fastapi>=0.46b0

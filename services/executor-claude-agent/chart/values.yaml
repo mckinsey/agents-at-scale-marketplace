@@ -1,0 +1,63 @@
+# Default values for executor-claude-agent
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/mckinsey/executor-claude-agent
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to chart appVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Claude configuration
+claude:
+  model: "claude-sonnet-4-20250514"
+  maxTurns: 10
+
+# API key configuration
+anthropicApiKey:
+  # Use existing secret
+  existingSecret: ""
+  existingSecretKey: "api-key"
+  # Or provide directly (not recommended for production)
+  value: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# OpenTelemetry configuration
+otel:
+  enabled: false
+  endpoint: ""
+  protocol: "grpc"
+  serviceName: "executor-claude-agent"
+
+# ExecutionEngine CRD configuration
+executionEngine:
+  enabled: true
+  name: "executor-claude-agent"
+  description: "Claude Agent SDK executor with agentic capabilities"

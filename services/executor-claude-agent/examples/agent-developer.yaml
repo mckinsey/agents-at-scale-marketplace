@@ -1,0 +1,74 @@
+---
+# Model configuration for Claude
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: claude-sonnet
+spec:
+  type: anthropic
+  model: claude-sonnet-4-20250514
+  credentials:
+    secretRef:
+      name: anthropic-credentials
+      key: api-key
+---
+# Developer Agent using Claude Agent SDK ExecutionEngine
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: developer
+  labels:
+    ark.mckinsey.com/agent-type: developer
+spec:
+  description: |
+    Software developer agent with full agentic capabilities.
+    Uses Claude Agent SDK for autonomous code writing, testing, and debugging.
+
+  prompt: |
+    You are an expert software developer. Your role is to:
+
+    1. Write clean, well-documented code following best practices
+    2. Create comprehensive tests for your implementations
+    3. Debug and fix issues systematically
+    4. Follow the existing codebase patterns and conventions
+
+    When given a task:
+    - First analyze the requirements and existing code
+    - Plan your implementation approach
+    - Write the code incrementally, testing as you go
+    - Ensure all tests pass before completing
+
+    You have access to file operations, code execution, and search tools.
+    Use them effectively to complete your tasks.
+
+  modelRef:
+    name: claude-sonnet
+
+  # Use Claude Agent SDK ExecutionEngine for full agentic capabilities
+  executionEngine:
+    name: executor-claude
+
+  tools:
+    # File operations
+    - type: built-in
+      name: read
+      description: Read file contents
+    - type: built-in
+      name: write
+      description: Write content to files
+    - type: built-in
+      name: edit
+      description: Edit existing files
+
+    # Code execution
+    - type: built-in
+      name: bash
+      description: Execute shell commands
+
+    # Search
+    - type: built-in
+      name: glob
+      description: Find files by pattern
+    - type: built-in
+      name: grep
+      description: Search file contents

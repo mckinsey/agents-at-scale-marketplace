@@ -1,0 +1,34 @@
+---
+# SDLC Team: Multi-agent workflow for software development
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: sdlc-team
+spec:
+  description: |
+    Software Development Lifecycle team with specialized agents
+    for development, testing, and code review.
+
+  # Agents in this team
+  agents:
+    - name: developer
+    - name: reviewer
+
+  # Orchestration: sequential workflow
+  orchestration:
+    type: sequential
+    steps:
+      - agent: developer
+        description: Implement the requested feature or fix
+      - agent: reviewer
+        description: Review the implementation for quality and security
+
+  # Shared context for the team
+  prompt: |
+    This is the SDLC team. Work together to deliver high-quality software:
+
+    1. Developer implements the requested changes
+    2. Reviewer analyzes the implementation
+    3. Developer addresses any feedback
+
+    Ensure all work follows project conventions and passes tests.
