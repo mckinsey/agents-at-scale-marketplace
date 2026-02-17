@@ -88,3 +88,4 @@ file-gateway:
     pvcName: "file-gateway-storage"  # Fixed name to survive helm upgrades
   filesystemMcp:
     enabled: true
+    

@@ -123,3 +123,4 @@ clean:
 	@kubectl delete workflows -n $(NAMESPACE) -l use-case=cobol-modernization 2>/dev/null || true
 	@kubectl delete queries -n $(NAMESPACE) -l use-case=cobol-modernization 2>/dev/null || true
 	@echo "Done."
+	
