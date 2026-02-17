@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.3...file-gateway-v0.1.4) (2026-02-17)
+
+
+### Bug Fixes
+
+* update RBAC and service account configurations in KYC demo bundle ([#113](https://github.com/mckinsey/agents-at-scale-marketplace/issues/113)) ([f56a738](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f56a73821a55d7c31646b6c38f104297dca965cf))
+
 ## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.2...file-gateway-v0.1.3) (2026-01-14)
 
 
