@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.8...noah-v0.1.9) (2026-02-17)
+
+
+### Features
+
+* add cobol-modernization tech demo ([#115](https://github.com/mckinsey/agents-at-scale-marketplace/issues/115)) ([81197c2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/81197c2dfaf6a408f038a7f949acaf3030c4834c))
+
+
+### Bug Fixes
+
+* shorten agent description for Noah ([#114](https://github.com/mckinsey/agents-at-scale-marketplace/issues/114)) ([a6bcab9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a6bcab9459a14b607b70a2ed59a70be53515e01c))
+
 ## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.7...noah-v0.1.8) (2026-01-13)
 
 
