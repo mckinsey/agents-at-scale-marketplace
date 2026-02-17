@@ -28,126 +28,41 @@ Plus supporting infrastructure:
 - Docker (to build the speech-mcp-server image)
 - `kubectl` and `helm` CLI tools
 
-## Quick Start
+## Local Development
 
 ```bash
-# Build, install, upload data, and run the workflow
-make build && make install-with-argo && make upload-data && make cobol-demo
+# 3 simple steps:
+cd agents-at-scale-marketplace/demos/cobol-modernization-bundle
+
+make build                  # 1. Build the speech-mcp-server Docker image
+make install-with-argo      # 2. Install everything
+make upload-data            # 3. Upload example customer file
+make cobol-demo               # 4. Run KYC workflow
+
+# View results
+kubectl get workflows -n default
+# Access ARK Dashboard → Workflow Templates (template is visible)
+# Access ARK Dashboard → Files section (download report)
+
+# Cleanup
+make uninstall
 ```
 
-### Step by step
+## Cloud Deployment
 
 ```bash
-# 1. Build the speech-mcp-server Docker image
-make build
-
-# 2. Install the bundle (agents + file-gateway + speech-mcp + WorkflowTemplate)
-make install-with-argo
-
-# Upload sample COBOL files
-make upload-data
-
-# 4. Run the COBOL modernization workflow
-make cobol-demo
+# Install the bundle
+ark install marketplace/demos/cobol-modernization-bundle
 ```
 
-## Sample Data
+**Upload input data (ARK Dashboard):**
 
-Sample COBOL files are included in `examples/data/cobol-source/`:
-- 11 COBOL files from CardDemo application
-- 1 audio file (interview recording)
+1. Open **ARK Dashboard → Files**.
+2. Create or use the folder `cobol-source/`.
+3. Upload your COBOL files (`.cbl`) and the audio file (e.g. `carddemo-interview.m4a`).
 
-## Output Artifacts
+**Run the workflow:**
 
-The workflow generates:
-1. **Pseudocode Documentation** - Language-agnostic logic descriptions
-2. **Audio Transcription** - Structured interview notes
-3. **Architecture Diagrams** - PlantUML C4 model diagrams
-4. **Python Code** - PySpark modules
-
-## Agents
-
-### audio-transcriber
-Transcribes audio files with speaker identification. Creates structured markdown with:
-- Overview
-- Modernisation Plan
-- Terminology and Context
-- Potential Gaps
-- Original Interview
-
-### cobol-code-documenter
-Creates comprehensive code documentation including:
-- Business Documentation (overview, requirements, rules)
-- Input/Output files grid
-- Technical Documentation (paragraphs, logic rules, variable sources)
-
-### cobol-codebase-summarizer
-Generates codebase-wide documentation:
-- Overview (purpose, architecture, folder structure)
-- File Descriptions (categorisation, individual descriptions)
-- Interconnections (call tree, dependency graph, data flow)
-- Functions and Procedures (key functions, implementation details)
-- Inputs and Outputs (files, data tables)
-
-### cobol-pseudocode-documenter
-Converts COBOL to pseudocode documentation:
-- Business Overview
-- Inputs and Outputs
-- Pseudo-code (plain English, no COBOL terms)
-
-### diagram-creator
-Generates PlantUML diagrams:
-- C4 Model architecture
-- Hexagonal architecture patterns
-- Target state focus
-
-### pseudo-python-modernizer
-Converts pseudocode to Python/PySpark:
-- Idiomatic Python code
-- PySpark for data processing
-- Type hints and docstrings
-- No SparkSession initialization
-
-## Configuration
-
-Override values in `values.yaml`:
-
-```yaml
-# Use a different model
-modelRef:
-  name: my-custom-model
-
-# Disable specific agents
-agents:
-  audioTranscriber:
-    enabled: false
-
-# Change Whisper model (tiny, base, small, medium, large)
-speechMcp:
-  whisperModel: "small"
-```
-
-## Troubleshooting
-
-**Agent not responding:**
-```bash
-kubectl get agent -n default
-kubectl describe agent cobol-pseudocode-documenter -n default
-```
-
-**Audio transcription failing:**
-```bash
-kubectl logs deploy/speech-mcp -n default
-```
-
-**File operations failing:**
-```bash
-kubectl get mcpserver -n default
-kubectl logs -l app=file-gateway -n default
-```
-
-**Workflow errors:**
-```bash
-argo list -n default
-argo logs <workflow-name> -n default
-```
+- From **ARK Dashboard → Argo Workflows**, submit a new workflow that references the `cobol-modernization-template` WorkflowTemplate, or apply the example workflow manifest:
+  - [cobol-modernization-from-template.yaml](https://github.com/mckinsey/agents-at-scale-marketplace/blob/main/demos/cobol-modernization-bundle/examples/cobol-modernization-from-template.yaml)
+- Use parameters such as `cobol-source-dir=cobol-source`, `output-dir=output`, and `audio-file=cobol-source/carddemo-interview.m4a` to match your uploaded paths.
