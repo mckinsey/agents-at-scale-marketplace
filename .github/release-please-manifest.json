@@ -9,5 +9,7 @@
   "agents/noah": "0.1.8",
   "services/file-gateway": "0.1.3",
   "services/file-gateway/services/file-api": "0.1.1",
-  "mcps/filesystem-mcp-server": "0.1.50"
+  "mcps/filesystem-mcp-server": "0.1.50",
+  "demos/cobol-modernization-bundle": "0.1.0",
+  "mcps/speech-mcp-server": "0.1.0"
 }

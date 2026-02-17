@@ -1,6 +1,6 @@
 .PHONY: help install install-with-argo uninstall kyc-demo upload-data
 
-NAMESPACE ?= default
+NAMESPACE ?= kyc-demo
 RELEASE_NAME ?= kyc-demo-bundle
 
 help:

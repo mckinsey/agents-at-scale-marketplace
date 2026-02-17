@@ -1,0 +1,297 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: cobol-modernization-template
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "COBOL Modernization Pipeline"
+    workflows.argoproj.io/description: "Complete COBOL modernization workflow: Reverse Engineer (Pseudocode) → Shape (Audio Transcription + Diagram) → Modernize (Python/PySpark)"
+spec:
+  entrypoint: main
+  serviceAccountName: argo-workflow
+  parallelism: {{ .Values.argoWorkflows.workflowTemplate.parallelism | default 2 }}
+  arguments:
+    parameters:
+      - name: cobol-source-dir
+        value: "cobol-source"
+      - name: output-dir
+        value: "output"
+      - name: audio-file
+        value: "cobol-source/carddemo-interview.m4a"
+  templates:
+    - name: main
+      steps:
+        - - name: list-cobol-files
+            template: list-files
+            arguments:
+              parameters:
+                - name: directory
+                  value: "{{ "{{workflow.parameters.cobol-source-dir}}" }}"
+                - name: pattern
+                  value: "*.cbl"
+
+        - - name: generate-pseudocode
+            template: query-agent
+            arguments:
+              parameters:
+                - name: agent-name
+                  value: "cobol-pseudocode-documenter"
+                - name: task-description
+                  value: |
+                    Read the COBOL file at: {{ "{{workflow.parameters.cobol-source-dir}}" }}/{{ "{{item}}" }}
+
+                    Create pseudocode documentation with:
+                    - Business overview
+                    - Inputs and outputs
+                    - Pseudo-code in plain English following all guidelines
+
+                    Save the documentation to: {{ "{{workflow.parameters.output-dir}}" }}/pseudocode/{{ "{{item}}" }}.md
+            withParam: "{{ "{{steps.list-cobol-files.outputs.parameters.files}}" }}"
+
+        - - name: transcribe-audio
+            template: query-agent
+            arguments:
+              parameters:
+                - name: agent-name
+                  value: "audio-transcriber"
+                - name: task-description
+                  value: |
+                    Read the audio file at: {{ "{{workflow.parameters.audio-file}}" }}
+
+                    Create "Interview Notes - Tech Modernisation" documentation with:
+                    - Overview
+                    - Modernisation Plan
+                    - Terminology and Context
+                    - Potential Gaps
+                    - Original Interview (with Interviewer/Interviewee labels)
+
+                    Use British English throughout.
+
+                    Save the transcription to: {{ "{{workflow.parameters.output-dir}}" }}/transcription/carddemo-interview.md
+
+        - - name: create-diagram
+            template: query-agent
+            arguments:
+              parameters:
+                - name: agent-name
+                  value: "diagram-creator"
+                - name: task-description
+                  value: |
+                    Read the transcription at: {{ "{{workflow.parameters.output-dir}}" }}/transcription/carddemo-interview.md
+
+                    Create a PlantUML C4 model diagram that visualises the TARGET STATE architecture:
+                    - Use hexagonal architecture patterns
+                    - All microservices in "Cloud System" boundary
+                    - Each microservice in its own container
+                    - Microservices connect only to API (not to each other)
+                    - Use standard C4 Model colour palette
+                    - British English throughout
+
+                    Save the PlantUML diagram to: {{ "{{workflow.parameters.output-dir}}" }}/diagrams/modernization-process.puml
+
+        - - name: list-pseudocode-files
+            template: list-files
+            arguments:
+              parameters:
+                - name: directory
+                  value: "{{ "{{workflow.parameters.output-dir}}" }}/pseudocode"
+                - name: pattern
+                  value: "*.md"
+
+        - - name: modernize-to-python
+            template: query-agent
+            arguments:
+              parameters:
+                - name: agent-name
+                  value: "pseudo-python-modernizer"
+                - name: task-description
+                  value: |
+                    Read the pseudocode documentation at: {{ "{{workflow.parameters.output-dir}}" }}/pseudocode/{{ "{{item}}" }}
+
+                    Also read the modernisation plan from the transcription at:
+                    {{ "{{workflow.parameters.output-dir}}" }}/transcription/carddemo-interview.md
+
+                    Convert the pseudocode to Python/PySpark code:
+                    - Idiomatic, correct, concise, executable
+                    - Use PySpark for data processing
+                    - Do NOT initialise SparkSession
+                    - Include docstrings and type hints
+                    - Adopt naming conventions from modernisation plan
+                    - No example usage code
+
+                    Save the Python code to: {{ "{{workflow.parameters.output-dir}}" }}/python/{{ "{{item}}" }}.py
+            withParam: "{{ "{{steps.list-pseudocode-files.outputs.parameters.files}}" }}"
+
+        - - name: generate-summary
+            template: workflow-summary
+            arguments:
+              parameters:
+                - name: output-dir
+                  value: "{{ "{{workflow.parameters.output-dir}}" }}"
+
+    - name: list-files
+      inputs:
+        parameters:
+          - name: directory
+          - name: pattern
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -e
+
+          QUERY_NAME="list-files-$(date +%s%N)"
+
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+          spec:
+            input: |
+              List all files in the directory: {{ "{{inputs.parameters.directory}}" }}
+              Return ONLY the filenames (not full paths) that match pattern: {{ "{{inputs.parameters.pattern}}" }}
+              Format the output as a JSON array of strings, like: ["file1.cbl", "file2.cbl"]
+            target:
+              type: agent
+              name: cobol-pseudocode-documenter
+            serviceAccount: argo-workflow
+            timeout: 2m
+            ttl: 1h
+          EOF
+
+          kubectl apply -n {{ .Release.Namespace }} -f /tmp/query.yaml
+          kubectl wait --for=condition=Completed --timeout=2m -n {{ .Release.Namespace }} query/$QUERY_NAME || true
+
+          kubectl get query $QUERY_NAME -n {{ .Release.Namespace }} -o json > /tmp/query.json
+
+          CONTENT=$(jq -r '.status.response.content // .status.responses[0].content // empty' /tmp/query.json)
+
+          echo "$CONTENT" | grep -oE '\[("[^"]*"(,\s*"[^"]*")*)?\]' | head -1 > /tmp/files.json
+
+          jq -c '.' /tmp/files.json > /tmp/validated.json 2>/dev/null && mv /tmp/validated.json /tmp/files.json || echo '[]' > /tmp/files.json
+
+          cat /tmp/files.json
+      outputs:
+        parameters:
+          - name: files
+            valueFrom:
+              path: /tmp/files.json
+
+    - name: query-agent
+      inputs:
+        parameters:
+          - name: agent-name
+          - name: task-description
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eux
+
+          QUERY_NAME="cobol-mod-{{ "{{workflow.name}}" }}-{{ "{{inputs.parameters.agent-name}}" }}-$(date +%s%N)"
+          AGENT_NAME="{{ "{{inputs.parameters.agent-name}}" }}"
+
+          cat > /tmp/task-description.txt <<'TASKEOF'
+          {{ "{{inputs.parameters.task-description}}" }}
+          TASKEOF
+
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+            labels:
+              workflow: "{{ "{{workflow.name}}" }}"
+              agent: "$AGENT_NAME"
+              use-case: cobol-modernization
+          spec:
+            input: |
+          $(cat /tmp/task-description.txt | sed 's/^/      /')
+            target:
+              type: agent
+              name: $AGENT_NAME
+            serviceAccount: argo-workflow
+            timeout: 35m
+            ttl: 24h
+          EOF
+
+          kubectl apply -n {{ .Release.Namespace }} -f /tmp/query.yaml
+
+          kubectl wait --for=condition=Completed --timeout=35m -n {{ .Release.Namespace }} query/$QUERY_NAME || true
+
+          kubectl get query $QUERY_NAME -n {{ .Release.Namespace }} -o json > /tmp/query.json
+          PHASE=$(jq -r '.status.phase' /tmp/query.json)
+
+          if [ "$PHASE" = "error" ]; then
+            ERROR_MESSAGE=$(jq -r '.status.response.content // .status.error // "Unknown error"' /tmp/query.json)
+            echo "Error: $ERROR_MESSAGE"
+            exit 1
+          fi
+
+          if [ "$PHASE" = "running" ] || [ "$PHASE" = "pending" ]; then
+            echo "Error: Query timed out - still in phase: $PHASE"
+            exit 1
+          fi
+
+          jq -r '.status.response.content // ""' /tmp/query.json | tee /tmp/response.txt
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              path: /tmp/response.txt
+
+    - name: workflow-summary
+      inputs:
+        parameters:
+          - name: output-dir
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          set -e
+
+          echo "================================================================================"
+          echo "COBOL MODERNIZATION WORKFLOW COMPLETE"
+          echo "================================================================================"
+          echo "Workflow: {{ "{{workflow.name}}" }}"
+          echo "Completed: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "================================================================================"
+          echo "OUTPUT ARTIFACTS"
+          echo "================================================================================"
+          echo ""
+          echo "The following artifacts have been generated:"
+          echo ""
+          echo "1. Pseudocode Documentation:"
+          echo "   Location: {{ "{{inputs.parameters.output-dir}}" }}/pseudocode/"
+          echo "   Format: Markdown files (.md)"
+          echo ""
+          echo "2. Audio Transcription:"
+          echo "   Location: {{ "{{inputs.parameters.output-dir}}" }}/transcription/"
+          echo "   Format: Markdown with speaker identification"
+          echo ""
+          echo "3. Architecture Diagrams:"
+          echo "   Location: {{ "{{inputs.parameters.output-dir}}" }}/diagrams/"
+          echo "   Format: PlantUML files (.puml)"
+          echo ""
+          echo "4. Python Code:"
+          echo "   Location: {{ "{{inputs.parameters.output-dir}}" }}/python/"
+          echo "   Format: Python/PySpark modules (.py)"
+          echo ""
+          echo "================================================================================"
+          echo "NEXT STEPS"
+          echo "================================================================================"
+          echo ""
+          echo "1. Review generated pseudocode for accuracy"
+          echo "2. Render PlantUML diagrams using plantuml.com or local tools"
+          echo "3. Review and test Python code"
+          echo "4. Integrate Python modules into your target application"
+          echo ""
+          echo "Access files via ARK Dashboard → Files section"
+          echo "================================================================================"
+{{- end }}

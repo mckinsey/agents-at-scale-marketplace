@@ -18,7 +18,9 @@ This bundle deploys **6 AI agents** that mirror the LegacyX Groups:
 Plus supporting infrastructure:
 - `speech-mcp-server` for local audio transcription via Whisper
 - `file-gateway` MCP server for file operations (read/write/list)
-- Argo Workflow RBAC for orchestration
+- Argo Workflow RBAC (ServiceAccount + Role + RoleBinding)
+- Data seeder (Helm post-install hook that uploads sample files automatically)
+- WorkflowTemplate for the full COBOL modernization pipeline
 
 ## Prerequisites
 
