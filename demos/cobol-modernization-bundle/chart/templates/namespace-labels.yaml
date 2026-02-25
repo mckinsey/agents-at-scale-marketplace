@@ -1,3 +1,5 @@
+{{- if ne .Release.Namespace "default" }}
+# Skip when installing into default namespace — it already exists and must not be Helm-managed
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -7,3 +9,4 @@ metadata:
   annotations:
     ark.mckinsey.com/demo-name: {{ .Values.demo.name | default "COBOL Modernization" | quote }}
     ark.mckinsey.com/demo-description: {{ .Values.demo.description | default "COBOL modernization with agents for reverse engineering, pseudocode generation, Python conversion, and documentation" | quote }}
+{{- end }}

@@ -84,6 +84,7 @@ demo:
 # File Gateway integration for file-based inputs/outputs
 file-gateway:
   enabled: true
+  fullnameOverride: "file-gateway"  # Stable names so agents' tool refs (file-gateway-mcpserver-*) match
   storage:
     pvcName: "file-gateway-storage"  # Fixed name to survive helm upgrades
   filesystemMcp:

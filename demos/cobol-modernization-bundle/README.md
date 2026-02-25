@@ -24,7 +24,8 @@ Plus supporting infrastructure:
 
 ## Prerequisites
 
-- ARK cluster with `default` Model configured (Azure OpenAI)
+- **Model for agents:** A Model (e.g. named `default`) must exist in the namespace where you install the bundle. Agents use this Model to run, workflows will fail until it is present. Create the Model (e.g. via ARK Dashboard → Models or `ark models create default`) in the target namespace. 
+- ARK cluster (Azure OpenAI or other provider)
 - Argo Workflows installed
 - `file-gateway` service (installed as dependency)
 - Docker (to build the speech-mcp-server image)
@@ -32,21 +33,26 @@ Plus supporting infrastructure:
 
 ## Local Development
 
+You can install the bundle in **any namespace**. If you don't set `NAMESPACE`, it installs in **default**. Ensure the prerequisites are met.
+
 ```bash
-# 3 simple steps:
 cd agents-at-scale-marketplace/demos/cobol-modernization-bundle
 
-make build                  # 1. Build the speech-mcp-server Docker image
-make install-with-argo      # 2. Install everything
-make upload-data            # 3. Upload example customer file
-make cobol-demo               # 4. Run KYC workflow
+# Install in default namespace (no NAMESPACE needed)
+make build
+make install-with-argo
+make upload-data
+make cobol-demo
 
-# View results
-kubectl get workflows -n default
-# Access ARK Dashboard → Workflow Templates (template is visible)
-# Access ARK Dashboard → Files section (download report)
+# Or install in a specific namespace (create/copy Model there first if needed)
+make install-with-argo NAMESPACE=cobol-demo
+make upload-data NAMESPACE=cobol-demo
+make cobol-demo NAMESPACE=cobol-demo
 
-# Cleanup
+# View results (use the namespace you installed into)
+kubectl get workflows -n default   # or -n cobol-demo
+
+# Cleanup (use same NAMESPACE as install)
 make uninstall
 ```
 

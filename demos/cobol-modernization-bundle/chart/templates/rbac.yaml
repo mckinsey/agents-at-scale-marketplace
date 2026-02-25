@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: argo-workflow-ark-access
+  name: {{ .Release.Name }}-argo-workflow-ark-access
   labels:
     {{- with .Values.commonLabels }}
     {{- toYaml . | nindent 4 }}
@@ -21,7 +21,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: argo-workflow-ark-access
+  name: {{ .Release.Name }}-argo-workflow-ark-access
   labels:
     {{- with .Values.commonLabels }}
     {{- toYaml . | nindent 4 }}
@@ -29,16 +29,16 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: argo-workflow-ark-access
+  name: {{ .Release.Name }}-argo-workflow-ark-access
 subjects:
   - kind: ServiceAccount
-    name: argo-workflow
+    name: {{ .Release.Name }}-argo-workflow
     namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: argo-workflow-edit-access
+  name: {{ .Release.Name }}-argo-workflow-edit-access
   labels:
     {{- with .Values.commonLabels }}
     {{- toYaml . | nindent 4 }}
@@ -49,6 +49,6 @@ roleRef:
   name: argo-workflows-edit
 subjects:
   - kind: ServiceAccount
-    name: argo-workflow
+    name: {{ .Release.Name }}-argo-workflow
     namespace: {{ .Release.Namespace }}
 {{- end }}
