@@ -1,6 +1,6 @@
 .PHONY: help build build-data-seeder install install-with-argo uninstall cobol-demo upload-data clean
 
-NAMESPACE ?= cobol-demo
+NAMESPACE ?= default
 RELEASE_NAME ?= cobol-modernization-bundle
 SPEECH_MCP_IMAGE ?= speech-mcp-server:latest
 DATA_SEEDER_IMAGE ?= cobol-demo-data-seeder:latest
@@ -8,13 +8,15 @@ DATA_SEEDER_IMAGE ?= cobol-demo-data-seeder:latest
 help:
 	@echo "COBOL Modernization Demo Bundle"
 	@echo ""
-	@echo "Available commands:"
-	@echo "  make build              Build speech-mcp-server Docker image (auto-loads into minikube)"
-	@echo "  make install            Install bundle (agents + file-gateway)"
-	@echo "  make install-with-argo  Install everything (bundle + WorkflowTemplate)"
-	@echo "  make upload-data        Upload sample COBOL files and audio"
-	@echo "  make cobol-demo         Run COBOL modernization workflow"
-	@echo "  make uninstall          Remove bundle and cleanup"
+	@echo "Namespace: $(NAMESPACE) (override with NAMESPACE=my-ns; omit for default)"
+	@echo ""
+	@echo "Required steps (prerequisite: create a Model in target namespace for agents):"
+	@echo "  make build                Build speech-mcp-server Docker image (auto-loads into minikube)"
+	@echo "  make install              Install bundle (agents + file-gateway)"
+	@echo "  make install-with-argo    Install bundle (agents + file-gateway + WorkflowTemplate)"
+	@echo "  make upload-data          Upload sample COBOL files and audio"
+	@echo "  make cobol-demo           Run COBOL modernization workflow"
+	@echo "  make uninstall            Remove bundle and cleanup"
 	@echo ""
 	@echo "Quick Start:"
 	@echo "  make build && make install-with-argo && make upload-data && make cobol-demo"
@@ -30,7 +32,7 @@ build: build-data-seeder
 	fi
 
 install:
-	@echo "Installing COBOL Modernization Bundle..."
+	@echo "Installing COBOL Modernization Bundle into namespace: $(NAMESPACE)"
 	@echo "Building Helm dependencies..."
 	@helm dependency build chart/
 	@helm upgrade --install $(RELEASE_NAME) chart/ \
@@ -38,14 +40,19 @@ install:
 		--create-namespace \
 		--wait
 	@echo "Applying namespace discovery labels..."
-	@kubectl apply -f ../namespaces/cobol-demo.yaml
+	@if [ "$(NAMESPACE)" = "default" ]; then \
+		kubectl label namespace default ark.mckinsey.com/demo=true --overwrite 2>/dev/null || true; \
+		kubectl annotate namespace default ark.mckinsey.com/demo-name="COBOL Modernization" ark.mckinsey.com/demo-description="COBOL modernization with agents for reverse engineering, pseudocode generation, Python conversion, and documentation" --overwrite 2>/dev/null || true; \
+	else \
+		echo "Namespace $(NAMESPACE) created/labeled by chart."; \
+	fi
 	@echo "Done. Agents and file-gateway are now available."
 	@echo ""
 	@echo "Installed agents:"
 	@kubectl get agents -n $(NAMESPACE) -l bundle=cobol-modernization
 
 install-with-argo: build
-	@echo "Installing COBOL Modernization Bundle with Argo support..."
+	@echo "Installing COBOL Modernization Bundle with Argo support into namespace: $(NAMESPACE)"
 	@echo "Building Helm dependencies..."
 	@helm dependency build chart/
 	@helm upgrade --install $(RELEASE_NAME) chart/ \
@@ -53,7 +60,12 @@ install-with-argo: build
 		--create-namespace \
 		--wait
 	@echo "Applying namespace discovery labels..."
-	@kubectl apply -f ../namespaces/cobol-demo.yaml
+	@if [ "$(NAMESPACE)" = "default" ]; then \
+		kubectl label namespace default ark.mckinsey.com/demo=true --overwrite 2>/dev/null || true; \
+		kubectl annotate namespace default ark.mckinsey.com/demo-name="COBOL Modernization" ark.mckinsey.com/demo-description="COBOL modernization with agents for reverse engineering, pseudocode generation, Python conversion, and documentation" --overwrite 2>/dev/null || true; \
+	else \
+		echo "Namespace $(NAMESPACE) created/labeled by chart."; \
+	fi
 	@echo ""
 	@echo "Done! Installed:"
 	@echo "  ✓ Speech MCP Server (Whisper audio transcription)"
@@ -66,13 +78,14 @@ uninstall:
 	@echo "Uninstalling COBOL Modernization Bundle..."
 	@kubectl delete workflowtemplate cobol-modernization-template -n $(NAMESPACE) 2>/dev/null || true
 	@helm uninstall $(RELEASE_NAME) -n $(NAMESPACE) 2>/dev/null || true
-	@kubectl delete rolebinding argo-workflow-cobol-mod-access -n $(NAMESPACE) 2>/dev/null || true
 	@echo "Done."
 
 upload-data:
 	@echo "Uploading sample COBOL files to file-gateway..."
+	@echo "Waiting for file-gateway filesystem-mcp deployment to be ready..."
+	@kubectl rollout status deployment/file-gateway-filesystem-mcp -n $(NAMESPACE) --timeout=120s
 	@echo "Creating directory structure..."
-	@kubectl exec -n $(NAMESPACE) deployment/file-gateway-filesystem-mcp -- mkdir -p \
+	@kubectl exec -n $(NAMESPACE) deployment/file-gateway-filesystem-mcp -c filesystem-mcp -- mkdir -p \
 		/data/aas-files/cobol-source \
 		/data/aas-files/output/pseudocode \
 		/data/aas-files/output/transcription \

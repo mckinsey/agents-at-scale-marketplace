@@ -12,7 +12,7 @@ metadata:
     workflows.argoproj.io/description: "Complete COBOL modernization workflow: Reverse Engineer (Pseudocode) → Shape (Audio Transcription + Diagram) → Modernize (Python/PySpark)"
 spec:
   entrypoint: main
-  serviceAccountName: argo-workflow
+  serviceAccountName: {{ .Release.Name }}-argo-workflow
   parallelism: {{ .Values.argoWorkflows.workflowTemplate.parallelism | default 2 }}
   arguments:
     parameters:
@@ -159,7 +159,7 @@ spec:
             target:
               type: agent
               name: cobol-pseudocode-documenter
-            serviceAccount: argo-workflow
+            serviceAccount: {{ .Release.Name }}-argo-workflow
             timeout: 2m
             ttl: 1h
           EOF
@@ -215,7 +215,7 @@ spec:
             target:
               type: agent
               name: $AGENT_NAME
-            serviceAccount: argo-workflow
+            serviceAccount: {{ .Release.Name }}-argo-workflow
             timeout: 35m
             ttl: 24h
           EOF
