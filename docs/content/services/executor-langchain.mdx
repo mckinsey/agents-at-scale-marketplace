@@ -1,0 +1,176 @@
+---
+title: LangChain Executor
+description: LangChain execution engine for ARK agents with RAG support
+---
+
+# LangChain Executor
+
+LangChain-based execution engine for ARK agents with optional Retrieval-Augmented Generation (RAG) support. Communicates using the A2A (Agent-to-Agent) protocol.
+
+## Overview
+
+The LangChain Executor provides:
+
+- **LangChain Framework Integration** - Execute agents using LangChain with OpenAI and Azure OpenAI models
+- **RAG Support** - Retrieval-Augmented Generation with FAISS vector search for code-aware responses
+- **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless integration with ARK
+- **ExecutionEngine CRD** - Registers as a Kubernetes-native execution engine
+
+## Install
+
+```bash
+ark install marketplace/services/executor-langchain
+```
+
+Or with DevSpace:
+
+```bash
+cd services/executor-langchain
+devspace deploy
+```
+
+Or with Helm:
+
+```bash
+helm install executor-langchain ./chart -n default --create-namespace
+```
+
+Access via:
+- Port forward: `kubectl port-forward svc/executor-langchain 8000:8000`
+- Health check: `curl http://localhost:8000/health`
+
+## ExecutionEngine Resource
+
+The LangChain executor registers as an ExecutionEngine with A2A protocol:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1prealpha1
+kind: ExecutionEngine
+metadata:
+  name: executor-langchain
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: executor-langchain
+  description: "LangChain Executor - A2A server with RAG support"
+```
+
+## Creating Agents
+
+Reference the execution engine in your agent spec:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: my-langchain-agent
+spec:
+  executionEngine:
+    name: executor-langchain
+  modelRef:
+    name: my-model
+  prompt: |
+    You are a helpful assistant.
+```
+
+## RAG Support
+
+Enable RAG for an agent by adding the `langchain: rag` label:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: my-rag-agent
+  labels:
+    langchain: rag
+spec:
+  executionEngine:
+    name: executor-langchain
+  modelRef:
+    name: my-model
+  prompt: |
+    You are an expert developer assistant with deep knowledge of the codebase.
+    When RAG context is provided, use it to give accurate, specific answers.
+```
+
+When RAG is enabled, the engine indexes local Python files and provides relevant code context via FAISS vector search.
+
+### Custom Embeddings Model
+
+Specify a custom embeddings model via the `langchain-embeddings-model` label:
+
+```yaml
+metadata:
+  labels:
+    langchain: rag
+    langchain-embeddings-model: text-embedding-3-small
+```
+
+## Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `app.image.repository` | Container image | `ghcr.io/mckinsey/agents-at-scale-marketplace/executor-langchain` |
+| `service.port` | Service port | `8000` |
+| `executionEngine.enabled` | Register ExecutionEngine CRD | `true` |
+| `httpRoute.enabled` | Enable Gateway API HTTPRoute | `false` |
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HOST` | Server bind address | `0.0.0.0` |
+| `PORT` | Server port | `8000` |
+
+### Supported Model Types
+
+| Type | Description |
+|------|-------------|
+| `openai` | OpenAI API with configurable properties |
+| `azure` | Azure OpenAI with deployment URLs |
+
+## Troubleshooting
+
+### Service Not Starting
+
+Check pod status and logs:
+```bash
+kubectl get pods -l app=executor-langchain
+kubectl logs -l app=executor-langchain
+```
+
+### ExecutionEngine Not Registered
+
+Verify the ExecutionEngine CRD exists:
+```bash
+kubectl get executionengines
+```
+
+### Health Check Failing
+
+Test the health endpoint directly:
+```bash
+kubectl port-forward svc/executor-langchain 8000:8000
+curl http://localhost:8000/health
+```
+
+## Uninstall
+
+**Using DevSpace:**
+```bash
+cd services/executor-langchain
+devspace purge
+```
+
+**Using Helm:**
+```bash
+helm uninstall executor-langchain -n default
+```
+
+## Additional Resources
+
+- [LangChain Executor README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/executor-langchain)
+- [LangChain Documentation](https://python.langchain.com/docs/)
+- [A2A Protocol](https://google.github.io/A2A/)
