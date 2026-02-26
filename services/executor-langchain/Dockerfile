@@ -15,11 +15,11 @@ RUN adduser --system --uid 1001 --home /home/executor executor && \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Copy project files
-COPY pyproject.toml uv.lock setup.cfg README.md ./
+COPY pyproject.toml setup.cfg README.md ./
 COPY src/ ./src/
 
 # Sync dependencies
-RUN uv sync --frozen --no-install-project
+RUN uv sync --no-install-project
 
 # Set up directories for non-root user
 RUN mkdir -p /home/executor/.cache/uv && \

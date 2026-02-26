@@ -11,3 +11,4 @@ coverage/
 build/
 dist/
 .DS_Store
+uv.lock

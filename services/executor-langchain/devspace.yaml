@@ -23,6 +23,7 @@ pipelines:
   dev: |-
     build_images --all
     create_deployments --all
+    start_dev --all
 
 deployments:
   executor-langchain:
@@ -39,6 +40,13 @@ deployments:
           enabled: ${HTTPROUTE_ENABLED}
         executionEngine:
           enabled: true
+
+dev:
+  executor-langchain:
+    imageSelector: executor-langchain
+    namespace: default
+    logs:
+      lastLines: 50
 
 hooks:
   - command: |-
