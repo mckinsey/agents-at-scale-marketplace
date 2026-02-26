@@ -1,7 +1,9 @@
 apiVersion: v2
 name: cobol-modernization-bundle
-description: COBOL modernization demo with agents for reverse engineering, pseudocode generation, Python conversion, and documentation
-version: 0.1.0
+description: >-
+  COBOL modernization demo with agents for reverse engineering, pseudocode
+  generation, Python conversion, and documentation
+version: 0.1.1
 type: application
 keywords:
   - ark
