@@ -1,0 +1,309 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-profile-enrichment
+  namespace: default
+  annotations:
+    workflows.argoproj.io/title: "Phase I - Customer Profile Initialization - 2a. Profile Enrichment"
+    workflows.argoproj.io/description: "Collect web and government data for customer profile"
+    workflows.argoproj.io/version: "v0.0.1"
+spec:
+  entrypoint: main
+  serviceAccountName: kyc-onboarding-bundle-argo-workflow
+  arguments:
+    parameters:
+      - name: execution-mode
+        value: "sequential"
+        enum: ["sequential", "parallel"]
+      - name: company-name
+        value: "ASSOCIATED BRITISH FOODS PLC"
+      - name: company-number
+        value: "00293262"
+      - name: web-prompts-file
+        value: "source_code_files/1-customer-profile-initialization/input/prompts_web_data.yml"
+      - name: gov-prompts-file
+        value: "source_code_files/1-customer-profile-initialization/input/prompts_uk_gov.yml"
+      - name: output-dir
+        value: "source_code_files/1-customer-profile-initialization/intermediate"
+
+  volumes:
+    - name: mcp-filesystem-volume
+      hostPath:
+        path: /mnt/output
+        type: DirectoryOrCreate
+
+  templates:
+    # ============================================================
+    # Main workflow
+    # ============================================================
+    - name: main
+      inputs:
+        parameters:
+          - name: execution-mode
+            value: "{{workflow.parameters.execution-mode}}"
+          - name: company-name
+            value: "{{workflow.parameters.company-name}}"
+          - name: company-number
+            value: "{{workflow.parameters.company-number}}"
+          - name: web-prompts-file
+            value: "{{workflow.parameters.web-prompts-file}}"
+          - name: gov-prompts-file
+            value: "{{workflow.parameters.gov-prompts-file}}"
+          - name: output-dir
+            value: "{{workflow.parameters.output-dir}}"
+      steps:
+        # Step 1: Get current date
+        - - name: get-current-date
+            template: get-current-date-script
+        
+        # Step 2: Get web research prompts
+        - - name: get-web-prompts
+            template: get-web-prompts-script
+        
+        # Step 3: Collect web data (sequential or parallel based on execution-mode)
+        - - name: collect-web-data-sequential
+            when: "{{inputs.parameters.execution-mode}} == sequential"
+            template: collect-web-data-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-web-prompts.outputs.result}}"
+                - name: current-date
+                  value: "{{steps.get-current-date.outputs.result}}"
+          
+          - name: collect-web-data-parallel
+            when: "{{inputs.parameters.execution-mode}} == parallel"
+            template: collect-web-data-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-web-prompts.outputs.result}}"
+                - name: current-date
+                  value: "{{steps.get-current-date.outputs.result}}"
+        
+        # Step 4: Get government data prompts
+        - - name: get-gov-prompts
+            template: get-gov-prompts-script
+        
+        # Step 5: Collect government data (sequential or parallel)
+        - - name: collect-gov-data-sequential
+            when: "{{inputs.parameters.execution-mode}} == sequential"
+            template: collect-gov-data-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-gov-prompts.outputs.result}}"
+                - name: current-date
+                  value: "{{steps.get-current-date.outputs.result}}"
+          
+          - name: collect-gov-data-parallel
+            when: "{{inputs.parameters.execution-mode}} == parallel"
+            template: collect-gov-data-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{steps.get-gov-prompts.outputs.result}}"
+                - name: current-date
+                  value: "{{steps.get-current-date.outputs.result}}"
+
+    # ============================================================
+    # Get current date
+    # ============================================================
+    - name: get-current-date-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          date +"%Y-%m-%d" | tee /tmp/date.txt
+      outputs:
+        parameters:
+          - name: result
+            valueFrom:
+              path: /tmp/date.txt
+
+    # ============================================================
+    # Get web research prompts from YAML file
+    # ============================================================
+    - name: get-web-prompts-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          #!/bin/sh
+          cat > /tmp/prompts.json <<'EOF'
+          [
+            "For company {{workflow.parameters.company-name}} identify the official main website",
+            "For company {{workflow.parameters.company-name}} find the latest global employee numbers and regional distribution",
+            "For company {{workflow.parameters.company-name}} provide a 4-5 sentence summary of the industry and market positioning",
+            "For company {{workflow.parameters.company-name}} identify the geographic presence and operational regions",
+            "For company {{workflow.parameters.company-name}} find information about products and services"
+          ]
+          EOF
+          cat /tmp/prompts.json
+      outputs:
+        parameters:
+          - name: result
+            valueFrom:
+              path: /tmp/prompts.json
+
+    # ============================================================
+    # Get government data prompts from YAML file
+    # ============================================================
+    - name: get-gov-prompts-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          #!/bin/sh
+          cat > /tmp/prompts.json <<'EOF'
+          [
+            "For company number {{workflow.parameters.company-number}} get company registration details from Companies House",
+            "For company number {{workflow.parameters.company-number}} get list of active directors and officers",
+            "For company number {{workflow.parameters.company-number}} get current filing status and compliance history"
+          ]
+          EOF
+          cat /tmp/prompts.json
+      outputs:
+        parameters:
+          - name: result
+            valueFrom:
+              path: /tmp/prompts.json
+
+    # ============================================================
+    # Collect web data - Sequential
+    # ============================================================
+    - name: collect-web-data-sequential
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: current-date
+      steps:
+        - - name: process-web-prompt-seq
+            template: web-data-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{item}}"
+                - name: current-date
+                  value: "{{inputs.parameters.current-date}}"
+            withParam: "{{inputs.parameters.prompts-json}}"
+            continueOn:
+              failed: true
+
+    # ============================================================
+    # Collect web data - Parallel
+    # ============================================================
+    - name: collect-web-data-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: current-date
+      steps:
+        - - name: process-web-prompt
+            template: web-data-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{item}}"
+                - name: current-date
+                  value: "{{inputs.parameters.current-date}}"
+            withParam: "{{inputs.parameters.prompts-json}}"
+
+    - name: web-data-query
+      inputs:
+        parameters:
+          - name: prompt
+          - name: current-date
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: web-data-
+          spec:
+            target:
+              type: agent
+              name: web-researcher-agent
+            input: |
+              Current date: {{inputs.parameters.current-date}}
+              Company: {{workflow.parameters.company-name}}
+              
+              Research task: {{inputs.parameters.prompt}}
+              
+              Save results to JSON file using mcp-filesystem-write-file tool.
+              Output path: {{workflow.parameters.output-dir}}/web_[hash].json
+              Include: company_name, research_topic, findings, sources, date
+            timeout: 5m
+
+    # ============================================================
+    # Collect government data - Sequential
+    # ============================================================
+    - name: collect-gov-data-sequential
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: current-date
+      steps:
+        - - name: process-gov-prompt-seq
+            template: gov-data-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{item}}"
+                - name: current-date
+                  value: "{{inputs.parameters.current-date}}"
+            withParam: "{{inputs.parameters.prompts-json}}"
+            continueOn:
+              failed: true
+
+    # ============================================================
+    # Collect government data - Parallel
+    # ============================================================
+    - name: collect-gov-data-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: current-date
+      steps:
+        - - name: process-gov-prompt
+            template: gov-data-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{item}}"
+                - name: current-date
+                  value: "{{inputs.parameters.current-date}}"
+            withParam: "{{inputs.parameters.prompts-json}}"
+
+    - name: gov-data-query
+      inputs:
+        parameters:
+          - name: prompt
+          - name: current-date
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: gov-data-
+          spec:
+            target:
+              type: agent
+              name: ch-api-agent
+            input: |
+              Current date: {{inputs.parameters.current-date}}
+              Company number: {{workflow.parameters.company-number}}
+              
+              Task: {{inputs.parameters.prompt}}
+              
+              Use Companies House API tools
+              Save results to JSON file using mcp-filesystem-write-file tool
+              Output path: {{workflow.parameters.output-dir}}/gov_[hash].json
+              Include all relevant fields from API response
+            timeout: 3m

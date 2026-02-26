@@ -1,0 +1,11 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-retrieve-key-controllers-
+spec:
+  workflowTemplateRef:
+    name: lx-retrieve-key-controllers
+  arguments:
+    parameters:
+      - name: execution-mode
+        value: "sequential"

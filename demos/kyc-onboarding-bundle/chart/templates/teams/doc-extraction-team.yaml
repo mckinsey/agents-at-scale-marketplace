@@ -1,0 +1,53 @@
+{{- if .Values.teams.docExtractionTeam.enabled }}
+# ============================================================
+# DOCUMENT EXTRACTION TEAM - PDF Ownership Data Extraction
+# ============================================================
+# Extracts ownership and corporate structure information from PDFs
+# Translated from: legacyX document_extraction_squad
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.docExtractionTeam.name }}
+  labels:
+    project: kyc-onboarding
+    function: document-extraction
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Team that extracts structured ownership and corporate information from PDF documents
+    such as annual reports, corporate filings, and ownership disclosures.
+    
+    Workflow:
+    1. Planner creates extraction mission plan
+    2. RAG Agent extracts ownership data from PDFs
+    3. Analyst structures extraction into required format
+    4. Critic reviews quality and completeness
+    5. File Manager saves final output
+  
+  # Sequential strategy: Each agent completes before next starts
+  strategy: {{ .Values.teams.docExtractionTeam.strategy }}
+  
+  # Maximum conversation turns to prevent infinite loops
+  maxTurns: {{ .Values.teams.docExtractionTeam.maxTurns }}
+  
+  # Team members in execution order
+  members:
+    - name: {{ .Values.agents.docPlanner.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.ragAgent.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.docAnalyst.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.critic.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.fileManager.name }}
+      type: agent
+{{- end }}
