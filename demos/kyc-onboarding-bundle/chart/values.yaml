@@ -1,0 +1,160 @@
+# KYC Onboarding Bundle Configuration
+# Override these values during installation with --set or -f custom-values.yaml
+
+# AI Gateway Configuration
+# IMPORTANT: DO NOT hardcode credentials here!
+# Set during deployment from .env file via sync-env.sh or use --set flags
+aigw:
+  token: "" # Set via: helm install --set aigw.token=$AIGW_TOKEN or sync-env.sh
+  uuid: "" # Set via: helm install --set aigw.uuid=$AIGW_UUID or sync-env.sh
+# Model reference for agents
+# You must create a Model resource before installing this bundle
+modelRef:
+  name: default
+# Agents configuration  
+# All agents migrated from legacyX squads
+agents:
+  # Shared agents used across multiple teams
+  critic:
+    enabled: true
+    name: critic-agent
+  fileManager:
+    enabled: true
+    name: file-manager-agent
+  # Document Extraction Team agents
+  docPlanner:
+    enabled: true
+    name: doc-planner-agent
+  ragAgent:
+    enabled: true
+    name: rag-agent
+  docAnalyst:
+    enabled: true
+    name: doc-analyst-agent
+  scoutAgent:
+    enabled: true
+    name: scout-agent
+  # Web Research Team agents
+  webPlanner:
+    enabled: true
+    name: web-planner-agent
+  webResearcher:
+    enabled: true
+    name: web-researcher-agent
+  webAnalyst:
+    enabled: true
+    name: web-analyst-agent
+  # Consolidation Team agents
+  consolidationPlanner:
+    enabled: true
+    name: consolidation-planner-agent
+  consolidationAnalyst:
+    enabled: true
+    name: consolidation-analyst-agent
+  # Consolidated standalone agents (OPTION C)
+  relevanceClassificationAgent:
+    enabled: true
+    name: relevance-classification-agent
+    model: default
+  summaryAssessmentAgent:
+    enabled: true
+    name: summary-assessment-agent
+    model: default
+  beneficialOwnerTreeAgent:
+    enabled: true
+    name: beneficial-owner-tree-agent
+    model: default
+  # Companies House Team agents
+  chPlanner:
+    enabled: true
+    name: ch-planner-agent
+  chApiAgent:
+    enabled: true
+    name: ch-api-agent
+  chAnalyst:
+    enabled: true
+    name: ch-analyst-agent
+# Teams configuration
+# All teams migrated from legacyX squads with maxTurns: 5
+teams:
+  # Document extraction from PDFs
+  docExtractionTeam:
+    enabled: true
+    name: doc-extraction-team
+    strategy: sequential
+    maxTurns: 5
+  # Simplified 2-agent scout+RAG pattern
+  scoutRagTeam:
+    enabled: true
+    name: scout-rag-team
+    strategy: sequential
+    maxTurns: 5
+  # Web research for KYC due diligence
+  webResearchTeam:
+    enabled: true
+    name: web-research-team
+    strategy: sequential
+    maxTurns: 5
+  # Multi-source data consolidation
+  consolidationTeam:
+    enabled: true
+    name: consolidation-team
+    strategy: sequential
+    maxTurns: 5
+  # UK company registry data retrieval
+  companiesHouseTeam:
+    enabled: true
+    name: companies-house-team
+    strategy: sequential
+    maxTurns: 5
+  # Beneficial Owners Team - CH API + Web Research
+  beneficialOwnersTeam:
+    enabled: false # Disabled by default - enable when needed
+    name: beneficial-owners-team
+    strategy: sequential
+    maxTurns: 30
+# Labels to apply to all resources
+commonLabels:
+  bundle: kyc-onboarding
+  managed-by: helm
+  migrated-from: legacyx
+# Argo Workflows integration
+argoWorkflows:
+  rbac:
+    enabled: true
+  serviceAccount:
+    # Set to false if ServiceAccount already exists in the namespace (e.g., when deploying to default)
+    create: true
+    name: argo-workflow
+# MCP Servers Configuration
+# Phase 1 (Current): Only filesystem-mcp required
+# Phase 2 (Future): Add specialized MCP servers for enhanced functionality
+mcpServers:
+  required:
+    - mcp-filesystem # File operations (read, write, list, directory management)
+  phase2_planned:
+    - rag-mcp # Document extraction with RAG capabilities
+    - web-search-mcp # Web research and search functionality
+    - companies-house-mcp # UK Companies House API integration
+    - plantuml-mcp # UML diagram generation (optional)
+  notes: |
+    **Phase 1 Implementation:**
+    Deploy filesystem MCP server:
+      kubectl apply -f mcp/filesystem-mcp/
+
+    Agents use prompt engineering with mcp-filesystem tools.
+    RAG, web search, and API calls are simulated via reasoning.
+
+    **Phase 2 Enhancement:**
+    Create and deploy specialized MCP servers as needed:
+      - RAG MCP: Enhanced PDF extraction with vector search
+      - Web Search MCP: Real web research capabilities
+      - Companies House MCP: Live UK registry API access
+
+    Update agent tool configurations to include new MCP tools.
+# Sub-chart image overrides for local development
+mcp-filesystem:
+  image:
+    repository: filesystem-mcp
+    tag: latest
+    pullPolicy: Never

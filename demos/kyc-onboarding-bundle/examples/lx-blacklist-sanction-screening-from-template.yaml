@@ -1,0 +1,11 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-blacklist-sanction-screening-
+spec:
+  workflowTemplateRef:
+    name: lx-blacklist-sanction-screening
+  arguments:
+    parameters:
+      - name: execution-mode
+        value: "sequential"

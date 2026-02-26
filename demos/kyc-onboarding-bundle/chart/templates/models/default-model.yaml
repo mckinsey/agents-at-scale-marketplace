@@ -1,0 +1,34 @@
+# Secret for Azure OpenAI API Key
+# Updated automatically by sync-env.sh from .env file via Helm values
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gateway-azure-openai
+  namespace: default
+type: Opaque
+stringData:
+  token: {{ .Values.aigw.token | quote }}
+---
+# Model: Azure OpenAI GPT-4.1
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: default
+  namespace: default
+spec:
+  provider: azure
+  type: completions
+  model:
+    value: gpt-4.1
+  pollInterval: 1m0s
+  config:
+    azure:
+      baseUrl:
+        value: https://azure.prod.ai-gateway.quantumblack.com/{{ .Values.aigw.uuid }}/
+      apiVersion:
+        value: 2024-04-01-preview
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: ai-gateway-azure-openai
+            key: token

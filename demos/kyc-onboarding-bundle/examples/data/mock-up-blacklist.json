@@ -1,0 +1,137 @@
+{
+  "embargoed_jurisdictions": [
+    {
+      "country": "North Korea",
+      "sanctions_regime": ["UN", "UK", "US", "EU"],
+      "reason": "Nuclear proliferation, human rights abuses",
+      "notes": "Total embargo on all transactions."
+    },
+    {
+      "country": "Iran",
+      "sanctions_regime": ["UK", "US", "EU"],
+      "reason": "Nuclear program, terrorism financing",
+      "notes": "Limited humanitarian exceptions apply."
+    },
+    {
+      "country": "Syria",
+      "sanctions_regime": ["UK", "EU", "US"],
+      "reason": "Human rights abuses, terrorism",
+      "notes": "Restrictions on oil and financial sectors."
+    },
+    {
+      "country": "Crimea (Ukraine)",
+      "sanctions_regime": ["UK", "EU", "US"],
+      "reason": "Annexation by Russia",
+      "notes": "No business with entities in the region."
+    },
+    {
+      "country": "Myanmar (Burma)",
+      "sanctions_regime": ["UK", "EU", "US"],
+      "reason": "Human rights abuses, military control",
+      "notes": "Targeted sanctions on military entities."
+    }
+  ],
+  "embargoed_individuals": [
+    {
+      "name": "John Donald Basin",
+      "aliases": ["JB"],
+      "date_of_birth": "1970-01-01",
+      "nationality": "Russian",
+      "sanctions_regime": ["UK OFSI", "US OFAC"],
+      "reason": "Linked to cyberattacks on UK systems."
+    },
+    {
+      "name": "Fatima Al-Hassan",
+      "date_of_birth": "1985-03-15",
+      "nationality": "Syrian",
+      "sanctions_regime": ["UN", "UK"],
+      "reason": "Financing terrorism activities."
+    },
+    {
+      "name": "Zhang Wei",
+      "date_of_birth": "1965-07-22",
+      "nationality": "Chinese",
+      "sanctions_regime": ["US OFAC"],
+      "reason": "Involvement in arms proliferation."
+    },
+    {
+      "name": "Ahmed Al-Farsi",
+      "date_of_birth": "1978-10-10",
+      "nationality": "Iranian",
+      "sanctions_regime": ["UK", "EU"],
+      "reason": "Facilitating money laundering."
+    }
+  ],
+  "embargoed_entities": [
+    {
+      "entity_name": "Pyongyang Trading Corporation",
+      "country_of_incorporation": "North Korea",
+      "sanctions_regime": ["UN", "UK", "US", "EU"],
+      "reason": "State-owned entity involved in WMDs."
+    },
+    {
+      "entity_name": "Syrian Petroleum Company",
+      "country_of_incorporation": "Syria",
+      "sanctions_regime": ["UK", "EU"],
+      "reason": "State-owned oil company under sanctions."
+    },
+    {
+      "entity_name": "Al-Farsi Logistics Ltd.",
+      "country_of_incorporation": "Iran",
+      "sanctions_regime": ["UK", "EU", "US"],
+      "reason": "Facilitating arms smuggling."
+    },
+    {
+      "entity_name": "Crimean Development Bank",
+      "country_of_incorporation": "Crimea (Ukraine)",
+      "sanctions_regime": ["UK", "EU", "US"],
+      "reason": "Financial institution in annexed region."
+    }
+  ],
+  "embargoed_sectors_and_activities": [
+    {
+      "sector_activity": "Arms Trade",
+      "jurisdiction": "Global",
+      "sanctions_regime": ["UK", "UN", "US", "EU"],
+      "details": "Prohibited with sanctioned entities."
+    },
+    {
+      "sector_activity": "Cryptocurrency Transactions",
+      "jurisdiction": ["North Korea", "Iran"],
+      "sanctions_regime": ["UK", "US"],
+      "details": "Linked to illicit financing schemes."
+    },
+    {
+      "sector_activity": "Oil and Gas",
+      "jurisdiction": ["Russia", "Iran", "Syria"],
+      "sanctions_regime": ["UK", "EU", "US"],
+      "details": "Restrictions on export/import."
+    },
+    {
+      "sector_activity": "Luxury Goods",
+      "jurisdiction": "North Korea",
+      "sanctions_regime": ["UK", "UN"],
+      "details": "Prohibited export of luxury items."
+    }
+  ],
+  "watchlist": [
+    {
+      "name_or_entity": "Global Tech Solutions Ltd.",
+      "country": "China",
+      "reason_for_monitoring": "Alleged links to cyber espionage.",
+      "risk_level": "High"
+    },
+    {
+      "name_or_entity": "Ahmed Khan",
+      "country": "Pakistan",
+      "reason_for_monitoring": "Suspected involvement in money laundering.",
+      "risk_level": "Medium"
+    },
+    {
+      "name_or_entity": "Eastern Oil Consortium",
+      "country": "Russia",
+      "reason_for_monitoring": "Potential future sanctions by UK/EU.",
+      "risk_level": "High"
+    }
+  ]
+}

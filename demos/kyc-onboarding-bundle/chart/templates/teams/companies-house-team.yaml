@@ -1,0 +1,53 @@
+{{- if .Values.teams.companiesHouseTeam.enabled }}
+# ============================================================
+# COMPANIES HOUSE TEAM - UK Company Registry Data Retrieval
+# ============================================================
+# Retrieves official UK company information from Companies House
+# Translated from: legacyX companies_house_squad
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.companiesHouseTeam.name }}
+  labels:
+    project: kyc-onboarding
+    function: api-data-retrieval
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Team that retrieves and structures UK company information from
+    Companies House official business registries.
+    
+    Workflow:
+    1. Planner creates data retrieval plan
+    2. API Agent retrieves Companies House data (Phase 1: mock, Phase 2: real API)
+    3. Analyst structures API responses into KYC format
+    4. Critic validates data completeness
+    5. File Manager saves Companies House data
+  
+  # Sequential strategy: Each agent completes before next starts
+  strategy: {{ .Values.teams.companiesHouseTeam.strategy }}
+  
+  # Maximum conversation turns
+  maxTurns: {{ .Values.teams.companiesHouseTeam.maxTurns }}
+  
+  # Team members in execution order
+  members:
+    - name: {{ .Values.agents.chPlanner.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.chApiAgent.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.chAnalyst.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.critic.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.fileManager.name }}
+      type: agent
+{{- end }}

@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-requirements-and-standards-seq-
+  namespace: default
+spec:
+  workflowTemplateRef:
+    name: lx-requirements-and-standards
+  arguments:
+    parameters:
+      - name: geography
+        value: "UK"
+      - name: output-file
+        value: "source_code_files/1-customer-profile-initialization/intermediate/kyc_standards.json"

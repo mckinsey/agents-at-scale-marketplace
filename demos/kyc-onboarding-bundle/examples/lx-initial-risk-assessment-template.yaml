@@ -1,0 +1,321 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-initial-risk-assessment
+  namespace: default
+  annotations:
+    workflows.argoproj.io/title: "Phase I - Customer Profile Initialization - 3. Initial Risk Assessment and Company Verification"
+    workflows.argoproj.io/description: "Consolidate profile data, validate, and create initial risk assessment"
+    workflows.argoproj.io/version: "v0.0.1"
+spec:
+  entrypoint: main
+  serviceAccountName: kyc-onboarding-bundle-argo-workflow
+  arguments:
+    parameters:
+      - name: intermediate-dir
+        value: "source_code_files/1-customer-profile-initialization/intermediate"
+      - name: output-dir
+        value: "source_code_files/1-customer-profile-initialization/output"
+
+  volumes:
+    - name: mcp-filesystem-volume
+      hostPath:
+        path: /mnt/output
+        type: DirectoryOrCreate
+
+  templates:
+    # ============================================================
+    # Main workflow
+    # ============================================================
+    - name: main
+      inputs:
+        parameters:
+          - name: intermediate-dir
+            value: "{{workflow.parameters.intermediate-dir}}"
+          - name: output-dir
+            value: "{{workflow.parameters.output-dir}}"
+      steps:
+        # Step 1: Find all JSON files in intermediate directory
+        - - name: read-source-root-directory
+            template: readdir-script
+            arguments:
+              parameters:
+                - name: intermediate-dir
+                  value: "{{inputs.parameters.intermediate-dir}}"
+        
+        # Step 2: Combine all JSON files into one
+        - - name: concat-json-files
+            template: combine-json-script
+            arguments:
+              parameters:
+                - name: file-paths
+                  value: "{{steps.read-source-root-directory.outputs.result}}"
+                - name: output-dir
+                  value: "{{inputs.parameters.output-dir}}"
+        
+        # Step 3: Validate and clean the profile data
+        - - name: validate-primary-information
+            template: validate-information-query
+        
+        # Step 4: Convert JSON to Markdown
+        - - name: json-to-markdown
+            template: json-to-markdown-query
+        
+        # Step 5: Get current date
+        - - name: get-current-date
+            template: get-current-date-script
+        
+        # Step 6: Create risk assessment summary
+        - - name: summarize-and-create-preliminary-risk-assessment
+            template: risk-assessment-query
+            arguments:
+              parameters:
+                - name: current-date
+                  value: "{{steps.get-current-date.outputs.result}}"
+
+    # ============================================================
+    # Find all JSON files in intermediate directory
+    # ============================================================
+    - name: readdir-script
+      inputs:
+        parameters:
+          - name: intermediate-dir
+      script:
+        image: alpine:3.19
+        command: [sh]
+        volumeMounts:
+          - name: mcp-filesystem-volume
+            mountPath: /mnt/output
+        source: |
+          #!/bin/sh
+          set -eux
+          
+          # Install jq
+          apk add --no-cache jq
+          
+          INTERMEDIATE_DIR="{{inputs.parameters.intermediate-dir}}"
+          BASE_DIR="/mnt/output/$INTERMEDIATE_DIR"
+          
+          # Check if running in Argo wrapped container
+          if [ -d "/mainctrfs/mnt/output/$INTERMEDIATE_DIR" ]; then
+              BASE_DIR="/mainctrfs/mnt/output/$INTERMEDIATE_DIR"
+          fi
+          
+          # Find all JSON files recursively
+          cd "$BASE_DIR" || exit 1
+          find . -type f -name "*.json" | sed 's|^\./||' | jq -R . | jq -s . > /tmp/file-paths.json
+          cat /tmp/file-paths.json
+      outputs:
+        parameters:
+          - name: result
+            valueFrom:
+              path: /tmp/file-paths.json
+
+    # ============================================================
+    # Combine all JSON files into one
+    # ============================================================
+    - name: combine-json-script
+      inputs:
+        parameters:
+          - name: file-paths
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eux
+          
+          FILE_PATHS='{{inputs.parameters.file-paths}}'
+          OUTPUT_FILE="{{inputs.parameters.output-dir}}/kyc_profile_unvalidated.json"
+          QUERY_NAME="combine-json-$(date +%s)"
+          
+          # Compact JSON to single line to avoid YAML heredoc issues
+          FILE_PATHS_COMPACT=$(echo "$FILE_PATHS" | tr -d '\n' | tr -s ' ')
+          
+          cat > /tmp/query.yaml <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: $QUERY_NAME
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            input: |
+              Read all JSON files from the intermediate directory and combine them into a single JSON object.
+              
+              File paths: $FILE_PATHS_COMPACT
+              Base directory: {{workflow.parameters.intermediate-dir}}
+              
+              Use the 'mcp-filesystem-read-file' tool to read each file.
+              
+              Combine all data into a single JSON object with the following structure:
+              {
+                "inquiry_information": {...},
+                "initial_profile": {...},
+                "requirements_and_standards": {...},
+                "web_data": {...},
+                "government_data": {...}
+              }
+              
+              Save the combined JSON using 'mcp-filesystem-write-file' to:
+              /data/$OUTPUT_FILE
+            timeout: 8m
+          EOF
+          
+          kubectl apply -n default -f /tmp/query.yaml
+          kubectl wait --for=condition=Completed --timeout=8m -n default query/$QUERY_NAME
+
+    # ============================================================
+    # Validate and clean profile data
+    # ============================================================
+    - name: validate-information-query
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: validate-info-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            input: |
+              Read the unvalidated KYC profile from:
+              /data/{{workflow.parameters.output-dir}}/kyc_profile_unvalidated.json
+              
+              Validate and clean the data:
+              1. Check for inconsistencies and duplicates
+              2. Verify all required fields are present
+              3. Standardize formatting
+              4. Remove any redundant information
+              5. Ensure data quality and completeness
+              
+              Save the validated profile using 'mcp-filesystem-write-file' to:
+              /data/{{workflow.parameters.output-dir}}/kyc_profile.json
+              
+              The validated profile should maintain the same structure but with clean, verified data.
+            timeout: 5m
+
+    # ============================================================
+    # Convert JSON to Markdown
+    # ============================================================
+    - name: json-to-markdown-query
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: json-to-md-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            input: |
+              Read the validated KYC profile from:
+              /data/{{workflow.parameters.output-dir}}/kyc_profile.json
+              
+              Convert the JSON data to a well-formatted Markdown document with the following main sections:
+              1. Inquiry Information
+              2. Initial Profile
+              3. Requirements and KYC Standards
+              
+              Formatting requirements:
+              - Use table format for subsections: 'Company Details', 'Basic Information', 'Active Officers'
+              - Use appropriate headers (##, ###)
+              - Include all relevant data in a readable format
+              - Add clear section separators
+              
+              Save the Markdown document using 'mcp-filesystem-write-file' to:
+              /data/{{workflow.parameters.output-dir}}/kyc_profile.md
+            timeout: 5m
+
+    # ============================================================
+    # Get current date
+    # ============================================================
+    - name: get-current-date-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          date +"%Y-%m-%d"
+
+    # ============================================================
+    # Create risk assessment summary
+    # ============================================================
+    - name: risk-assessment-query
+      inputs:
+        parameters:
+          - name: current-date
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: risk-assessment-
+          spec:
+            target:
+              type: agent
+              name: summary-assessment-agent
+            input: |
+              Current date: {{inputs.parameters.current-date}}
+              
+              Read the validated KYC profile from:
+              /data/{{workflow.parameters.output-dir}}/kyc_profile.json
+              
+              Create a comprehensive preliminary risk assessment summary in Markdown format.
+              
+              The summary should include:
+              
+              ## Executive Summary
+              - Overall risk rating (Low/Medium/High)
+              - Key risk factors identified
+              - Recommended next steps
+              
+              ## Company Overview
+              - Business nature and activities
+              - Geographic presence
+              - Size and complexity
+              
+              ## Risk Factors Analysis
+              
+              ### Geographic Risk
+              - Jurisdictions of operation
+              - Exposure to high-risk countries
+              
+              ### Business Risk
+              - Industry sector risk
+              - Business model complexity
+              - Transaction patterns
+              
+              ### Regulatory Risk
+              - Regulatory environment
+              - Compliance history
+              - Sanctions screening results
+              
+              ### Reputational Risk
+              - Adverse media findings
+              - Public perception
+              - Related parties concerns
+              
+              ## Preliminary Risk Rating
+              - Detailed justification for the rating
+              - Specific areas requiring enhanced due diligence
+              
+              ## Recommendations
+              - Next steps in the KYC process
+              - Additional information needed
+              - Enhanced due diligence requirements
+              
+              Save the risk assessment using 'mcp-filesystem-write-file' to:
+              /data/{{workflow.parameters.output-dir}}/summary_risk_report.md
+            timeout: 8m

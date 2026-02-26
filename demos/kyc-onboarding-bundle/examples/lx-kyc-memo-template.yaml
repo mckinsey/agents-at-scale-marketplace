@@ -1,0 +1,246 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-kyc-memo
+  namespace: default
+  annotations:
+    workflows.argoproj.io/title: "Phase III - KYC Memo - 1. KYC Memo"
+    workflows.argoproj.io/description: "Generate comprehensive KYC memo for relationship manager"
+    workflows.argoproj.io/version: "v0.0.1"
+spec:
+  entrypoint: main
+  serviceAccountName: kyc-onboarding-bundle-argo-workflow
+  arguments:
+    parameters:
+      - name: input-file
+        value: "source_code_files/3-kyc-memo/input/kyc_profile.json"
+      - name: output-file
+        value: "source_code_files/3-kyc-memo/output/kyc_memo.md"
+      - name: risk-rating
+        value: "4"
+
+  templates:
+    # ============================================================
+    # Main workflow
+    # ============================================================
+    - name: main
+      inputs:
+        parameters:
+          - name: input-file
+            value: "{{workflow.parameters.input-file}}"
+          - name: output-file
+            value: "{{workflow.parameters.output-file}}"
+          - name: risk-rating
+            value: "{{workflow.parameters.risk-rating}}"
+      steps:
+        # Step 1: Get current date
+        - - name: get-current-date
+            template: get-current-date-script
+        
+        # Step 2: Generate KYC memo
+        - - name: kyc-memo
+            template: kyc-memo-query
+            arguments:
+              parameters:
+                - name: current-date
+                  value: "{{steps.get-current-date.outputs.result}}"
+                - name: input-file
+                  value: "{{inputs.parameters.input-file}}"
+                - name: output-file
+                  value: "{{inputs.parameters.output-file}}"
+                - name: risk-rating
+                  value: "{{inputs.parameters.risk-rating}}"
+
+    # ============================================================
+    # Get current date
+    # ============================================================
+    - name: get-current-date-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          date +"%Y-%m-%d"
+
+    # ============================================================
+    # Generate comprehensive KYC memo
+    # ============================================================
+    - name: kyc-memo-query
+      inputs:
+        parameters:
+          - name: current-date
+          - name: input-file
+          - name: output-file
+          - name: risk-rating
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: kyc-memo-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            input: |
+              Current date: {{inputs.parameters.current-date}}
+              Risk rating: {{workflow.parameters.risk-rating}} (on scale of 1-5)
+              
+              Read the consolidated customer profile from:
+              /data/{{workflow.parameters.input-file}}
+              
+              Generate a comprehensive KYC memo for the relationship manager.
+              This memo will be used to make the final decision on accepting the customer relationship.
+              
+              The KYC memo should follow this structure:
+              
+              # KYC MEMO
+              
+              **Date:** {{inputs.parameters.current-date}}
+              **Customer:** [Company Name from profile]
+              **Prepared by:** KYC Team
+              **Risk Rating:** {{workflow.parameters.risk-rating}}/5
+              
+              ---
+              
+              ## EXECUTIVE SUMMARY
+              
+              [2-3 paragraph summary covering:
+              - Customer identity and business nature
+              - Purpose of the relationship
+              - Overall risk assessment
+              - Key recommendation (Accept/Reject/Accept with Enhanced Monitoring)]
+              
+              ---
+              
+              ## 1. CUSTOMER IDENTIFICATION
+              
+              ### Company Details
+              [Table with: Legal Name, Registration Number, Incorporation Date, Jurisdiction, Industry]
+              
+              ### Business Activities
+              [Description of primary business activities, products/services, geographic markets]
+              
+              ### Corporate Structure
+              [Overview of ownership structure, parent companies, subsidiaries]
+              
+              ---
+              
+              ## 2. OWNERSHIP AND CONTROL
+              
+              ### Beneficial Owners
+              [Table with beneficial owners holding >25% ownership]
+              
+              ### Ultimate Beneficial Owners (UBOs)
+              [Identification of individuals with ultimate control]
+              
+              ### Key Controllers
+              [Senior management, directors, authorized signatories]
+              
+              ---
+              
+              ## 3. PURPOSE OF RELATIONSHIP
+              
+              [Detailed description of:
+              - Requested banking services
+              - Expected transaction volumes and patterns
+              - Business rationale
+              - Source of funds]
+              
+              ---
+              
+              ## 4. RISK ASSESSMENT
+              
+              ### Geographic Risk
+              [Assessment of jurisdictions, exposure to high-risk countries]
+              
+              ### Business/Industry Risk
+              [Industry-specific risks, business model complexity]
+              
+              ### Customer Risk Profile
+              [Overall risk factors including ownership structure, transaction patterns]
+              
+              ### Sanctions and Screening
+              
+              #### Sanctions Screening
+              [Results of sanctions list checks]
+              
+              #### Adverse Media
+              [Summary of adverse media findings with relevance assessment]
+              
+              #### PEP Screening
+              [Politically Exposed Persons screening results]
+              
+              ---
+              
+              ## 5. DUE DILIGENCE FINDINGS
+              
+              ### Documents Reviewed
+              [List of documents and information sources]
+              
+              ### Verification Results
+              [Summary of verification outcomes]
+              
+              ### Outstanding Issues
+              [Any unresolved questions or information gaps]
+              
+              ---
+              
+              ## 6. REGULATORY COMPLIANCE
+              
+              ### AML/KYC Requirements
+              [Assessment against applicable regulations]
+              
+              ### Enhanced Due Diligence
+              [If applicable, detail of enhanced measures taken]
+              
+              ### Ongoing Monitoring Requirements
+              [Recommendations for transaction monitoring, periodic reviews]
+              
+              ---
+              
+              ## 7. RECOMMENDATION
+              
+              **Decision:** [Accept/Reject/Accept with Conditions]
+              
+              **Rationale:**
+              [Detailed justification for the recommendation based on:
+              - Risk rating and key risk factors
+              - Mitigation measures in place
+              - Regulatory requirements
+              - Business considerations]
+              
+              **Conditions (if applicable):**
+              [Any specific conditions for onboarding, such as:
+              - Enhanced monitoring requirements
+              - Transaction limits
+              - Periodic review frequency
+              - Additional documentation requirements]
+              
+              **Escalation:**
+              [Required approvals based on risk rating]
+              
+              ---
+              
+              ## APPENDICES
+              
+              ### Appendix A: Corporate Structure Diagram
+              [Text description of ownership structure]
+              
+              ### Appendix B: Screening Results Details
+              [Detailed screening results]
+              
+              ### Appendix C: Source Documentation
+              [List of all source documents and evidence]
+              
+              ---
+              
+              **Prepared by:** KYC Analyst
+              **Reviewed by:** [KYC Manager/Compliance Officer]
+              **Date:** {{inputs.parameters.current-date}}
+              
+              Save the KYC memo using 'mcp-filesystem-write-file' to:
+              /data/{{workflow.parameters.output-file}}
+            timeout: 10m
