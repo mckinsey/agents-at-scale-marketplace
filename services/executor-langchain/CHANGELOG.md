@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.1...executor-langchain-v0.1.2) (2026-03-11)
+
+
+### Bug Fixes
+
+* **executor-langchain:** downgrade Python from 3.14 to 3.12 ([#131](https://github.com/mckinsey/agents-at-scale-marketplace/issues/131)) ([ecc353c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/ecc353c9fb0b97702bfa8d7023b2c751a9fe272e))
+
 ## [0.1.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.0...executor-langchain-v0.1.1) (2026-02-26)
 
 
