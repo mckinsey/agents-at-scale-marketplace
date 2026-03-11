@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.1...cobol-modernization-bundle-v0.1.2) (2026-03-11)
+
+
+### Bug Fixes
+
+* **charts:** update stale subchart dependency versions ([#133](https://github.com/mckinsey/agents-at-scale-marketplace/issues/133)) ([7f229d2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7f229d2e544a834b99e0cf8e7355e69b2aa7e95d))
+
 ## [0.1.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.0...cobol-modernization-bundle-v0.1.1) (2026-02-26)
 
 

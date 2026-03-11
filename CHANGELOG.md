@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.22](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.21...v0.1.22) (2026-03-11)
+
+
+### Bug Fixes
+
+* **charts:** update stale subchart dependency versions ([#133](https://github.com/mckinsey/agents-at-scale-marketplace/issues/133)) ([7f229d2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7f229d2e544a834b99e0cf8e7355e69b2aa7e95d))
+* **executor-langchain:** downgrade Python from 3.14 to 3.12 ([#131](https://github.com/mckinsey/agents-at-scale-marketplace/issues/131)) ([ecc353c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/ecc353c9fb0b97702bfa8d7023b2c751a9fe272e))
+
 ## [0.1.21](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.20...v0.1.21) (2026-02-26)
 
 
