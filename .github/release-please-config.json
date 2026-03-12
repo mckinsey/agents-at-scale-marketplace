@@ -101,7 +101,7 @@
         "chart/Chart.yaml"
       ]
     },
-    "services/executor-langchain": {
+    "executors/langchain": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
       "package-name": "executor-langchain",

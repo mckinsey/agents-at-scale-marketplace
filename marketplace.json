@@ -269,7 +269,7 @@
     },
     {
       "name": "executor-langchain",
-      "type": "service",
+      "type": "executor",
       "displayName": "LangChain Executor",
       "description": "LangChain execution engine for ARK agents with RAG support",
       "version": "0.1.0",
@@ -280,7 +280,7 @@
       "tags": ["langchain", "execution-engine", "rag", "ai", "agents"],
       "category": "development",
       "icon": "https://example.com/executor-langchain-icon.png",
-      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/executor-langchain/",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/executors/executor-langchain/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
       },

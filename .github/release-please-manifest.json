@@ -12,6 +12,6 @@
   "mcps/filesystem-mcp-server": "0.1.51",
   "demos/cobol-modernization-bundle": "0.1.2",
   "mcps/speech-mcp-server": "0.1.1",
-  "services/executor-langchain": "0.1.2",
+  "executors/langchain": "0.1.2",
   "demos/cobol-modernization-bundle/examples/data": "1.0.0"
 }
