@@ -44,6 +44,10 @@ httpRoute:
   hostnames:
     - "executor-langchain.default.127.0.0.1.nip.io"
 
+# RBAC configuration
+rbac:
+  create: true
+
 # Service account configuration
 serviceAccount:
   name: executor-langchain-sa
