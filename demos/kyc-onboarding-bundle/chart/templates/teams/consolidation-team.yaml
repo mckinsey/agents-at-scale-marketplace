@@ -1,0 +1,53 @@
+{{- if .Values.teams.consolidationTeam.enabled }}
+# ============================================================
+# CONSOLIDATION TEAM - Multi-Source Data Consolidation
+# ============================================================
+# Consolidates information from multiple sources into unified profiles
+# Translated from: legacyX consolidation_squad / entities_vessels_consolidation_team
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.consolidationTeam.name }}
+  labels:
+    project: kyc-onboarding
+    function: consolidation
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Team that consolidates data from multiple sources (documents, web, APIs)
+    into unified KYC entity profiles.
+    
+    Workflow:
+    1. Planner creates consolidation mission plan with merge logic
+    2. File Manager reads all source files
+    3. Analyst consolidates data per merge rules
+    4. Critic validates completeness and consistency
+    5. File Manager saves consolidated output
+  
+  # Sequential strategy: Each agent completes before next starts
+  strategy: {{ .Values.teams.consolidationTeam.strategy }}
+  
+  # Maximum conversation turns
+  maxTurns: {{ .Values.teams.consolidationTeam.maxTurns }}
+  
+  # Team members in execution order
+  members:
+    - name: {{ .Values.agents.consolidationPlanner.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.fileManager.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.consolidationAnalyst.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.critic.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.fileManager.name }}
+      type: agent
+{{- end }}

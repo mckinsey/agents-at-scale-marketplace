@@ -1,0 +1,11 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-retrieve-ownership-structure-
+spec:
+  workflowTemplateRef:
+    name: lx-retrieve-ownership-structure
+  arguments:
+    parameters:
+      - name: execution-mode
+        value: "sequential"

@@ -1,0 +1,67 @@
+adverse_media_screening:
+  financial_crime:
+    objective: |
+      Identify any adverse media coverage related to financial crimes involving the company, its executives, or key stakeholders. Focus on allegations or confirmed cases of money laundering, fraud, tax evasion, or embezzlement. 
+
+      Definition: Financial crimes refer to illegal activities involving financial transactions or the misappropriation of funds, including fraudulent schemes or deliberate evasion of tax obligations.
+
+      Example: 
+        "- The company is under investigation for allegedly facilitating a $10 million money laundering scheme through its subsidiary in Eastern Europe. Authorities claim the funds were routed through multiple shell companies to obscure their origin.
+        - A senior executive was convicted of tax evasion in 2022 after failing to disclose offshore accounts used to hide personal income. The case resulted in a $2 million fine and a two-year prison sentence.
+        _Source_: [news outlet name 1](link 1), [news outlet name 2](link 2)
+        "
+
+  regulatory_violations:
+    objective: |
+      Identify any media coverage or reports of regulatory violations by the company, including breaches of financial regulations, sanctions evasion, or non-compliance with environmental, social, or governance (ESG) standards. 
+
+      Definition: Regulatory violations refer to any failure to adhere to laws, rules, or standards set by governing bodies, including those related to financial conduct, trade sanctions, and ESG requirements.
+
+      Example: 
+        - "The company was fined $5 million by the Financial Conduct Authority for failing to implement adequate anti-money laundering controls. The investigation revealed systemic weaknesses in its compliance framework over a three-year period.
+        - "Non-compliance with environmental standards led to the shutdown of the company's primary manufacturing facility in 2023. Local authorities cited excessive emissions and improper waste disposal practices as the primary reasons for the action.
+        _Source_: [news outlet name 1](link 1), [news outlet name 2](link 2)"
+
+  criminal_activity:
+    objective: |
+      For company {{company_name}}, identify any adverse media coverage linking the company or its executives to criminal activities such as terrorism financing, organized crime, corruption, or bribery. 
+
+      Definition: Criminal activity refers to illegal actions that may involve the company directly or indirectly, including corruption, bribery, or associations with criminal organizations.
+
+      Example: 
+        "- The company was implicated in a bribery scandal involving government contracts in Southeast Asia. Reports allege that senior executives authorized payments to local officials in exchange for securing a $50 million infrastructure project.
+        - A senior manager was arrested for alleged links to organized crime, with accusations that the individual facilitated the laundering of illicit funds through the company's financial systems.
+        _Source_: [news outlet name 1](link 1), [news outlet name 2](link 2)"
+
+  reputational_risk:
+    objective: |
+      For company {{company_name}}, identify any adverse media coverage that could pose reputational risks to the company, such as allegations of unethical business practices, negative press coverage unrelated to criminal activity, or public backlash. 
+
+      Definition: Reputational risk refers to any negative perception of the company by stakeholders, which may arise from its actions, policies, or associations, even if not directly linked to criminal or regulatory violations.
+
+      Example: 
+        "- The company faced public criticism for its labor practices in developing countries, with reports highlighting unsafe working conditions and low wages at its factories in Southeast Asia. Advocacy groups have called for a boycott of its products.
+        - A viral social media campaign accused the company of greenwashing its sustainability efforts, claiming that its environmental initiatives are overstated and fail to address its significant carbon footprint.
+        _Source_: [news outlet name 1](link 1), [news outlet name 2](link 2)"
+
+  litigations_and_legal_issues:
+    objective: |
+      For company {{company_name}}, identify any ongoing or past lawsuits, bankruptcy filings, or insolvency proceedings involving the company or its executives that could impact its financial or operational stability. 
+
+      Definition: Litigations and legal issues refer to formal legal disputes or proceedings that may have financial, operational, or reputational consequences for the company.
+
+      Example: 
+        "- The company is facing a class-action lawsuit from investors over alleged securities fraud. Plaintiffs claim that the company misrepresented its financial performance in quarterly earnings reports, leading to significant shareholder losses.
+        - The company filed for Chapter 11 bankruptcy protection in 2021 after accumulating $500 million in debt. The bankruptcy proceedings include restructuring plans to sell off non-core assets and reduce operational costs.
+        _Source_: [news outlet name 1](link 1), [news outlet name 2](link 2)"
+
+  recent_performance:
+    objective: |
+      For company {{company_name}}, identify any recent media coverage or reports on the company’s operational and financial performance, including significant achievements, challenges, or market trends that may impact its risk profile. 
+
+      Definition: Recent performance refers to the company’s current business activities, financial results, and market positioning, as reported in the media or public disclosures.
+
+      Example: 
+        "- The company reported a 20% decline in revenue for Q4 2023 due to supply chain disruptions caused by geopolitical tensions. Analysts predict that recovery will be slow, given the company's reliance on affected regions for raw materials.
+        - The company launched a new product line in 2024, targeting the premium consumer electronics market. Early sales figures suggest strong demand, with the company projecting a 15% increase in annual revenue as a result.
+        _Source_: [news outlet name 1](link 1), [news outlet name 2](link 2)"

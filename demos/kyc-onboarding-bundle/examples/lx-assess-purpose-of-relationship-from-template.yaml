@@ -1,0 +1,11 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-assess-purpose-of-relationship-
+spec:
+  workflowTemplateRef:
+    name: lx-assess-purpose-of-relationship
+  arguments:
+    parameters:
+      - name: execution-mode
+        value: "sequential"

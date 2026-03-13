@@ -1,0 +1,40 @@
+{{- if .Values.argoWorkflows.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+---
+{{- end }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-kyc-bundle-argo-workflow
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtaskresults"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["queries"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-kyc-bundle-argo-workflow
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-kyc-bundle-argo-workflow
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
