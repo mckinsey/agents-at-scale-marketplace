@@ -1,0 +1,128 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-assess-purpose-of-relationship
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase II - Customer Due Diligence - 3. Purpose of Relationship"
+    workflows.argoproj.io/description: "Assess the purpose and nature of the business relationship"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  volumes:
+    - name: mcp-filesystem-volume
+      hostPath:
+        path: /mnt/output
+        type: DirectoryOrCreate
+
+  arguments:
+    parameters:
+      - name: output-base-dir
+        value: "source_code_files/2-customer-due-diligence"
+
+  templates:
+    # ============================================================
+    # MAIN WORKFLOW
+    # ============================================================
+    - name: main
+      inputs:
+        parameters:
+          - name: output-base-dir
+            value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
+      steps:
+        # Single step: Assess purpose of relationship
+        - - name: assess-purpose-of-relationship
+            template: assess-purpose-of-relationship-query
+            arguments:
+              parameters:
+                - name: profile-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/kyc_profile.json"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/profile_sections/purpose_of_relationship.json"
+
+    # ============================================================
+    # QUERY TEMPLATE
+    # ============================================================
+
+    # ARK Query: Assess purpose of relationship
+    - name: assess-purpose-of-relationship-query
+      inputs:
+        parameters:
+          - name: profile-file
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: purpose-relationship-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              Read the customer profile from: {{ "{{inputs.parameters.profile-file}}" }}
+              Do NOT add /data or any other prefix to file paths when using MCP tools.
+
+              Based on the KYC profile information, assess and document the purpose of the business relationship.
+
+              The assessment MUST include exactly 3 subsections:
+
+              1. **Purpose of the Business Relationship**
+                 - Why is the company seeking this business relationship?
+                 - What services/products will they use?
+                 - What are their business objectives?
+
+              2. **Operational Needs**
+                 - What are the company's operational financial needs?
+                 - Treasury management, FX, trade finance requirements
+                 - Integration and system requirements
+
+              3. **Plausibility of the Business Relationship**
+                 - For each product/service requested, assess plausibility
+                 - Explain why the request is reasonable given the company's profile
+                 - Structure as an array of objects with product names as keys
+
+              Create a comprehensive JSON document with the assessment and save it to: {{ "{{inputs.parameters.output-file}}" }}
+
+              The JSON structure MUST be exactly:
+              {
+                "Purpose of relationship": [
+                  {
+                    "subsection": "Purpose of the Business Relationship",
+                    "content": "<descriptive text about why the company seeks this relationship>",
+                    "source": "<source of information>"
+                  },
+                  {
+                    "subsection": "Operational Needs",
+                    "content": "<descriptive text about operational financial needs>"
+                  },
+                  {
+                    "subsection": "Plausibility of the Business Relationship",
+                    "content": [
+                      {"<Product/Service Name>": "<plausibility explanation>"},
+                      {"<Product/Service Name>": "<plausibility explanation>"}
+                    ],
+                    "source": "<source of information>"
+                  }
+                ]
+              }
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+{{- end }}

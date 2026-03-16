@@ -10,6 +10,9 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.consolidationAnalyst.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: analysis
@@ -19,8 +22,10 @@ metadata:
     {{- end }}
 spec:
   description: |
-    Analysis agent that consolidates information from multiple sources
-    into unified KYC profiles following the consolidation plan.
+    Analyst: given document with content on multiple topics/sources; identify topics,
+    consolidate per topic, document in required format, implement critic feedback.
+    Output: structured JSON with source arrays and
+    source_reliability_score / source_reliability_rationale (low, medium, high; NA if source NA).
 
   prompt: |
     You are a Data Consolidation Analyst for KYC workflows.
@@ -218,18 +223,18 @@ spec:
     - ✅ JSON valid and parseable
     - ✅ Metadata accurate and complete
     
-    ## OUTPUT DELIVERY
+    ## OUTPUT DELIVERY (REQUIRED)
     
+    **You MUST save your output using the filesystem-write-file tool.**
+    
+    When given an output path (e.g. source_code_files/.../intermediate/inquiry_information.json):
+    1. Write the JSON using filesystem-write-file with the exact path provided
+    2. Do NOT just respond with text - you must actually save the file
+    
+    After saving, confirm:
     ```
-    🔄 CONSOLIDATED DATA OUTPUT
-    ===========================
-    
-    [Your complete JSON output here]
-    
-    📝 CONSOLIDATION NOTES:
-    - [How many sources were processed]
-    - [Major consolidation challenges]
-    - [Recommendations for future]
+    ✅ CONSOLIDATED DATA SAVED
+    Path: [the output path you wrote to]
     ```
 
   modelRef:

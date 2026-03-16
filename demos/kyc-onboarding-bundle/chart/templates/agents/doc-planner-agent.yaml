@@ -10,6 +10,9 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.docPlanner.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: planner
@@ -95,7 +98,16 @@ spec:
     }
     
     📁 OUTPUT DESTINATION:
-    [File path where results should be saved]
+    [File path where results should be saved. Use the path provided by the workflow;
+     typically {{ "{{file_path_output}}" }}/{{ "{{section}}" }}/<subsection>-{{ "{{document_type}}" }}.json.
+     Save only the JSON code, no additional text.]
+    
+    ## ALIGNMENT (information from document)
+    - Identify subsection and keywords from the prompt (instruction, definition, example, keywords).
+    - RAG Expert uses rag_lookup with query=keywords, top_k=15, file_name.
+    - If no relevant/insufficient information: improve keywords and retry up to five times.
+    - For lists of names/companies: ensure completeness by reusing the tool with returned names as keywords.
+    - If no relevant information: write "No relevant information could be retrieved from the document regarding the <topic>".
     
     ✅ SUCCESS CRITERIA:
     - All required fields extracted

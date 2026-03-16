@@ -1,16 +1,17 @@
 # KYC Onboarding Bundle Configuration
 # Override these values during installation with --set or -f custom-values.yaml
 
-# AI Gateway Configuration
-# IMPORTANT: DO NOT hardcode credentials here!
-# Set during deployment from .env file via sync-env.sh or use --set flags
+# AI Gateway (only used when modelRef.create is true; otherwise create Model in ARK Dashboard)
 aigw:
-  token: "" # Set via: helm install --set aigw.token=$AIGW_TOKEN or sync-env.sh
-  uuid: "" # Set via: helm install --set aigw.uuid=$AIGW_UUID or sync-env.sh
+  token: ""
+  uuid: ""
 # Model reference for agents
-# You must create a Model resource before installing this bundle
+# Set modelRef.create to true only if you want the chart to create the Model (and Secret).
+# If you already have a Model (e.g. from "ark models create default"), leave modelRef.create false
+# to avoid Helm adoption errors.
 modelRef:
   name: default
+  create: false
 # Agents configuration  
 # All agents migrated from legacyX squads
 agents:
@@ -74,45 +75,66 @@ agents:
   chAnalyst:
     enabled: true
     name: ch-analyst-agent
+  # Beneficial Owners Team agents (used when teams.beneficialOwnersTeam.enabled is true)
+  boPlanner:
+    enabled: true
+    name: bo-planner
+    model: default
+  companiesHouseExpert:
+    enabled: true
+    name: companies-house-expert
+    model: default
+  boWebResearcher:
+    enabled: true
+    name: bo-web-researcher
+    model: default
+  boAnalyst:
+    enabled: true
+    name: bo-analyst
+    model: default
 # Teams configuration
 # All teams migrated from legacyX squads with maxTurns: 5
 teams:
-  # Document extraction from PDFs
+  # Document extraction from PDFs (5 agents: planner→rag→analyst→critic→file-manager, each needs multiple turns)
   docExtractionTeam:
     enabled: true
     name: doc-extraction-team
     strategy: sequential
-    maxTurns: 5
-  # Simplified 2-agent scout+RAG pattern
+    maxTurns: 15
+  # Simplified 2-agent scout+RAG pattern (scout→rag-agent, each needs multiple turns for PDF analysis)
   scoutRagTeam:
     enabled: true
     name: scout-rag-team
     strategy: sequential
-    maxTurns: 5
-  # Web research for KYC due diligence
+    maxTurns: 15
+  # Web research needs more turns: Planner → Researcher → Analyst → Critic → File Manager (each may use multiple turns)
   webResearchTeam:
     enabled: true
     name: web-research-team
     strategy: sequential
-    maxTurns: 5
-  # Multi-source data consolidation
+    maxTurns: 12
+  # Multi-source data consolidation (4 agents: planner→file-manager→analyst→critic, each needs multiple turns)
   consolidationTeam:
     enabled: true
     name: consolidation-team
     strategy: sequential
-    maxTurns: 5
-  # UK company registry data retrieval
+    maxTurns: 15
+  # UK company registry data retrieval (needs more turns: Planner → API → Analyst → Critic → File Manager)
   companiesHouseTeam:
     enabled: true
     name: companies-house-team
     strategy: sequential
-    maxTurns: 5
-  # Beneficial Owners Team - CH API + Web Research
+    maxTurns: 12
+  # Beneficial Owners Team - CH API + Web Research (required for submit-ownership)
   beneficialOwnersTeam:
-    enabled: false # Disabled by default - enable when needed
+    enabled: true
     name: beneficial-owners-team
     strategy: sequential
     maxTurns: 30
+# Demo metadata for ARK Dashboard namespace labels
+demo:
+  name: "KYC Onboarding"
+  description: "KYC onboarding workflows with specialized agents and teams for customer due diligence"
 # Labels to apply to all resources
 commonLabels:
   bundle: kyc-onboarding
@@ -126,6 +148,8 @@ argoWorkflows:
     # Set to false if ServiceAccount already exists in the namespace (e.g., when deploying to default)
     create: true
     name: argo-workflow
+  workflowTemplate:
+    enabled: true
 # MCP Servers Configuration
 # Phase 1 (Current): Only filesystem-mcp required
 # Phase 2 (Future): Add specialized MCP servers for enhanced functionality
@@ -152,9 +176,24 @@ mcpServers:
       - Companies House MCP: Live UK registry API access
 
     Update agent tool configurations to include new MCP tools.
-# Sub-chart image overrides for local development
-mcp-filesystem:
+# Data seeder - auto-uploads sample data via file-gateway-api post-install hook
+dataSeeder:
+  enabled: true
+  fileGateway: "file-gateway-api:80"
+  prefix: "source_code_files/2-customer-due-diligence/input/"
   image:
-    repository: filesystem-mcp
+    repository: kyc-demo-data-seeder
     tag: latest
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
+# File Gateway (installed with bundle; provides file-gateway-api and file-gateway-filesystem-mcp)
+file-gateway:
+  enabled: true
+  fullnameOverride: "file-gateway"
+  storage:
+    pvcName: "file-gateway-storage"
+  filesystemMcp:
+    enabled: true
+    # Register as "mcp-filesystem" so ARK uses this MCP for mcp-filesystem-* tools (no make build needed).
+    mcpserverName: "mcp-filesystem"
+  httpRoute:
+    enabled: false

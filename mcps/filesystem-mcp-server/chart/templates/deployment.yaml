@@ -18,6 +18,18 @@ spec:
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
       automountServiceAccountToken: false
+      {{- if or .Values.podSecurityContext.runAsUser .Values.podSecurityContext.runAsGroup .Values.podSecurityContext.fsGroup }}
+      securityContext:
+        {{- if .Values.podSecurityContext.runAsUser }}
+        runAsUser: {{ .Values.podSecurityContext.runAsUser }}
+        {{- end }}
+        {{- if .Values.podSecurityContext.runAsGroup }}
+        runAsGroup: {{ .Values.podSecurityContext.runAsGroup }}
+        {{- end }}
+        {{- if .Values.podSecurityContext.fsGroup }}
+        fsGroup: {{ .Values.podSecurityContext.fsGroup }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -54,7 +66,10 @@ spec:
               mountPath: /data
       volumes:
         - name: data
-          {{- if .Values.persistence.enabled }}
+          {{- if .Values.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim }}
+          {{- else if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "mcp-filesystem.fullname" . }}-data
           {{- else }}

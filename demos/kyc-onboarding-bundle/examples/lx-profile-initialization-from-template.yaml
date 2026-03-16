@@ -8,7 +8,7 @@ spec:
     name: lx-profile-initialization
   arguments:
     parameters:
-      - name: email-file
+      - name: input-file
         value: "source_code_files/1-customer-profile-initialization/input/mock-up-email-abf.txt"
       - name: output-file
         value: "source_code_files/1-customer-profile-initialization/intermediate/inquiry_information.json"

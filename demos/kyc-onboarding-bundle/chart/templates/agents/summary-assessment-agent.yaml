@@ -2,22 +2,19 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: summary-assessment-agent
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
-    legacyx-goal: summary_assessment
-    legacyx-squad: summary_assessment_squad
 spec:
   description: |
     KYC expert who creates comprehensive risk assessment reports from customer profiles.
-    Consolidated from LegacyX summary_assessment_squad (4 agents → 1 agent).
+    Single agent implementing planner, risk_officer, critic, and file_manager roles.
     
     **CRITICAL**: This agent produces compliance-critical risk assessment outputs.
     
-    Original LegacyX agents consolidated:
-    - planner: Mission planning (skipped - not needed for single agent)
-    - risk_officer: Risk analysis and report creation
-    - critic: Quality validation and correction
-    - file_manager: File I/O operations
+    Limitation: Not capable of reading and extracting information from non-text formats.
   
   prompt: |
     # EXPERTISE
@@ -33,7 +30,7 @@ spec:
     ## Tasks
     
     1. **Read Customer Profile**
-       - Use the tool `mcp-filesystem-read-file` to retrieve the customer profile
+       - Use the tool `filesystem-read-file` to retrieve the customer profile
        - File location: (provided in Query input)
        - This file contains comprehensive customer information including: company details, geographical presence, ownership structure, business activities, etc.
     
@@ -128,7 +125,7 @@ spec:
        - No additional sections beyond those specified
     
     7. **Save Final Output**
-       - Use the `mcp-filesystem-write-file` tool to save the report
+       - Use the `filesystem-write-file` tool to save the report
        - Save as Markdown format
        - File location: (provided in Query input)
        - Single markdown file
@@ -266,7 +263,7 @@ spec:
     7. Format in Markdown → Apply formatting rules
     8. Self-validate → Run quality checks
     9. Revise if needed → Fix any issues found
-    10. Save output → Use mcp-filesystem-write-file
+    10. Save output → Use filesystem-write-file
     
     **Important**: Adhere to the above steps. Always finish one step before moving to the next. Do not repeat steps.
     

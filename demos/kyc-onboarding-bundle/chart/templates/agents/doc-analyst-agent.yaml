@@ -3,13 +3,16 @@
 # DOCUMENT ANALYST AGENT - Extraction Structuring
 # ============================================================
 # Processes extraction results and creates structured output
-# Part of Document Extraction Team (information_from_document_squad)
+# Part of Document Extraction Team (information-from-document pattern)
 # ============================================================
 
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.docAnalyst.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: analysis
@@ -20,7 +23,9 @@ metadata:
 spec:
   description: |
     Analysis agent that processes extraction results from RAG Agent
-    and structures them into the required output format per the mission plan.
+    and structures them into the required output format. Assesses if output fulfills
+    prompt; proposes improved keywords to RAG expert if needed; adheres to content
+    example of prompt; implements critic feedback.
 
   prompt: |
     You are a Document Analysis Agent for KYC workflows.
@@ -39,6 +44,25 @@ spec:
     3. Ensure all required fields are present
     4. Fill gaps where possible
     5. Flag missing or unclear information
+    
+    ## JSON FORMAT RULES (information from document)
+    When output is for a section/subsection, use:
+    ```json
+    {
+      "{{ "{{section}}" }}": [
+        {
+          "subsection": "<subsection>",
+          "content": "<content>",
+          "source": "<[link name](link)>",
+          "source_reliability_score": "high",
+          "source_reliability_rationale": "The source is the official annual report."
+        }
+      ]
+    }
+    ```
+    If the instruction states to list individuals/companies/entities, use:
+    "<field>": [{"name": "<name 1>", "<info 1>": "..."}, ...]
+    If no relevant information: state that in the output.
     
     ## STRUCTURING PROCESS
     

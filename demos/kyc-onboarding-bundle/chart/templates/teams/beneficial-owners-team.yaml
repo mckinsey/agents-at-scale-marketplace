@@ -2,8 +2,8 @@
 # ============================================================
 # BENEFICIAL OWNERS TEAM - Hybrid CH API + Web Research
 # ============================================================
-# Retrieves indirect beneficial owners using Companies House API and web research
-# Consolidated from: LegacyX beneficial_owners_indirect_squad (6 agents)
+# Retrieves indirect beneficial owners via Companies House API and web research
+# Consolidated from: beneficial_owners_indirect pattern (6 agents → team)
 # ============================================================
 
 apiVersion: ark.mckinsey.com/v1alpha1
@@ -18,51 +18,43 @@ metadata:
     {{- end }}
 spec:
   description: |
-    Team that retrieves indirect beneficial owners using hybrid approach:
-    - UK Companies House API for corporate ownership data
-    - Web research for additional ownership information
+    Team that builds beneficial ownership structures from direct and indirect owner data
+    (beneficial_owner_tree, beneficial_owners_direct, beneficial_owners_indirect patterns).
     
-    **Use Case**: Given a direct owner (company/entity), find their beneficial owners
+    Objective (beneficial_owner_tree): Read {{ "{{file_path_direct_owners}}" }} and {{ "{{file_path_indirect_owners}}" }};
+    combine; build ownership tree (nested: name, type, percentage, connection, source, owners);
+    validate (match source files, correct structure, no duplicate owners, individuals have no owners);
+    save to {{ "{{file_path_output}}" }}.
     
-    Workflow:
-    1. Planner creates research mission plan
-    2. CH Expert queries Companies House API for UK entities
-    3. Web Researcher gathers additional ownership information from web
-    4. Analyst structures findings into ownership tree format
-    5. Critic validates ownership chain and data quality
-    6. File Manager saves research results
+    Capabilities: Create a beneficial ownership tree of a company based on the provided owner information.
     
-    **Output**: JSON ownership tree with direct and indirect beneficial owners
+    Workflow: Planner → CH Expert / Web Researcher → Analyst → Critic → File Manager.
   
   # Sequential strategy: Each agent completes before next starts
   strategy: {{ .Values.teams.beneficialOwnersTeam.strategy | default "sequential" }}
   
-  # Maximum conversation turns (30 from LegacyX)
+  # Maximum conversation turns
   maxTurns: {{ .Values.teams.beneficialOwnersTeam.maxTurns | default 30 }}
   
   # Team members in execution order
   members:
-    # Planner: Mission coordination (LegacyX: planner agent)
+    # Planner: Mission coordination
     - name: {{ .Values.agents.boPlanner.name | default "bo-planner" }}
       type: agent
     
-    # Companies House Expert: UK corporate data (LegacyX: companies_house_expert)
-    - name: {{ .Values.agents.companiesHouseExpert.name | default "companies-house-expert" }}
-      type: agent
-    
-    # Web Researcher: Online ownership research (LegacyX: web_expert)
+    # Web Researcher: Online ownership research
     - name: {{ .Values.agents.boWebResearcher.name | default "bo-web-researcher" }}
       type: agent
     
-    # Analyst: Structure ownership tree (LegacyX: analyst)
+    # Analyst: Structure ownership tree
     - name: {{ .Values.agents.boAnalyst.name | default "bo-analyst" }}
       type: agent
     
-    # Critic: Validate ownership chain (LegacyX: critic)
+    # Critic: Validate ownership chain
     - name: {{ .Values.agents.critic.name | default "critic" }}
       type: agent
     
-    # File Manager: Save results (LegacyX: file_manager)
+    # File Manager: Save results
     - name: {{ .Values.agents.fileManager.name | default "file-manager" }}
       type: agent
 
@@ -179,7 +171,7 @@ spec:
     You are a web research expert responsible for finding beneficial ownership information online.
     
     **Your Tool:**
-    - `perplexity_ask` or web search tools
+    - `perplexity-ask` (LegacyX-compatible): pass messages as [{"role":"user","content":"<prompt>"}]
     
     **Ownership Research Prompt Template:**
     ```

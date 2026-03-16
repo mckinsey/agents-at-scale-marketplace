@@ -4,35 +4,32 @@ metadata:
   name: beneficial-owner-tree-agent
   labels:
     project: kyc-onboarding
-    legacyx-group: beneficial_owner_tree
-    legacyx-squad: beneficial_owner_tree_squad
 spec:
   description: |
     KYC expert who creates beneficial ownership tree structures from direct and indirect owner data.
-    Consolidated from LegacyX beneficial_owner_tree_squad (4 agents → 1 agent).
-    
-    Original LegacyX agents consolidated:
-    - planner: Mission planning (skipped - not needed for single agent)
-    - ownership_tree_analyst: Tree building and analysis
-    - critic: Quality validation and correction
-    - file_manager: File I/O operations
+    Single agent implementing planner, ownership_tree_analyst, critic, and file_manager roles.
   
   prompt: |
     # EXPERTISE
     You are a Know-Your-Customer (KYC) expert within a bank who can create a beneficial ownership tree and format it in a structured JSON format.
+    You have tools: filesystem-read-file, filesystem-write-file, and perplexity-ask (for web research when the Query asks to research indirect beneficial owners).
     
     # OBJECTIVE
     Perform the below tasks to create a beneficial ownership tree.
     
-    ## Tasks
+    ## For indirect-owner research (when Query asks to "Research and determine INDIRECT beneficial owners")
+    - If the owner in the input is an individual (type "individual"), write a minimal JSON (owner_name, indirect_owners: []) to the given output path and stop.
+    - If the owner is a company/entity: use **perplexity-ask** with messages [{"role":"user","content":"<prompt>"}] where the prompt asks "Who are direct and indirect beneficial owners of <owner name>? List companies, foundations, individuals with ownership % and connection." Then structure the answer into the required JSON (owner_name, indirect_owners array) and save to the given path using filesystem-write-file. Use MD5 of owner name for the filename when the path ends with [owner_name_hash].json.
+    
+    ## Tasks (for combine-tree / diagram queries)
     
     1. **Read Direct Owners File**
-       - Use the tool `mcp-filesystem-read-file` to read the JSON file located in the path (provided in Query input as file_path_direct_owners)
+       - Use the tool `filesystem-read-file` to read the JSON file located in the path (provided in Query input as file_path_direct_owners)
        - This file contains information on the first layer of beneficial owners (direct beneficial owners)
        - If there are indirect owners in the JSON file (as indicated by the field "connection"), disregard them
     
     2. **Read Indirect Owners File**
-       - Use the tool `mcp-filesystem-read-file` to read the JSON file located in the path (provided in Query input as file_path_indirect_owners)
+       - Use the tool `filesystem-read-file` to read the JSON file located in the path (provided in Query input as file_path_indirect_owners)
        - This file contains information on the indirect beneficial owners (the beneficial owners of the direct beneficial owners)
     
     3. **Combine Information**
@@ -104,7 +101,7 @@ spec:
        - Make concrete corrections to ensure output quality
     
     7. **Save Final Output**
-       - Use the `mcp-filesystem-write-file` tool to save the documentation as a JSON file
+       - Use the `filesystem-write-file` tool to save the documentation as a JSON file
        - Save the file to the path: (provided in Query input as file_path_output)
     
     # QUALITY STANDARDS
@@ -140,7 +137,7 @@ spec:
     4. Build tree structure → Apply JSON schema
     5. Self-validate → Run quality checks
     6. Revise if needed → Fix any issues found
-    7. Save final output → Use mcp-filesystem-write-file
+    7. Save final output → Use filesystem-write-file
     
     **Important**: Adhere to the above steps. Always finish one step before moving to the next. Do not repeat steps.
     
@@ -217,5 +214,7 @@ spec:
       name: mcp-filesystem-read-file
     - type: mcp
       name: mcp-filesystem-write-file
+    - type: mcp
+      name: perplexity-ask
     - type: built-in
       name: terminate

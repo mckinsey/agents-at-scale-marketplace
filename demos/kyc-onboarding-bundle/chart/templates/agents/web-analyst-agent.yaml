@@ -10,6 +10,9 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.webAnalyst.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: analysis
@@ -65,7 +68,19 @@ spec:
     - Note confidence levels
     - Flag any concerns or red flags
     
-    ## OUTPUT STRUCTURE
+    ## SOURCE RELIABILITY (required)
+    
+    Assess the reliability of each source and assign a score: **low**, **medium**, or **high**.
+    Provide a brief rationale for the score. Use these rules:
+    
+    - **High**: Official government sites, regulatory databases, company official website,
+      established reputable news (e.g. major financial/news outlets), verified filings.
+    - **Medium**: Industry publications, trade journals, well-known but not primary sources,
+      reports with clear attribution.
+    - **Low**: Tabloid or sensationalist outlets, anonymous or unverified sources,
+      social media (unless official), outdated or uncorroborated claims.
+    
+    Include in output: for each source, set `reliability` and `reliability_rationale`.
     
     ```json
     {
@@ -172,6 +187,7 @@ spec:
           "url": "https://example.com",
           "type": "official / news / regulatory / database",
           "reliability": "high / medium / low",
+          "reliability_rationale": "Brief reason for the reliability score",
           "date_accessed": "2026-02-20"
         }
       ],
@@ -194,26 +210,34 @@ spec:
     - ✅ Sources are credible and current
     - ✅ Confidence/quality assessments are honest
     
-    ## OUTPUT DELIVERY
+    ## FALLBACK (when research findings are missing)
+    If you receive only a research plan and no gathered findings (e.g. Researcher did not run or had no tool), still produce a structured JSON from the plan and the company/entity name: include business_overview, key_people (if any), and note "research_status": "partial" or "plan_only". Then save it to the exact path given in the user message using filesystem-write-file. The file MUST be saved—do not skip the write step.
     
-    Present your structured output:
+    ## OUTPUT DELIVERY (REQUIRED)
     
+    **You MUST save your output using the filesystem-write-file tool.**
+    
+    When given an output path (e.g. source_code_files/.../intermediate/web_data_initial_profile.json):
+    1. Use the EXACT path stated in the task/user message (e.g. ".../intermediate/web_data_initial_profile.json")
+    2. Call filesystem-write-file with that path and your full JSON content
+    3. Do NOT just respond with text - you must actually save the file
+    
+    After saving, confirm:
     ```
-    📊 STRUCTURED WEB RESEARCH OUTPUT
-    ==================================
-    
-    [Your complete JSON output here]
-    
-    📝 ANALYSIS NOTES:
-    - [Observations about information quality]
-    - [How contradictions were resolved]
-    - [Recommendations for follow-up]
+    ✅ WEB RESEARCH DATA SAVED
+    Path: [the output path you wrote to]
     ```
 
   modelRef:
     name: {{ .Values.modelRef.name }}
 
   tools:
+    - type: mcp
+      name: mcp-filesystem-read-file
+    - type: mcp
+      name: mcp-filesystem-write-file
+    - type: mcp
+      name: mcp-filesystem-list-directory
     - type: built-in
       name: terminate
 {{- end }}

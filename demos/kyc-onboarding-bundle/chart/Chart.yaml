@@ -22,10 +22,9 @@ annotations:
   ark.mckinsey.com/type: bundle
   ark.mckinsey.com/use-case: kyc-onboarding
   ark.mckinsey.com/components: agents,teams,workflows
-  ark.mckinsey.com/workflows: "6"
-# Note: MCP server dependencies removed - deploy them separately from mcps/ directory
-# dependencies:
-#   - name: mcp-filesystem
-#     version: "*"
-#     repository: file://../../../mcps/filesystem-mcp-server/chart
+  ark.mckinsey.com/workflows: "12"
+dependencies:
+  - name: file-gateway
+    version: 0.1.3
+    repository: file://../../../services/file-gateway/chart
 

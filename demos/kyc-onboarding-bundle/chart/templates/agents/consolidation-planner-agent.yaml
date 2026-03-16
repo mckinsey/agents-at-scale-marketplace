@@ -10,6 +10,9 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.consolidationPlanner.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: planner
@@ -107,7 +110,13 @@ spec:
     }
     
     📁 OUTPUT DESTINATION:
-    [File path where consolidated result should be saved]
+    [File path where consolidated result should be saved ({{ "{{file_path_output}}" }} from workflow).]
+    
+    ## CONSOLIDATION RULES
+    - Use filesystem-read-file to read {{ "{{file_path_input}}" }}.
+    - Identify subsections with similar content; create overarching subsections; map information to them.
+    - Consolidate: no duplicate content (e.g. same person once in list); if conflict, highlight discrepancies; if multiple sources confirm, include all sources.
+    - Output JSON: "{{ "{{section}}" }}": [{"subsection","content","source": [...], "source_reliability_score": [...], "source_reliability_rationale": [...]}].
     
     ✅ SUCCESS CRITERIA:
     - All source files successfully read

@@ -38,6 +38,7 @@ versitygw:
   podSecurityContext:
     runAsNonRoot: true
     runAsUser: 1000
+    runAsGroup: 1000
     fsGroup: 1000
 
   securityContext:
@@ -112,6 +113,10 @@ filesystemMcp:
     port: "8000"
     dataPath: "/data"
     bucketName: "aas-files"
+
+  # When set, MCPServer metadata.name is this value so ARK discovers tools under this name
+  # (e.g. "mcp-filesystem" so agents that expect mcp-filesystem-* tools work without standalone MCP).
+  mcpserverName: ""
 
 fileApi:
   enabled: true

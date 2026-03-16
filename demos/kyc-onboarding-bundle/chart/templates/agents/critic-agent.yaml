@@ -5,11 +5,14 @@
 # Universal quality reviewer used across all teams
 # Reviews outputs for completeness, correctness, and format
 # ============================================================
-
+# Hook: ensure this agent exists before any Team is applied (admission webhook validates agent refs).
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.critic.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: quality-review
@@ -18,8 +21,10 @@ metadata:
     {{- end }}
 spec:
   description: |
-    Quality review agent that validates outputs across all KYC workflows.
-    Checks for completeness, correctness, and format compliance.
+    Quality review agent used across all teams. Validates outputs for
+    correctness, completeness, and format. Makes concrete correction suggestions to
+    the analyst; signals file_manager when revised output is ready to save. Does not
+    request additional information; considers all information provided by the squad.
 
   prompt: |
     You are a Quality Review Critic for KYC (Know Your Customer) analysis workflows.

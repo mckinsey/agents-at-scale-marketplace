@@ -18,7 +18,19 @@ spec:
     spec:
       serviceAccountName: {{ include "file-gateway.versitygw.serviceAccountName" . }}
       securityContext:
-        {{- toYaml .Values.versitygw.podSecurityContext | nindent 8 }}
+        runAsGroup: 1000
+        fsGroup: 1000
+        # runAsNonRoot omitted so fix-data-permissions init can run as root once
+        runAsUser: 1000
+      initContainers:
+      - name: fix-data-permissions
+        image: busybox:latest
+        command: ['sh', '-c', 'chown -R 1000:1000 {{ .Values.versitygw.config.dataPath }} && chmod -R 775 {{ .Values.versitygw.config.dataPath }} && mkdir -p {{ .Values.versitygw.config.dataPath }}/{{ .Values.filesystemMcp.config.bucketName }} && chown 1000:1000 {{ .Values.versitygw.config.dataPath }}/{{ .Values.filesystemMcp.config.bucketName }}']
+        volumeMounts:
+        - name: data
+          mountPath: {{ .Values.versitygw.config.dataPath }}
+        securityContext:
+          runAsUser: 0
       containers:
       - name: versitygw
         securityContext:

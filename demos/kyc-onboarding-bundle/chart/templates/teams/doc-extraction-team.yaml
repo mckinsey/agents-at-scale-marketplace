@@ -3,7 +3,7 @@
 # DOCUMENT EXTRACTION TEAM - PDF Ownership Data Extraction
 # ============================================================
 # Extracts ownership and corporate structure information from PDFs
-# Translated from: legacyX document_extraction_squad
+# Translated from: document extraction squad (information from document)
 # ============================================================
 
 apiVersion: ark.mckinsey.com/v1alpha1
@@ -18,15 +18,24 @@ metadata:
     {{- end }}
 spec:
   description: |
-    Team that extracts structured ownership and corporate information from PDF documents
-    such as annual reports, corporate filings, and ownership disclosures.
+    Team that extracts requested information from documents (e.g. annual reports)
+    and documents it in a structured format (information-from-document pattern).
+    
+    Objective (retrieve information from document):
+    Retrieve information from document at {{ "{{file_path_rag}}" }}. Identify subsection and
+    keywords from {{ "{{prompt}}" }}; use rag_lookup (query=keywords, top_k=15, file_name);
+    assess relevance/sufficiency; improve keywords and retry up to five times if needed;
+    formulate answer; ensure completeness (reuse tool with returned names for lists);
+    format as JSON; save to {{ "{{file_path_output}}" }}/{{ "{{section}}" }}/<subsection>-{{ "{{document_type}}" }}.json.
     
     Workflow:
     1. Planner creates extraction mission plan
-    2. RAG Agent extracts ownership data from PDFs
+    2. RAG Agent extracts using rag_lookup
     3. Analyst structures extraction into required format
     4. Critic reviews quality and completeness
     5. File Manager saves final output
+    
+    Capabilities: Read prompt, extract from embedded document via rag_lookup, document in structured format, save as JSON.
   
   # Sequential strategy: Each agent completes before next starts
   strategy: {{ .Values.teams.docExtractionTeam.strategy }}

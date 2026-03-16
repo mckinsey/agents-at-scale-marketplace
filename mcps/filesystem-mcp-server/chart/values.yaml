@@ -1,5 +1,12 @@
 replicaCount: 1
 
+# When sharing PVC with file-gateway (existingClaim=file-gateway-storage), set runAsUser/fsGroup 1000
+# so files created by the MCP have the same owner as VersityGW and list_objects does not break.
+podSecurityContext:
+  runAsUser: null
+  runAsGroup: null
+  fsGroup: null
+
 image:
   repository: ghcr.io/mckinsey/agents-at-scale-marketplace/filesystem-mcp-server
   # tag defaults to .Chart.AppVersion if not specified
@@ -20,6 +27,8 @@ persistence:
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 10Gi
+  # When set, use this existing PVC instead of creating one (e.g. share file-gateway storage).
+  existingClaim: ""
 
 resources:
   limits:

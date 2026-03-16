@@ -8,7 +8,5 @@ spec:
     name: lx-initial-risk-assessment
   arguments:
     parameters:
-      - name: intermediate-dir
-        value: "source_code_files/1-customer-profile-initialization/intermediate"
-      - name: output-dir
-        value: "source_code_files/1-customer-profile-initialization/output"
+      - name: output-base-dir
+        value: "source_code_files/1-customer-profile-initialization"

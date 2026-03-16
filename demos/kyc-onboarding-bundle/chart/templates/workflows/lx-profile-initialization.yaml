@@ -1,0 +1,110 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-profile-initialization
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase I - Customer Profile Initialization - 1. Profile Initialization"
+    workflows.argoproj.io/description: "Extract inquiry information from email/document to initialize customer profile"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  arguments:
+    parameters:
+      - name: output-base-dir
+        value: "source_code_files/1-customer-profile-initialization"
+      - name: input-file
+        value: "source_code_files/1-customer-profile-initialization/input/mock-up-email-abf.txt"
+      - name: output-file
+        value: "source_code_files/1-customer-profile-initialization/intermediate/inquiry_information.json"
+
+  templates:
+    - name: main
+      inputs:
+        parameters:
+          - name: output-base-dir
+          - name: input-file
+          - name: output-file
+      steps:
+        - - name: extract-email-information
+            template: extract-email-query
+            arguments:
+              parameters:
+                - name: input-file
+                  value: "{{ "{{inputs.parameters.input-file}}" }}"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-file}}" }}"
+
+    - name: extract-email-query
+      inputs:
+        parameters:
+          - name: input-file
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: profile-init-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              You must complete this task yourself and save the output; do not hand off or terminate.
+
+              Step 1 — Read the email: Use mcp-filesystem-read-file with path: {{ "{{inputs.parameters.input-file}}" }}
+
+              Step 2 — Extract and structure the data in the LegacyX format for inquiry_information.json.
+              The output JSON must have exactly this structure (same as LegacyX demo):
+
+              {
+                "Inquiry information": [
+                  {
+                    "subsection": "Company details",
+                    "content": [
+                      {"Company Name": "<from email>", "validation status": "_Pending_", "validation source": "NA"},
+                      {"Company Address": "<from email if present>", "validation status": "_Pending_", "validation source": "NA"},
+                      {"Company Number": "<if present>", "validation status": "_Pending_", "validation source": "NA"},
+                      {"Company Nature of Business": "<brief from email/subject>", "validation status": "_Pending_", "validation source": "NA"},
+                      {"Key Individuals": [{"name": "...", "Position": "...", "Address": "...", "Nationality": "...", "validation status": "_Pending_", "validation source": "NA"}]}
+                    ]
+                  },
+                  {
+                    "subsection": "Contact details",
+                    "content": [
+                      {"Contact name": "<sender from email>"},
+                      {"Contact email address": "<from email>"},
+                      {"Contact phone number": "<from email if present>"}
+                    ]
+                  },
+                  {
+                    "subsection": "Inquiry details",
+                    "content": [
+                      {"Customer Inquiry Date": "<date from email>"},
+                      {"Product requested": [<list of products/services mentioned>]},
+                      {"Account purpose": "<from email body>"},
+                      {"Submitted documents": [<list if mentioned>]}
+                    ]
+                  },
+                  {"source": "Email conversation between <sender company> and <recipient>"}
+                ]
+              }
+
+              Extract from the email: sender (contact name), recipient, date, subject, body, company mentions, and any products/purpose/documents mentioned. Use validation status "_Pending_" and validation source "NA" for all fields from the email (no external validation yet). Populate Company details from company names and context in the email.
+
+              Step 3 — Save the JSON (REQUIRED): Call mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-file}}" }} and content: your full JSON. Use the exact path; do NOT add /data or /mnt prefix.
+{{- end }}

@@ -10,6 +10,9 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.chAnalyst.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: analysis
@@ -27,6 +30,8 @@ spec:
     Your role is to process raw Companies House API data and structure it
     into the required output format specified in the retrieval plan.
     
+    **CRITICAL: You MUST save your final output using filesystem-write-file tool to the path specified in the task. Do NOT just respond with text.**
+    
     ## YOUR TASK
     
     You will receive:
@@ -34,11 +39,31 @@ spec:
     2. Raw Companies House API responses from the API Agent
     
     You must:
-    1. Parse all API response data
+    1. Parse all API response data (or use tool output as-is; do not change information from the web).
     2. Extract relevant KYC information
     3. Structure data according to the plan's output schema
-    4. Add metadata and quality indicators
+    4. Include source_reliability_score "high" and source_reliability_rationale "The source is an official UK government website, which is a reputable source for company information."
     5. Ensure completeness and accuracy
+    
+    ## JSON FORMAT RULES (government data)
+    
+    When the output is for a section/subsection, use this structure when applicable:
+    ```json
+    {
+      "{{ "{{section}}" }}": [
+        {
+          "subsection": "<subsection>",
+          "content": "<content>",
+          "source": "<[link name](link)>",
+          "source_reliability_score": "high",
+          "source_reliability_rationale": "The source is an official UK government website, which is a reputable source for company information."
+        }
+      ]
+    }
+    ```
+    If the instruction states to list individuals/companies/entities, use:
+    "<field>": [{"name": "<name 1>", "<info 1>": "..."}, ...]
+    If no relevant information is available, state that in the output. If company number is not available, state that.
     
     ## DATA STRUCTURING PROCESS
     
@@ -326,24 +351,34 @@ spec:
     - ✅ KYC insights added
     - ✅ Data quality assessment included
     
-    ## OUTPUT DELIVERY
+    ## FALLBACK (when API data is missing)
+    If you receive only a retrieval plan and no API response data (e.g. API Agent did not run or Phase 1 mock), still produce a structured JSON from the plan and the company number: include retrieval_metadata, company_profile (with company_number and company_name from the request), and note "phase": "Phase 1" or "data_completeness": "plan_only". Then save it to the exact path given in the user message using filesystem-write-file. The file MUST be saved—do not skip the write step.
     
+    ## OUTPUT DELIVERY (REQUIRED)
+    
+    **You MUST save your output using the filesystem-write-file tool.**
+    
+    When given an output path (e.g. source_code_files/.../intermediate/government_data_initial_profile.json):
+    1. Use the EXACT path stated in the task/user message (e.g. ".../intermediate/government_data_initial_profile.json")
+    2. Call filesystem-write-file with that path and your full JSON content
+    3. Do NOT just respond with text - you must actually save the file
+    
+    After saving, confirm:
     ```
-    🏢 COMPANIES HOUSE STRUCTURED DATA
-    ==================================
-    
-    [Your complete JSON output here]
-    
-    📝 ANALYST NOTES:
-    - [Summary of data retrieved]
-    - [Any notable findings for KYC]
-    - [Recommendations for further research if needed]
+    ✅ COMPANIES HOUSE DATA SAVED
+    Path: [the output path you wrote to]
     ```
 
   modelRef:
     name: {{ .Values.modelRef.name }}
 
   tools:
+    - type: mcp
+      name: mcp-filesystem-read-file
+    - type: mcp
+      name: mcp-filesystem-write-file
+    - type: mcp
+      name: mcp-filesystem-list-directory
     - type: built-in
       name: terminate
 {{- end }}

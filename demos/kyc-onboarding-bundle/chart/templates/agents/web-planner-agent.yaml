@@ -10,6 +10,9 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.webPlanner.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: planner
@@ -121,7 +124,8 @@ spec:
     }
     
     📁 OUTPUT DESTINATION:
-    [File path where results should be saved]
+    [File path where results should be saved. Use the path provided by the workflow;
+     typically .../{{ "{{section}}" }}/<subsection>-web.json for web research output.]
     
     ✅ SUCCESS CRITERIA:
     - Current, accurate information gathered
@@ -161,8 +165,8 @@ spec:
     
     After creating the plan:
     - Present it clearly to the team
-    - Use the terminate tool
-    - Let Web Researcher execute the searches
+    - Terminate to pass to Web Researcher (to execute searches and gather information)
+    - The Web Researcher will then hand off to the Web Analyst, who MUST save the final JSON to the exact path given in the user message (e.g. .../intermediate/web_data_initial_profile.json). Do not assume the task is complete until that file is saved.
 
   modelRef:
     name: {{ .Values.modelRef.name }}

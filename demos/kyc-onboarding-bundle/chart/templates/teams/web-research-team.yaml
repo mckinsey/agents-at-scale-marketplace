@@ -3,7 +3,7 @@
 # WEB RESEARCH TEAM - Online KYC Information Gathering
 # ============================================================
 # Researches entities online for KYC due diligence
-# Translated from: legacyX web_research_squad / profile_web_enricher
+# Translated from: web_research_squad / profile_web_enricher
 # ============================================================
 
 apiVersion: ark.mckinsey.com/v1alpha1
@@ -21,12 +21,24 @@ spec:
     Team that conducts comprehensive web research for KYC due diligence.
     Gathers business information, news, regulatory data, and reputation intelligence.
     
+    Objective (web data collection):
+    Perform tasks for the given company and prompt; use the web research tool to obtain
+    information (do not change the prompt); analyze and formulate a comprehensive answer
+    adhering to the required structure; assess source reliability (low/medium/high) with
+    rationale; format as structured JSON; ensure complete and accurate. When the prompt
+    specifies an exact output path (e.g. .../intermediate/web_data_initial_profile.json),
+    save to that path; otherwise save to the specified path (e.g. .../section/<subsection>-web.json).
+    
     Workflow:
     1. Planner creates research mission plan
     2. Researcher gathers information from online sources
     3. Analyst structures findings into required format
     4. Critic reviews quality and source credibility
     5. File Manager saves research results
+    
+    When the user message specifies an exact output path (e.g. .../intermediate/web_data_initial_profile.json), the Web Analyst or File Manager MUST call mcp-filesystem-write-file to that path before the task is complete. The task is not done until that file exists. If the Researcher has limited or no tool access, the Analyst should still produce structured JSON from the plan and available context and save it to the specified path.
+    
+    Limitation: Not capable of reading and extracting information from non-text formats.
   
   # Sequential strategy: Each agent completes before next starts
   strategy: {{ .Values.teams.webResearchTeam.strategy }}

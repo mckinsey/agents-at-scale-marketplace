@@ -21,3 +21,13 @@ __pycache__/
 
 # Just keep some stuff locally
 .local/
+
+# Downloaded workflow outputs (local testing artifacts)
+downloaded-outputs/
+
+# Helm dependency artifacts
+**/chart/charts/
+
+# Claude Code
+CLAUDE.md
+.claude/

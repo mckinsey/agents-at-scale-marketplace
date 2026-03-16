@@ -1,489 +1,175 @@
 # KYC Onboarding Bundle
 
-Complete KYC (Know Your Customer) workflow implementation migrated from LegacyX to ARK platform. This bundle provides six production-ready workflows covering Phase I-III of customer due diligence, packaged as a Helm chart for easy deployment.
+End-to-end KYC (Know Your Customer) onboarding workflows for customer due diligence, with multi-agent document extraction, web research, and compliance screening.
 
-## Overview
+## What's Included
 
-This bundle provides end-to-end KYC onboarding workflows that extract, analyze, and screen customer information using a multi-agent architecture with MCP (Model Context Protocol) tool integration.
+**17 agents** organized into **6 teams** covering Phase I–III of customer due diligence:
 
-**Bundle Structure:**
-```
-kyc-onboarding-bundle/
-├── chart/                    # Helm chart for agents, teams, and RBAC
-│   ├── Chart.yaml
-│   ├── values.yaml           # Configuration (credentials via --set, never stored here)
-│   └── templates/
-│       ├── agents/           # 4 specialized agents
-│       ├── teams/            # scout-rag-team
-│       └── rbac.yaml         # Argo Workflows permissions
-├── examples/                 # Workflow templates and sample data
-│   ├── *-template.yaml       # WorkflowTemplate definitions
-│   ├── *-from-template.yaml  # Workflow instances
-│   └── data/                 # Sample input files
-├── Makefile                  # Installation and workflow submission
-├── devspace.yaml             # DevSpace configuration
-├── scripts/                  # Utility scripts (run-workflow.sh, sync-env.sh)
-└── .env.template             # Environment configuration template
-```
+| ARK Agent | Description |
+|-----------|-------------|
+| `scout-agent` | Scans PDFs to locate relevant sections |
+| `rag-agent` | Extracts structured data from documents |
+| `doc-planner-agent` | Plans document extraction strategy |
+| `doc-analyst-agent` | Analyzes document content |
+| `web-planner-agent` | Plans web research tasks |
+| `web-analyst-agent` | Analyzes web research results |
+| `web-researcher-agent` | Performs web research via Perplexity |
+| `ch-planner-agent` | Plans Companies House lookups |
+| `ch-analyst-agent` | Analyzes Companies House data |
+| `ch-api-agent` | Queries Companies House API |
+| `consolidation-planner-agent` | Plans data consolidation |
+| `consolidation-analyst-agent` | Consolidates extracted data |
+| `beneficial-owner-tree-agent` | Builds ownership tree structures |
+| `relevance-classification-agent` | Classifies content relevance |
+| `file-manager-agent` | Manages file read/write operations |
+| `critic-agent` | Reviews and validates outputs |
+| `summary-assessment-agent` | Generates summary assessments |
 
-**Workflows included:**
-1. **Ownership Structure Retrieval** (`lx-retrieve-ownership-structure`) - Extract Ultimate Beneficial Owner (UBO) tree from documents
-2. **Entities & Vessels Retrieval** (`lx-retrieve-entities-vessels`) - Identify subsidiaries, affiliates, and vessels
-3. **Key Controllers Retrieval** (`lx-retrieve-key-controllers`) - Identify key management and control persons
-4. **Purpose of Relationship Assessment** (`lx-assess-purpose-of-relationship`) - Analyze business purpose and risk
-5. **Adverse Media Screening** (`lx-adverse-media-screening`) - Search for negative news and reputational risks
-6. **Blacklist & Sanction Screening** (`lx-blacklist-sanction-screening`) - Check against watchlists and sanctions
+**Teams:**
+- `scout-rag-team` — Two-stage PDF extraction (scout → RAG)
+- `doc-extraction-team` — Document analysis and extraction
+- `web-research-team` — Web research coordination
+- `companies-house-team` — Companies House data enrichment
+- `consolidation-team` — Data consolidation across sources
+- `beneficial-owners-team` — Beneficial ownership analysis
 
-**Architecture:**
-- **Agents**: Specialized AI agents for document extraction, web research, and analysis
-- **Teams**: Multi-agent collaboration (scout-rag-team for two-stage PDF extraction)
-- **MCP Servers**: Tool providers for PDF analysis, web research, and file operations
-- **Workflows**: Orchestrated Argo Workflows with sequential/parallel execution modes
+**12 Argo WorkflowTemplates:**
+- **Phase I** — `lx-profile-initialization`, `lx-profile-enrichment`, `lx-requirements-and-standards`, `lx-initial-risk-assessment`
+- **Phase II** — `lx-retrieve-ownership-structure`, `lx-retrieve-entities-vessels`, `lx-retrieve-key-controllers`, `lx-adverse-media-screening`, `lx-blacklist-sanction-screening`, `lx-assess-purpose-of-relationship`
+- **Profile finalization** — `lx-profile-finalization`
+- **Phase III** — `lx-kyc-memo`
+
+**Supporting infrastructure:** File Gateway (Helm dependency), PDF extraction MCP, web research MCP, Perplexity Ask MCP, data seeder job, RBAC.
 
 ## Prerequisites
 
-- **Kubernetes cluster** (minikube, kind, or cloud provider)
-- **Argo Workflows** 3.4+
-- **ARK platform** installed and configured
-- **Helm** 3.x
-- **kubectl** configured to access your cluster
-- **API Gateway access** (Daily.co or Azure OpenAI)
+- ARK cluster with Argo Workflows 3.4+
+- A Model named `default` in the target namespace (create via ARK Dashboard → Models)
+- `kubectl` and `helm` CLI tools
+
+## Secrets Setup
+
+Create these secrets in the bundle namespace before deploying MCPs:
+
+```bash
+# 1. Azure OpenAI credentials (for pdf-extraction MCP)
+kubectl create secret generic ai-gateway-azure-openai -n default \
+  --from-literal=base-url='https://YOUR_AZURE_OPENAI_ENDPOINT/' \
+  --from-literal=token='YOUR_AZURE_OPENAI_API_KEY'
+
+# 2. Web search credentials (for web-research MCP — at least one key required)
+kubectl create secret generic web-search-credentials -n default \
+  --from-literal=tavily-api-key='YOUR_TAVILY_API_KEY' \
+  --from-literal=perplexity-api-key='YOUR_PERPLEXITY_API_KEY'
+```
 
 ## Quick Start
 
-### 1. Deploy MCP Servers
-
-Deploy the required MCP servers from the marketplace:
-
-```bash
-# From the marketplace root directory
-cd mcps
-
-# Deploy filesystem MCP server
-kubectl apply -f filesystem-mcp-server/
-
-# Note: PDF and web tools are now provided by pdf-extraction-mcp and web-research-mcp
-```
-
-### 2. Configure Environment
-
 ```bash
 cd demos/kyc-onboarding-bundle
-
-# Copy and configure .env
-cp .env.template .env
-vi .env  # Set your API_TOKEN and AIGW_UUID
-
-# No sync needed - credentials are passed via Helm --set flags
+make uninstall                    # Clean any previous install
 ```
 
-**Key configuration variables:**
-- `API_TOKEN` - Your AI Gateway JWT token (rotates daily)
-- `AIGW_UUID` - Your AI Gateway workspace UUID
-- `K8S_NAMESPACE` - Where to deploy agents/teams (default: `kyc-onboarding-demo`)
-- `MCP_NAMESPACE` - Where MCP servers are deployed (default: `default`)
+### Option A: Data seeder (automatic upload on install)
 
-**Security Note:** Credentials are NEVER stored in `values.yaml`. They're passed to Helm via `--set` flags from your local `.env` file.
-
-**Namespace Architecture**: MCP servers are deployed once in a shared namespace (typically `default`), and Tool CRDs are created in each demo namespace with cross-namespace references. See [Cross-Namespace Tools Guide](../../docs/CROSS_NAMESPACE_TOOLS.md) for details.
-
-### 3. Install Bundle with Argo Support
+Build the data-seeder image first — the post-install hook uploads sample data automatically.
 
 ```bash
+make build-data-seeder
 make install-with-argo
+make build
+make ready
 ```
 
-This installs:
-- ✅ 4 specialized agents (scout, rag, profile-web-enricher, companies-house-enricher)
-- ✅ scout-rag-team (two-stage PDF extraction)
-- ✅ Argo Workflows RBAC
-- ✅ 6 WorkflowTemplate definitions
+### Option B: Manual upload
 
-### 4. Upload Sample Data
+Install with the data seeder disabled, then upload sample data manually.
 
 ```bash
+make install-with-argo DATA_SEEDER_ENABLED=false
+make build
 make upload-data
+make ready
 ```
 
-### 5. Run Workflows
+After `make ready`, wait 30–60s and refresh ARK Dashboard for agents/teams to show Available.
 
-Submit individual workflows:
+## Running Workflows
 
 ```bash
-# Retrieve ownership structure
-make submit-ownership
+# Phase I
+make submit-profile-init          # Extract inquiry info
+make submit-profile-enrichment    # Enrich with web + Companies House data
+make submit-requirements          # Retrieve KYC requirements
+make submit-initial-risk          # Produce KYC profile + risk report
 
-# Retrieve entities and vessels
-make submit-entities
+# Phase II
+make submit-ownership             # Ownership structure + UBO tree
+make submit-entities              # Subsidiaries, affiliates, vessels
+make submit-controllers           # Key management persons
+make submit-media                 # Adverse media screening
+make submit-blacklist             # Watchlist/sanction screening
+make submit-purpose               # Business purpose analysis
 
-# Retrieve key controllers
-make submit-controllers
-
-# Assess purpose of relationship
-make submit-purpose
-
-# Adverse media screening
-make submit-media
-
-# Blacklist screening
-make submit-blacklist
+# Profile finalization + Phase III
+make submit-profile-finalization  # Merge into final profile
+make submit-kyc-memo              # Generate KYC memo
 ```
 
-Monitor workflow execution:
-```bash
-kubectl get workflows -w
-```
-
-## Bundle Contents
-
-### Agents (chart/templates/agents/)
-- **scout-agent** - Scans PDFs to locate relevant sections
-- **rag-agent** - Extracts structured data from documents  
-- **profile-web-enricher** - Performs web research via Perplexity
-- **companies-house-enricher** - Enriches UK company data
-
-### Teams (chart/templates/teams/)
-- **scout-rag-team** - Two-stage PDF extraction (scout → RAG)
-
-### Workflows (examples/)
-
-Each workflow has two files:
-- `*-template.yaml` - WorkflowTemplate definition (installed with bundle)
-- `*-from-template.yaml` - Workflow instance (submitted to run)
-
-### MCP Servers (deployed separately from mcps/)
-- **filesystem-mcp-server** - File read/write operations
-- **pdf-extraction-mcp** - PDF extraction and analysis
-- **web-research-mcp** - Web research capabilities
-
-## Workflow Patterns
-```yaml
-# ✅ CORRECT - Declarative
-spec:
-  input: |
-    Extract ownership information from: {{.document_file}}
-    Save results to: /mnt/output/{{.output_file}}
-  target:
-    type: team
-    name: scout-rag-team
-
-# ❌ WRONG - Imperative (don't specify tools)
-spec:
-  input: "Use analyze_pdf_ownership tool to extract..."
-```
-
-**Two-Stage Extraction** (scout-rag-team):
-1. **Scout phase**: Agent scans entire PDF, identifies relevant pages
-2. **RAG phase**: Agent performs targeted extraction from identified sections
-3. **Result**: More accurate extraction with better context
-
-**Declarative Queries** (Tell WHAT, not HOW):
-
-## Sample Data
-
-Sample data files are provided in `examples/data/`:
-**Input Files:**
-
-- `kyc_profile.json` - Customer profile
-- `prompts_*.yml` - Extraction prompts for each workflow
-- `mock-up-blacklist.json` - Sample blacklist
-- `abf-annual-report-2024.pdf` - Test document
-
-Uploaded to: `/mnt/output/source_code_files/2-customer-due-diligence/input/`
-
-## Workflow Details
-
-**Steps**:
-1. Read prompts file (ownership structure extraction rules)
-2. Document extraction (two-stage: scout → RAG)
-3. Determine direct beneficial owners
-4. Determine indirect beneficial owners
-5. Create beneficial owner tree (JSON structure)
-6. Draw ownership diagram
-
-**Output**: JSON file with complete ownership hierarchy and visual diagram
-
-**Example**:
-```bash
-./scripts/run-workflow.sh ownership seq
-```
-
-### 2. Retrieve Entities & Vessels
-
-**Purpose**: Identify subsidiaries, affiliates, and vessels owned by customer
-
-**Template**: `lx-retrieve-entities-vessels-workflow`
-
-**Steps**:
-1. Read prompts file (entity extraction rules)
-2. Document extraction (scout-rag-team)
-3. Consolidate entities list
-4. Enrich with web data
-
-**Output**: JSON file with entities, vessels, and ownership percentages
-
-### 3. Retrieve Key Controllers
-
-**Purpose**: Identify key management and control persons
-
-**Template**: `lx-retrieve-key-controllers-workflow`
-
-**Steps**:
-1. Read prompts file (controller identification rules)
-2. Document extraction (scout-rag-team)
-3. Web research for additional information
-4. Consolidate results
-
-**Output**: JSON file with key controllers and their roles
-
-### 4. Assess Purpose of Relationship
-
-**Purpose**: Analyze business purpose and relationship risk
-
-**Template**: `lx-assess-purpose-of-relationship-workflow`
-
-**Steps**:
-1. Analyze customer profile
-2. Research business activities
-3. Assess risk factors
-4. Generate risk report
-
-**Output**: Risk assessment report with recommendations
-
-### 5. Adverse Media Screening
-
-**Purpose**: Search for negative news and reputational risks
-
-**Template**: `lx-adverse-media-screening-workflow`
-
-**Steps**:
-1. Read screening queries
-2. Execute web searches (Perplexity)
-3. Analyze results
-4. Generate screening report
-
-**Output**: Adverse media findings with sources
-
-### 6. Blacklist & Sanction Screening
-
-**Purpose**: Check customer against watchlists and sanctions
-
-**Template**: `lx-blacklist-sanction-screening-workflow`
-
-**Steps**:
-1. Load blacklist data
-2. Match customer against lists
-3. Check sanctions databases
-4. Generate compliance report
-
-**Output**: Compliance screening results with matches
-
-## Troubleshooting
-
-### 403 Forbidden Errors
-
-**Symptom**: Queries return `403 Forbidden` from API Gateway
-
-**Cause**: Invalid or expired API token
-
-**Solution**:
-```bash
-# 1. Check your token is set correctly
-echo $API_TOKEN
-
-# 2. Verify it matches your provider
-source .env
-echo $API_TOKEN
-
-# 3. Re-deploy with new credentials (sync-env.sh handles secret updates + Helm upgrade)
-cd scripts
-./sync-env.sh
-
-# 4. Restart MCP servers (if needed)
-kubectl rollout restart deployment mcp-filesystem
-```
-
-### Workflow Steps Skipped
-
-**Symptom**: Steps show as "Skipped" in workflow
-
-**Cause**: 
-- `withParam` received empty array (no items to iterate)
-- Condition not met (`when` clause evaluated to false)
-- Previous step returned no results
-
-**Solution**:
-```bash
-# 1. Check previous step output
-argo logs <workflow-name> <step-name>
-
-# 2. Verify execution mode
-./run-workflow.sh ownership seq  # Use 'seq' not 'sequential'
-
-# 3. Check if fake mode
-argo get <workflow-name> -o yaml | grep execution-mode
-```
-
-### MCP Server Not Available
-
-**Symptom**: Agent cannot find MCP tool
-
-**Cause**: MCP server deployment not running or not configured
-
-**Solution**:
-```bash
-# 1. Check MCP server status
-kubectl get deployments | grep mcp
-kubectl get pods | grep mcp
-
-# 2. Check agent configuration
-kubectl get agent <agent-name> -o yaml | grep -A 10 tools
-
-# 3. Restart MCP servers
-kubectl rollout restart deployment/<mcp-server-name>
-
-# 4. Check logs
-kubectl logs deployment/<mcp-server-name>
-```
-
-### Empty Extraction Results
-
-**Symptom**: Document extraction returns no data
-
-**Cause**:
-- Document format not recognized
-- Prompts don't match document content
-- Scout agent didn't find relevant sections
-
-**Solution**:
-```bash
-# 1. Test with scout-rag-team
-kubectl exec -it deployment/mcp-filesystem -- cat /mnt/output/scout_results.json
-
-# 2. Check document format
-file data/abf-annual-report-2024.pdf
-
-# 3. Manually test scout
-# Create test query targeting scout-agent
-
-# 4. Review prompts
-cat data/prompts_ownership_structure.yml
-```
-
-### Environment Variable Issues
-
-**Symptom**: `source .env` fails or variables not set
-
-**Cause**: Syntax error in .env file
-
-**Solution**:
-```bash
-# 1. Check for syntax errors
-bash -n .env  # Should return no output if valid
-
-# 2. Look for common issues
-grep -n '=' .env | grep -v '^#'  # Check for proper quotes
-
-# 3. Validate required variables
-source .env
-echo "API_TOKEN: ${API_TOKEN:0:20}..."
-echo "AIGW_UUID: ${AIGW_UUID}"
-```
-
-### Prompts File Format Error
-
-**Symptom**: Workflow fails with "withParam expected array, got object"
-
-**Cause**: YAML prompts file has nested structure instead of array
-
-**Solution**: Use updated workflow templates (already fixed in this demo)
-
-The `read-prompts-file` template transforms prompts automatically:
-```yaml
-# Transforms this (object):
-ownership_structure:
-  direct_owners:
-    objective: "Extract direct owners..."
-
-# Into this (array):
-[
-  {
-    "section": "direct_owners",
-    "prompt": "Extract direct owners..."
-  }
-]
-```
-
-## Advanced Usage
-
-### Switching Providers
-
-Edit `.env` to switch between ARK and LegacyX:
+Use `NAMESPACE=<ns>` for a non-default namespace.
+
+## Validation — Expected Output Files
+
+After each workflow completes, verify the output files in **ARK Dashboard → Files** under `source_code_files/`.
+
+### Phase I — Customer Profile Initialization
+
+| Workflow | Make Target | Output Files (under `1-customer-profile-initialization/`) |
+|----------|-------------|-----------------------------------------------------------|
+| Profile Initialization | `make submit-profile-init` | `intermediate/inquiry_information.json` |
+| Requirements & Standards | `make submit-requirements` | `intermediate/kyc_standards.json` |
+| Profile Enrichment | `make submit-profile-enrichment` | `intermediate/web_data_initial_profile.json`, `intermediate/government_data_initial_profile.json` |
+| Initial Risk Assessment | `make submit-initial-risk` | `output/kyc_profile.json`, `output/kyc_profile.md`, `output/summary_risk_report.md` |
+
+### Phase II — Customer Due Diligence
+
+| Workflow | Make Target | Output Files (under `2-customer-due-diligence/`) |
+|----------|-------------|---------------------------------------------------|
+| Ownership Structure | `make submit-ownership` | `profile_sections/ownership_structure.json`, `profile_sections/beneficial_ownership_tree.json`, `output/beneficial_ownership_tree.puml` |
+| Entities & Vessels | `make submit-entities` | `profile_sections/entities_vessels.json` |
+| Key Controllers | `make submit-controllers` | `profile_sections/key_controllers.json` |
+| Adverse Media Screening | `make submit-media` | `profile_sections/adverse_media_screening.json`, `output/adverse_media_screening_summary.md` |
+| Blacklist/Sanction Screening | `make submit-blacklist` | `profile_sections/sanction_blacklist_screening.json`, `output/sanction_blacklist_screening_report.md` |
+| Purpose of Relationship | `make submit-purpose` | `profile_sections/purpose_of_relationship.json` |
+
+### Profile Finalization & Phase III
+
+| Workflow | Make Target | Output Files |
+|----------|-------------|--------------|
+| Profile Finalization | `make submit-profile-finalization` | `2-customer-due-diligence/output/kyc_profile.json`, `2-customer-due-diligence/output/kyc_profile.md` |
+| KYC Memo | `make submit-kyc-memo` | `3-kyc-memo/output/kyc_memo.md` |
+
+> **Tip:** To check workflow status, run: `kubectl get workflows -n default -w`. To inspect a failed Query: `kubectl get query -n default --sort-by=.metadata.creationTimestamp -o name | tail -1 | xargs kubectl get -n default -o yaml`.
+
+## Useful Make Targets
+
+| Target | Description |
+|--------|-------------|
+| `make install-with-argo` | Deploy bundle with WorkflowTemplates |
+| `make build` | Build and deploy all MCP images |
+| `make upload-data` | Upload sample data to file-gateway |
+| `make ready` | Full deployment readiness check |
+| `make verify-mcp` | Verify MCP servers and Tool CRs |
+| `make verify-agents` | List all agents (expects 17) |
+| `make upgrade` | Helm upgrade (auto-detects existing file-gateway) |
+| `make uninstall` | Remove bundle |
+| `make clean` | Cleanup resources |
+
+## Cloud Deployment
 
 ```bash
-# Use ARK
-API_TOKEN=$ARK_DAILY_API_TOKEN
-AIGW_UUID=$ARK_AIGW_UUID
-
-# Or use LegacyX
-API_TOKEN=$LX_DAILY_API_TOKEN
-AIGW_UUID=$LX_AIGW_UUID
-
-# Then deploy with new credentials
-./scripts/sync-env.sh  # Updates secrets and redeploys via Helm with --set flags
+ark install marketplace/demos/kyc-onboarding-bundle
 ```
 
-### Custom Prompts
-
-Modify prompt files in `data/` to customize extraction:
-
-```yaml
-# prompts_ownership_structure.yml
-ownership_structure:
-  direct_owners:
-    objective: |
-      Extract information about direct beneficial owners.
-      Include: name, ownership percentage, type of control.
-  
-  indirect_owners:
-    objective: |
-      Identify indirect beneficial owners through subsidiaries.
-```
-
-### Parallel Execution
-
-For faster processing, use parallel mode:
-
-```bash
-./scripts/run-workflow.sh ownership par
-```
-
-**Note**: Only independent steps run in parallel. Sequential dependencies are preserved.
-
-### Custom Execution Mode
-
-Override execution mode in workflow parameters:
-
-```bash
-argo submit argo-workflows/lx-retrieve-ownership-structure-workflow.yaml \
-  --parameter execution-mode=fake \
-  --parameter document_file=/mnt/output/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf
-```
-
-## Further Documentation
-
-- **CLAUDE.md** - Complete migration guide with best practices
-- **ARK Documentation** - https://ark.mckinsey.com/docs
-- **Argo Workflows** - https://argoproj.github.io/workflows
-
-## Support
-
-For issues or questions:
-1. Check Troubleshooting section above
-2. Review CLAUDE.md for detailed guidance
-3. Check workflow logs: `argo logs <workflow-name>`
-4. Inspect agent status: `kubectl get agents`
-
-## License
-
-© 2024 McKinsey & Company. Internal use only.
+Upload KYC documents via **ARK Dashboard → Files** to `source_code_files/`, then submit workflows from **ARK Dashboard → Argo Workflows** or apply example manifests from [`examples/`](examples/).

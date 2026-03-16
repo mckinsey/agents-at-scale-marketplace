@@ -1,0 +1,139 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-profile-finalization
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Populate Customer Profile"
+    workflows.argoproj.io/description: "Consolidate Phase II profile sections into final KYC profile (JSON and Markdown)"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  arguments:
+    parameters:
+      - name: output-base-dir
+        value: "source_code_files/2-customer-due-diligence"
+      - name: profile-sections-dir
+        value: "source_code_files/2-customer-due-diligence/profile_sections"
+      - name: base-profile
+        value: "source_code_files/2-customer-due-diligence/input/kyc_profile.json"
+      - name: output-profile-json
+        value: "source_code_files/2-customer-due-diligence/output/kyc_profile.json"
+      - name: output-profile-md
+        value: "source_code_files/2-customer-due-diligence/output/kyc_profile.md"
+
+  templates:
+    - name: main
+      inputs:
+        parameters:
+          - name: output-base-dir
+          - name: profile-sections-dir
+          - name: base-profile
+          - name: output-profile-json
+          - name: output-profile-md
+      steps:
+        - - name: merge-profile-sections
+            template: merge-profile-query
+            arguments:
+              parameters:
+                - name: profile-sections-dir
+                  value: "{{ "{{inputs.parameters.profile-sections-dir}}" }}"
+                - name: base-profile
+                  value: "{{ "{{inputs.parameters.base-profile}}" }}"
+                - name: output-profile-json
+                  value: "{{ "{{inputs.parameters.output-profile-json}}" }}"
+        - - name: profile-json-to-markdown
+            template: profile-json-to-markdown-query
+            arguments:
+              parameters:
+                - name: profile-json
+                  value: "{{ "{{inputs.parameters.output-profile-json}}" }}"
+                - name: profile-md
+                  value: "{{ "{{inputs.parameters.output-profile-md}}" }}"
+
+    - name: merge-profile-query
+      inputs:
+        parameters:
+          - name: profile-sections-dir
+          - name: base-profile
+          - name: output-profile-json
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: profile-finalize-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              Read the base KYC profile from: {{ "{{inputs.parameters.base-profile}}" }}
+              Do NOT add /data or any other prefix to file paths when using MCP tools.
+
+              Read all JSON files from the profile sections directory: {{ "{{inputs.parameters.profile-sections-dir}}" }}/
+              The expected section files are: ownership_structure.json, entities_vessels.json, key_controllers.json, adverse_media_screening.json, sanction_blacklist_screening.json, purpose_of_relationship.json, beneficial_ownership_tree.json.
+              Read each file individually using `mcp-filesystem-read-file`.
+
+              Merge the base profile with all profile sections into a single consolidated KYC profile JSON.
+              Preserve structure and ensure no data loss. Use clear section keys (e.g. ownership_structure, entities_vessels, key_controllers, adverse_media_screening, sanction_blacklist_screening, purpose_of_relationship).
+
+              You MUST use the `mcp-filesystem-write-file` tool to save the merged profile to: {{ "{{inputs.parameters.output-profile-json}}" }}
+              Do NOT add /data or any other prefix to the path.
+    - name: profile-json-to-markdown-query
+      inputs:
+        parameters:
+          - name: profile-json
+          - name: profile-md
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: profile-json2md-
+          spec:
+            target:
+              type: agent
+              name: summary-assessment-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              Read the consolidated KYC profile JSON from: {{ "{{inputs.parameters.profile-json}}" }}
+              Do NOT add /data or any other prefix to file paths when using MCP tools.
+
+              Convert it to a well-formatted MARKDOWN document (NOT JSON). The output MUST be valid Markdown (.md) format with headers, tables, and readable text.
+
+              Main sections:
+              1. Inquiry information
+              2. Initial Profile
+              3. Requirements and KYC standards
+              4. Affiliates (4.1 Ownership structure: Entities/Vessels, 4.2 Ownership structure: Beneficial owners, 4.3 Key controllers)
+              5. Screening (5.1 Adverse media screening with Summary subsection, 5.2 Blacklist screening, 5.3 Sanction screening)
+              6. Purpose of relationship
+
+              If a section is not available, write "No information available" under the section title.
+              Use Markdown TABLE format for 'Company Details', 'Basic Information', 'Active Officers', 'Affiliates', 'Screening'. For adverse media screening include columns for Relevance and Source.
+
+              IMPORTANT: The output MUST be Markdown, not JSON. Use # headers, | table | syntax, bullet points, and other Markdown formatting.
+
+              You MUST use the `mcp-filesystem-write-file` tool to save the Markdown to: {{ "{{inputs.parameters.profile-md}}" }}
+              Do NOT add /data or any other prefix to the path.
+              After saving, confirm the file was written successfully.
+{{- end }}

@@ -2,20 +2,17 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: relevance-classification-agent
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
-    legacyx-goal: relevance_classification
-    legacyx-squad: relevance_squad
 spec:
   description: |
     KYC expert who classifies the relevance of adverse media findings for potential customers.
-    Consolidated from LegacyX relevance_squad (4 agents → 1 agent).
+    Single agent implementing planner, relevance_analyst, critic, and file_manager roles.
     
-    Original LegacyX agents consolidated:
-    - planner: Mission planning (skipped - not needed for single agent)
-    - relevance_analyst: Information analysis and classification
-    - critic: Quality validation and correction
-    - file_manager: File I/O operations
+    Limitation: Not capable of reading and extracting information from non-text formats.
   
   prompt: |
     # EXPERTISE
@@ -29,7 +26,7 @@ spec:
     ## Tasks
     
     1. **Read Input File**
-       - Use the tool `mcp-filesystem-read-file` to read the file at path (provided in Query input)
+       - Use the tool `filesystem-read-file` to read the file at path (provided in Query input)
        - This file contains adverse media findings or other customer information in JSON format
     
     2. **Analyze Content**
@@ -98,7 +95,7 @@ spec:
        - Ensure all items are classified (no missing relevance fields)
     
     7. **Save Final Output**
-       - Use the `mcp-filesystem-write-file` tool to save the updated JSON
+       - Use the `filesystem-write-file` tool to save the updated JSON
        - Save to the SAME path as input (provided in Query input)
        - This overwrites the original file with the classified version
     

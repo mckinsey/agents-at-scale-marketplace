@@ -1,0 +1,548 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-retrieve-key-controllers
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase II - Customer Due Diligence - 1c. Key Controllers"
+    workflows.argoproj.io/description: "Retrieve key controllers (Board of Directors and Management) from annual reports and web sources"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  volumes:
+    - name: mcp-filesystem-volume
+      hostPath:
+        path: /mnt/output
+        type: DirectoryOrCreate
+
+  arguments:
+    parameters:
+      - name: company-name
+        value: "ASSOCIATED BRITISH FOODS PLC"
+      - name: document-file
+        value: "/data/data/pdfs/abf-annual-report-2024.pdf"
+      - name: output-base-dir
+        value: "source_code_files/2-customer-due-diligence"
+      - name: execution-mode
+        value: "sequential"
+        enum:
+          - sequential
+          - parallel
+
+  templates:
+    # ============================================================
+    # MAIN WORKFLOW
+    # ============================================================
+    - name: main
+      inputs:
+        parameters:
+          - name: company-name
+            value: "{{ "{{workflow.parameters.company-name}}" }}"
+          - name: document-file
+            value: "{{ "{{workflow.parameters.document-file}}" }}"
+          - name: output-base-dir
+            value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
+          - name: execution-mode
+            value: "{{ "{{workflow.parameters.execution-mode}}" }}"
+      steps:
+        # Step 1: Get current date
+        - - name: get-current-date
+            template: get-current-date-script
+
+        # Step 2: Get key controllers prompts from YAML
+        - - name: get-key-controllers-prompts
+            template: read-prompts-file
+            arguments:
+              parameters:
+                - name: prompts-file-path
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/prompts_key_controllers.yml"
+
+        # Step 3: Collect information from annual report (conditional execution)
+        - - name: collect-info-sequential
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+            template: collect-info-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-key-controllers-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/key_controllers"
+                - name: current-date
+                  value: "{{ "{{steps.get-current-date.outputs.parameters.current-date}}" }}"
+
+          - name: collect-info-parallel
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
+            template: collect-info-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-key-controllers-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/key_controllers"
+                - name: current-date
+                  value: "{{ "{{steps.get-current-date.outputs.parameters.current-date}}" }}"
+
+        # Step 4: Collect web data (conditional execution)
+        - - name: collect-web-data-sequential
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+            template: collect-web-data-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-key-controllers-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/key_controllers"
+                - name: current-date
+                  value: "{{ "{{steps.get-current-date.outputs.parameters.current-date}}" }}"
+
+          - name: collect-web-data-parallel
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
+            template: collect-web-data-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-key-controllers-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/key_controllers"
+                - name: current-date
+                  value: "{{ "{{steps.get-current-date.outputs.parameters.current-date}}" }}"
+
+        # Step 5: Read JSON files from directory
+        - - name: read-info-json-directory
+            template: readdir-script
+            arguments:
+              parameters:
+                - name: base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/key_controllers"
+
+        # Step 6: Combine JSON files
+        - - name: append-info-files
+            template: combine-json
+            arguments:
+              parameters:
+                - name: file-paths-json
+                  value: "{{ "{{steps.read-info-json-directory.outputs.parameters.file-paths}}" }}"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/tmp/key_controllers_unconsolidated.json"
+
+        # Step 7: Consolidate information
+        - - name: consolidate-information
+            template: consolidate-key-controllers-query
+            arguments:
+              parameters:
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: input-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/tmp/key_controllers_unconsolidated.json"
+                - name: profile-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/kyc_profile.json"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/profile_sections/key_controllers.json"
+
+    # ============================================================
+    # UTILITY TEMPLATES
+    # ============================================================
+
+    # Get current date
+    - name: get-current-date-script
+      script:
+        image: alpine:latest
+        command: [sh]
+        source: |
+          date +%Y-%m-%d > /tmp/current_date.txt
+          cat /tmp/current_date.txt
+      outputs:
+        parameters:
+          - name: current-date
+            valueFrom:
+              path: /tmp/current_date.txt
+
+    # Read prompts from YAML file
+    - name: read-prompts-file
+      inputs:
+        parameters:
+          - name: prompts-file-path
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          PROMPTS_FILE="$MCP_DATA/{{ "{{inputs.parameters.prompts-file-path}}" }}"
+
+          # Use kubectl exec to read file via mcp-filesystem and convert to array format
+          kubectl exec deployment/mcp-filesystem -- cat "$PROMPTS_FILE" | yq eval -o=json '.' | jq '
+            to_entries[0].value |
+            to_entries | map({
+              section: .key,
+              prompt: .value.objective
+            })
+          ' > /tmp/prompts.json
+
+          cat /tmp/prompts.json
+
+      outputs:
+        parameters:
+          - name: prompts-list
+            valueFrom:
+              path: /tmp/prompts.json
+
+    # Collect information sequentially
+    - name: collect-info-sequential
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: document-file
+          - name: output-dir
+          - name: current-date
+      steps:
+        - - name: process-prompt
+            template: doc-extract-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+                - name: current-date
+                  value: "{{ "{{inputs.parameters.current-date}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Collect information in parallel
+    - name: collect-info-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: document-file
+          - name: output-dir
+          - name: current-date
+      steps:
+        - - name: process-all-prompts
+            template: doc-extract-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+                - name: current-date
+                  value: "{{ "{{inputs.parameters.current-date}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Collect web data sequentially
+    - name: collect-web-data-sequential
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: company-name
+          - name: output-dir
+          - name: current-date
+      steps:
+        - - name: process-web-prompt
+            template: web-data-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+                - name: current-date
+                  value: "{{ "{{inputs.parameters.current-date}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Collect web data in parallel
+    - name: collect-web-data-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: company-name
+          - name: output-dir
+          - name: current-date
+      steps:
+        - - name: process-all-web-prompts
+            template: web-data-query
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+                - name: current-date
+                  value: "{{ "{{inputs.parameters.current-date}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # ARK Query: Extract information from document using RAG agent
+    - name: doc-extract-query
+      inputs:
+        parameters:
+          - name: prompt
+          - name: section
+          - name: document-file
+          - name: output-dir
+          - name: current-date
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: doc-extract-
+          spec:
+            target:
+              type: agent
+              name: rag-agent
+            input: |
+              Current date: {{ "{{inputs.parameters.current-date}}" }}
+
+              {{ "{{inputs.parameters.prompt}}" }}
+
+              Use the `pdf-extraction-mcp-analyze-pdf-ownership` tool to extract information from the PDF file at: {{ "{{inputs.parameters.document-file}}" }}
+
+              After extracting the information, save it to a JSON file using the `filesystem-write-file` tool.
+
+              Save the output file to: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Do NOT add /data or any other prefix to the path.
+
+              The JSON structure should follow this format:
+              {
+                "section": "{{ "{{inputs.parameters.section}}" }}",
+                "prompt": "{{ "{{inputs.parameters.prompt}}" }}",
+                "data": <extracted_information>,
+                "sources": [<list_of_sources_with_page_numbers>]
+              }
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # ARK Query: Collect web data using web enricher agent
+    - name: web-data-query
+      inputs:
+        parameters:
+          - name: prompt
+          - name: section
+          - name: company-name
+          - name: output-dir
+          - name: current-date
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: web-data-
+          spec:
+            target:
+              type: team
+              name: web-research-team
+            input: |
+              Current date: {{ "{{inputs.parameters.current-date}}" }}
+              Company: {{ "{{inputs.parameters.company-name}}" }}
+
+              {{ "{{inputs.parameters.prompt}}" }}
+
+              Use the `web-research-mcp-research-ubo-web` tool to research information about the company.
+
+              After collecting the information, save it to a JSON file using the `filesystem-write-file` tool.
+
+              Save the output file to: {{ "{{inputs.parameters.output-dir}}" }}/web_{{ "{{inputs.parameters.section}}" }}.json
+              Do NOT add /data or any other prefix to the path.
+
+              The JSON structure should follow this format:
+              {
+                "section": "{{ "{{inputs.parameters.section}}" }}",
+                "prompt": "{{ "{{inputs.parameters.prompt}}" }}",
+                "company": "{{ "{{inputs.parameters.company-name}}" }}",
+                "data": <researched_information>,
+                "sources": [<list_of_web_sources>]
+              }
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # Read directory and return file paths
+    - name: readdir-script
+      inputs:
+        parameters:
+          - name: base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          BASE_DIR="{{ "{{inputs.parameters.base-dir}}" }}"
+
+          # Use kubectl exec to find files via mcp-filesystem (paths under MCP base)
+          FILES=$(kubectl exec deployment/mcp-filesystem -- find "$MCP_DATA/$BASE_DIR" -type f -name "*.json" 2>/dev/null || echo "[]")
+
+          if [ "$FILES" = "[]" ] || [ -z "$FILES" ]; then
+            echo "[]" > /tmp/file_paths.json
+          else
+            # Return paths relative to MCP base (so combine-json can cat $MCP_DATA/$file)
+            echo "$FILES" | sed "s|^$MCP_DATA/||g" | jq -R -s -c 'split("\n") | map(select(length > 0))' > /tmp/file_paths.json
+          fi
+
+          cat /tmp/file_paths.json
+      outputs:
+        parameters:
+          - name: file-paths
+            valueFrom:
+              path: /tmp/file_paths.json
+
+    # Combine JSON files
+    - name: combine-json
+      inputs:
+        parameters:
+          - name: file-paths-json
+          - name: output-file
+          - name: wrapper-key
+            default: ""
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          FILE_PATHS='{{ "{{inputs.parameters.file-paths-json}}" }}'
+          OUTFILE="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
+          WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
+
+          # Create output directory
+          kubectl exec deployment/mcp-filesystem -- mkdir -p "$(dirname $OUTFILE)"
+
+          # Combine all JSON files using kubectl exec
+          COMBINED="[]"
+          for file in $(echo "$FILE_PATHS" | jq -r '.[]'); do
+            CONTENT=$(kubectl exec deployment/mcp-filesystem -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
+            COMBINED=$(echo "$COMBINED" | jq ". += [$CONTENT]")
+          done
+
+          # Wrap in key if specified
+          if [ -n "$WRAPPER_KEY" ]; then
+            COMBINED=$(echo "$COMBINED" | jq "{\"$WRAPPER_KEY\": .}")
+          fi
+
+          # Write combined JSON
+          echo "$COMBINED" | kubectl exec -i deployment/mcp-filesystem -- tee "$OUTFILE" > /dev/null
+
+          echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
+
+    # ARK Query: Consolidate key controllers information
+    - name: consolidate-key-controllers-query
+      inputs:
+        parameters:
+          - name: company-name
+          - name: input-file
+          - name: profile-file
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: consolidate-kc-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            input: |
+              Company: {{ "{{inputs.parameters.company-name}}" }}
+
+              Read the unconsolidated key controllers data from: {{ "{{inputs.parameters.input-file}}" }}
+              Read the existing customer profile data from: {{ "{{inputs.parameters.profile-file}}" }}
+              Do NOT add /data or any other prefix to file paths when using MCP tools.
+
+              Goal: Consolidate different sources of output to determine the key controllers of the company.
+              The output should only contain the key controllers of the company, split into two subsections:
+              'Board of Directors' and 'Board of Management'.
+
+              From the customer profile, extract information on key controllers (Directors, Managers, C-suite, executives).
+              Do not use general information on the company, but only information on key controllers.
+              This information is very reliable and should be included.
+
+              Save the consolidated result to: {{ "{{inputs.parameters.output-file}}" }}
+
+              The JSON MUST follow this exact LegacyX format:
+              {
+                "key_controllers": [
+                  {
+                    "subsection": "Board of Directors",
+                    "content": {
+                      "board_members": [
+                        {
+                          "name": "Person Name",
+                          "role": "Chairman",
+                          "appointed_on": "2020-01-15",
+                          "nationality": "British",
+                          "independence_status": "Independent Non-Executive",
+                          "tenure": "4 years",
+                          "source": ["Annual Report 2024", "Companies House"],
+                          "source_reliability_score": ["high", "high"],
+                          "source_reliability_rationale": ["Official company publication", "Government registry"]
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "subsection": "Board of Management",
+                    "content": {
+                      "management_roles": [
+                        {
+                          "name": "Person Name",
+                          "role": "Chief Executive Officer",
+                          "source": ["Annual Report 2024"],
+                          "source_reliability_score": ["high"],
+                          "source_reliability_rationale": ["Official company publication"]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+
+              CRITICAL: The top-level key MUST be "key_controllers". Each entry must have "subsection" and "content" fields. Board members must include: name, role, appointed_on, nationality, independence_status, tenure, source (array), source_reliability_score (array), source_reliability_rationale (array). Management roles must include: name, role, source (array), source_reliability_score (array), source_reliability_rationale (array).
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+{{- end }}

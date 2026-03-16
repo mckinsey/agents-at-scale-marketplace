@@ -12,13 +12,29 @@ metadata:
     helm.sh/hook-weight: "10"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
-  backoffLimit: 3
+  backoffLimit: 10
+  activeDeadlineSeconds: 900
   template:
     metadata:
       labels:
         app: data-seeder
     spec:
       restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-gateway
+          image: "{{ .Values.dataSeeder.image.repository }}:{{ .Values.dataSeeder.image.tag }}"
+          imagePullPolicy: {{ .Values.dataSeeder.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              GATEWAY="http://file-gateway-api:80"
+              echo "Waiting for file-gateway-api to be ready..."
+              for i in $(seq 1 90); do
+                if curl -sf "${GATEWAY}/health"; then echo "file-gateway-api is ready."; exit 0; fi
+                echo "  attempt $$i/90, retrying in 5s..."
+                sleep 5
+              done
+              echo "Timeout waiting for file-gateway-api"; exit 1
       containers:
         - name: data-seeder
           image: "{{ .Values.dataSeeder.image.repository }}:{{ .Values.dataSeeder.image.tag }}"

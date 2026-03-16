@@ -1,10 +1,10 @@
-# Secret for Azure OpenAI API Key
-# Updated automatically by sync-env.sh from .env file via Helm values
+# Secret and Model created only when modelRef.create is true (otherwise create Model in ARK Dashboard).
+{{- if .Values.modelRef.create }}
 apiVersion: v1
 kind: Secret
 metadata:
   name: ai-gateway-azure-openai
-  namespace: default
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 stringData:
   token: {{ .Values.aigw.token | quote }}
@@ -13,8 +13,8 @@ stringData:
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Model
 metadata:
-  name: default
-  namespace: default
+  name: {{ .Values.modelRef.name }}
+  namespace: {{ .Release.Namespace }}
 spec:
   provider: azure
   type: completions
@@ -32,3 +32,4 @@ spec:
           secretKeyRef:
             name: ai-gateway-azure-openai
             key: token
+{{- end }}

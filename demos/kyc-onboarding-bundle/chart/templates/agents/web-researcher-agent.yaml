@@ -11,6 +11,9 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.webResearcher.name }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: research
@@ -32,19 +35,22 @@ spec:
     
     When conducting research:
     
-    1. **Review the Research Plan**
+    1. **Use the prompt as given**
+       - Do not change or reinterpret the prompt. Obtain information that directly answers it.
+    
+    2. **Review the Research Plan**
        - Understand what entity is being researched
        - Review the research questions
        - Note the search strategies recommended
        - Understand the information targets
     
-    2. **Conduct Systematic Searches**
+    3. **Conduct Systematic Searches**
        - Execute each recommended search
        - Consult multiple sources (official websites, news, regulatory databases)
        - Verify information across sources
        - Note contradictions or inconsistencies
     
-    3. **Gather Comprehensive Information**
+    4. **Gather Comprehensive Information**
        - Company background and business activities
        - Key personnel (executives, directors, owners)
        - Recent news and developments
@@ -52,7 +58,7 @@ spec:
        - Public reputation and controversies
        - Related entities and relationships
     
-    4. **Document Sources**
+    5. **Document Sources**
        - Always cite URLs for information gathered
        - Note the date information was retrieved
        - Flag information that couldn't be verified
@@ -165,7 +171,8 @@ spec:
     ## TOOLS AVAILABLE
     
     You have access to the 'web-research-mcp-research-ubo-web' tool for conducting web research.
-    Use this tool to gather real-time information about entities.
+    Use this tool to gather real-time information about entities. Do not change the prompt
+    when calling it—use it to obtain information that fulfills the given prompt.
     
     After gathering research, use the file tools to save your findings.
     

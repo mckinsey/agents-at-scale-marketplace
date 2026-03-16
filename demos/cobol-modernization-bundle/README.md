@@ -17,9 +17,10 @@ This bundle deploys **6 AI agents** that mirror the LegacyX Groups:
 
 Plus supporting infrastructure:
 - `speech-mcp-server` for local audio transcription via Whisper
-- `file-gateway` MCP server for file operations (read/write/list)
+- **`file-gateway`** (installed as a **Helm dependency** )
 - Argo Workflow RBAC (ServiceAccount + Role + RoleBinding)
-- Data seeder (Helm post-install hook that uploads sample files automatically)
+- **Data seeder** (optional): Helm post-install hook uploads sample files; run `make build-data-seeder` before install for Option A
+- **`make upload-data`** (Option B): manual upload via file-gateway-api
 - WorkflowTemplate for the full COBOL modernization pipeline
 
 ## Prerequisites
@@ -27,34 +28,51 @@ Plus supporting infrastructure:
 - **Model for agents:** A Model (e.g. named `default`) must exist in the namespace where you install the bundle. Agents use this Model to run, workflows will fail until it is present. Create the Model (e.g. via ARK Dashboard → Models or `ark models create default`) in the target namespace. 
 - ARK cluster (Azure OpenAI or other provider)
 - Argo Workflows installed
-- `file-gateway` service (installed as dependency)
-- Docker (to build the speech-mcp-server image)
+- **File Gateway** is installed automatically with this bundle (Helm dependency); no separate install step.
+- Docker (to build the speech-mcp-server and data-seeder images)
 - `kubectl` and `helm` CLI tools
 
 ## Local Development
 
-You can install the bundle in **any namespace**. If you don't set `NAMESPACE`, it installs in **default**. Ensure the prerequisites are met.
+Install in any namespace (default if omitted). Prerequisites must be met. If file-gateway is already in the namespace (e.g. from the KYC demo), use `USE_EXISTING_FILE_GATEWAY=true` so the bundle skips installing it and uses the existing one.
+
+**For a clean install** (recommended): run `make uninstall` first to remove any existing bundle and file-gateway; then run the steps below.
+
+### Option A: Data seeder (automatic upload on install)
+
+Build the data-seeder image, then build and install. A post-install hook runs the seeder and uploads sample COBOL/audio.
 
 ```bash
 cd agents-at-scale-marketplace/demos/cobol-modernization-bundle
-
-# Install in default namespace (no NAMESPACE needed)
+make uninstall
+make build-data-seeder
 make build
 make install-with-argo
+make cobol-demo
+```
+
+### Option B: Manual upload
+
+Build and install with the data-seeder disabled, then run `make upload-data` to upload from `examples/data/cobol-source/`.
+
+```bash
+cd agents-at-scale-marketplace/demos/cobol-modernization-bundle
+make uninstall
+make build
+make install-with-argo DATA_SEEDER_ENABLED=false
 make upload-data
 make cobol-demo
-
-# Or install in a specific namespace (create/copy Model there first if needed)
-make install-with-argo NAMESPACE=cobol-demo
-make upload-data NAMESPACE=cobol-demo
-make cobol-demo NAMESPACE=cobol-demo
-
-# View results (use the namespace you installed into)
-kubectl get workflows -n default   # or -n cobol-demo
-
-# Cleanup (use same NAMESPACE as install)
-make uninstall
 ```
+
+**Testing Option B after Option A:** Re-run install with the seeder disabled, then upload manually. Optionally delete the existing data-seeder Job first for a clean state:
+```bash
+make delete-data-seeder-job
+make install-with-argo DATA_SEEDER_ENABLED=false
+make upload-data
+make cobol-demo
+```
+
+Use `NAMESPACE=<ns>` for install/upload/cobol-demo when using a non-default namespace. Cleanup: `make uninstall`.
 
 ## Cloud Deployment
 
