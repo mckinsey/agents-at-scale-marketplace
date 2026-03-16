@@ -266,6 +266,33 @@
         "installArgs": ["--create-namespace"],
         "dependencies": ["file-gateway", "speech-mcp-server"]
       }
+    },
+    {
+      "name": "executor-langchain",
+      "type": "executor",
+      "displayName": "LangChain Executor",
+      "description": "LangChain execution engine for ARK agents with RAG support",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["langchain", "execution-engine", "rag", "ai", "agents"],
+      "category": "development",
+      "icon": "https://example.com/executor-langchain-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/executors/executor-langchain/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/executor-langchain",
+        "namespace": "default",
+        "helmReleaseName": "executor-langchain",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "executor-langchain",
+        "k8sServicePort": 8000,
+        "k8sDeploymentName": "executor-langchain"
+      }
     }
   ]
 }

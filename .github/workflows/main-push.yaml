@@ -30,6 +30,7 @@ jobs:
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server }
           - { name: speech-mcp-server, path: mcps/speech-mcp-server }
           - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
+          - { name: executor-langchain, path: executors/langchain }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -61,6 +62,8 @@ jobs:
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server, namespace: default, run-deployment-test: false }
           # disable cobol-modernization-bundle deployment tests for PRs to avoid hitting 5m limit
           - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default, run-deployment-test: false }
+          # disable executor-langchain deployment tests for PRs to avoid hitting 5m limit
+          - { name: executor-langchain, path: executors/langchain, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -150,6 +153,7 @@ jobs:
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server }
           - { name: speech-mcp-server, path: mcps/speech-mcp-server }
           - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
+          - { name: executor-langchain, path: executors/langchain }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -174,6 +178,7 @@ jobs:
           - { name: file-gateway, path: services/file-gateway, namespace: default }
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server, namespace: default }
           - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default }
+          - { name: executor-langchain, path: executors/langchain, namespace: default }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
