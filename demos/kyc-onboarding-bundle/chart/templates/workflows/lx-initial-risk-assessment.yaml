@@ -85,11 +85,22 @@ spec:
             input: |
               You must complete this task yourself and save the output; do not hand off or terminate.
 
+              **CRITICAL RULE — SINGLE FILE OUTPUT:** You MUST produce exactly ONE JSON file containing ALL sections. Do NOT split the output into multiple files. Do NOT create separate files per section. You will call mcp-filesystem-write-file EXACTLY ONCE to write ONE file that contains the complete merged JSON object with all three top-level keys.
+
               **CRITICAL — Populate with real data from files.** You MUST read the JSON files from the intermediate directory and **copy the actual values** from them into your output. Do NOT use "NA", "[sender company]", or placeholders for fields that exist in the source files. Only use NA or _Pending_ when a source file is missing or a field is genuinely absent in all sources.
 
               Step 1 — List and read files: Call mcp-filesystem-list-directory on {{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ then mcp-filesystem-read-file for each JSON file (inquiry_information.json, web_data_initial_profile.json, government_data_initial_profile.json, kyc_standards.json). Read every file that exists.
 
-              Step 2 — Merge into one KYC profile JSON using the exact LegacyX schema below. **Copy real values** from the files you read.
+              Step 2 — Merge ALL data into ONE single KYC profile JSON object using the exact LegacyX schema below. The final JSON must be a SINGLE object with exactly three top-level keys. **Copy real values** from the files you read.
+
+              Your output JSON must match this exact skeleton (one object, three keys):
+              ```json
+              {
+                "KYC Standards and Requirements": [ ... ],
+                "Inquiry information": [ ... ],
+                "Initial Profile": [ ... ]
+              }
+              ```
 
               **CRITICAL — Top-level keys:** Use these EXACT strings (with spaces, NO underscores): "KYC Standards and Requirements", "Inquiry information", "Initial Profile". Do NOT use "KYC_Standards_and_Requirements", "Inquiry_information", or "Initial_Profile".
 
@@ -110,7 +121,11 @@ spec:
 
               If a file is missing, only then use minimal placeholders for that section. Otherwise **merge and copy the real data** from every file you read.
 
-              You MUST call mcp-filesystem-write-file exactly once with path: {{ "{{inputs.parameters.profile-json}}" }} and content: your full JSON. Use the exact path; do NOT add /data or /mnt prefix.
+              Step 3 — Write the SINGLE consolidated file:
+              You MUST call mcp-filesystem-write-file EXACTLY ONCE with:
+              - path: {{ "{{inputs.parameters.profile-json}}" }}
+              - content: your COMPLETE merged JSON (one object with all three top-level keys)
+              Do NOT write multiple files. Do NOT split by section. Do NOT add /data or /mnt prefix to the path. ONE call, ONE file, ALL data.
     - name: json-to-markdown-query
       inputs:
         parameters:
