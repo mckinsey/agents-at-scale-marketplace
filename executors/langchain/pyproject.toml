@@ -85,3 +85,8 @@ pythonpath = [
 testpaths = [
     "tests"
 ]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.3.0",
+]
