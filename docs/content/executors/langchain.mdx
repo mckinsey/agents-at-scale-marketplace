@@ -12,6 +12,7 @@ LangChain-based execution engine for ARK agents with optional Retrieval-Augmente
 The LangChain Executor provides:
 
 - **LangChain Framework Integration** - Execute agents using LangChain with OpenAI and Azure OpenAI models
+- **Conversation History** - Server-side conversation memory keyed by `conversationId`, using LangChain's `ChatMessageHistory`
 - **RAG Support** - Retrieval-Augmented Generation with FAISS vector search for code-aware responses
 - **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless integration with ARK
 - **ExecutionEngine CRD** - Registers as a Kubernetes-native execution engine
