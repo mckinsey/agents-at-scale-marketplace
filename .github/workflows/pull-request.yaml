@@ -29,6 +29,7 @@ jobs:
           - { name: speech-mcp-server, path: mcps/speech-mcp-server }
           - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
           - { name: executor-langchain, path: services/executor-langchain }
+          - { name: evaluator, path: services/evaluator }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -62,6 +63,8 @@ jobs:
           - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default, run-deployment-test: false }
           # disable executor-langchain deployment tests for PRs to avoid hitting 5m limit
           - { name: executor-langchain, path: services/executor-langchain, namespace: default, run-deployment-test: false }
+          # disable evaluator deployment tests for PRs to avoid hitting 5m limit
+          - { name: evaluator, path: services/evaluator, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}

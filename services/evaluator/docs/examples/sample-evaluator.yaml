@@ -1,0 +1,19 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Evaluator
+metadata:
+  name: evaluator
+spec:
+  description: "Marketplace evaluator service"
+  address:
+    valueFrom:
+      serviceRef:
+        name: evaluator
+        port: "http"
+        path: "/evaluate"
+  parameters:
+    - name: model.name
+      value: default
+    - name: scope
+      value: "all"
+    - name: threshold
+      value: "0.7"

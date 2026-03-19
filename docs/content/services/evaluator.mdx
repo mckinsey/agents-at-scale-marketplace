@@ -1,0 +1,194 @@
+---
+title: Evaluator
+description: AI evaluation service with LLM-as-a-Judge, deterministic metrics, RAGAS, and Langfuse
+---
+
+# Evaluator
+
+AI evaluation service providing LLM-as-a-Judge, deterministic metrics, RAGAS, and Langfuse integration.
+
+## Overview
+
+The Evaluator provides:
+- **LLM-as-a-Judge** - Subjective quality assessment (relevance, accuracy, completeness, clarity, usefulness)
+- **Deterministic Metrics** - Objective performance scoring (token efficiency, cost, latency, quality)
+- **RAGAS Provider** - Standalone RAGAS evaluation with Azure OpenAI or OpenAI
+- **Langfuse Integration** - Hybrid RAGAS evaluation with Langfuse tracing and observability
+
+## Requirements
+
+- **Ark 0.1.50+** (optional): For CRD-triggered evaluations via the Evaluation/Evaluator CRDs
+- Works standalone without Ark for direct evaluations via HTTP API
+
+## Install
+
+```bash
+ark install marketplace/services/evaluator
+```
+
+Or with DevSpace:
+
+```bash
+cd services/evaluator
+devspace deploy
+```
+
+Or with Helm:
+
+```bash
+helm install evaluator ./chart -n default
+```
+
+Access via:
+- Port forward: `kubectl port-forward svc/evaluator 8000:8000`
+- HTTPRoute: `http://evaluator.default.127.0.0.1.nip.io:8080`
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/evaluate` | POST | Unified LLM evaluation (direct, query, baseline, batch, event) |
+| `/evaluate-metrics` | POST | Deterministic metrics evaluation |
+| `/providers/{provider}/metrics` | GET | List metrics for a provider |
+| `/providers/{provider}/metrics/{metric}` | GET | Get metric field requirements |
+| `/health` | GET | Health check |
+| `/ready` | GET | Readiness check |
+
+## Evaluation Types
+
+### Direct (`type: "direct"`)
+
+Evaluate a single input/output pair. No Kubernetes dependencies.
+
+```bash
+curl -s -X POST http://localhost:8000/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{"type":"direct","config":{"input":"What is ML?","output":"ML is machine learning."},"parameters":{"provider":"ark","scope":"all"}}'
+```
+
+### Query (`type: "query"`)
+
+Evaluate an existing Ark Query CRD's response. Requires Ark operator.
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Evaluation
+metadata:
+  name: query-eval-example
+spec:
+  type: query
+  evaluator:
+    name: evaluator
+  config:
+    queryRef:
+      name: completed-query
+```
+
+### Baseline (`type: "baseline"`)
+
+Test model against golden examples. Generates responses and evaluates each.
+
+### Batch (`type: "batch"`)
+
+Aggregate multiple evaluations. Managed by the Ark operator.
+
+### Event (`type: "event"`)
+
+Expression-based evaluation of Kubernetes events with semantic rules.
+
+```yaml
+config:
+  rules:
+    - name: "tools_used"
+      expression: "tool.was_called()"
+      weight: 1
+    - name: "tool_success"
+      expression: "tool.get_success_rate() >= 0.8"
+      weight: 2
+```
+
+## Providers
+
+| Provider | Description | Configuration |
+|----------|-------------|---------------|
+| `ark` (default) | Native Ark LLM evaluation | Uses configured LLM endpoint |
+| `ragas` | Standalone RAGAS evaluation | `azure.*` or `openai.*` parameters |
+| `langfuse` | Hybrid RAGAS + Langfuse tracing | `langfuse.*` parameters |
+
+## CRDs
+
+### Evaluator
+
+When deployed with Ark, the Helm chart creates an `Evaluator` CRD resource:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Evaluator
+metadata:
+  name: evaluator
+spec:
+  address:
+    value: "http://evaluator.default.svc.cluster.local:8000"
+  description: "Marketplace evaluator service"
+```
+
+### Evaluation
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Evaluation
+metadata:
+  name: direct-eval-example
+spec:
+  type: direct
+  evaluator:
+    name: evaluator
+    parameters:
+      - name: scope
+        value: "accuracy,clarity"
+  config:
+    input: "What is the capital of France?"
+    output: "Paris is the capital of France."
+```
+
+## Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `app.image.repository` | Container image | `ghcr.io/mckinsey/agents-at-scale-marketplace/evaluator` |
+| `app.env` | Environment variables | `HOST=0.0.0.0`, `PORT=8000`, `WORKERS=4` |
+| `service.port` | Service port | `8000` |
+| `evaluatorCRD.enabled` | Create Evaluator CRD resource | `true` |
+| `httpRoute.enabled` | Enable Gateway API HTTPRoute | `false` |
+| `serviceAccount.create` | Create service account | `true` |
+
+## CLI Integration
+
+```bash
+# Direct evaluation (creates Evaluation CR)
+ark evaluation my-evaluator --input "question" --output "answer"
+
+# Query evaluation
+ark evaluation my-evaluator my-query
+
+# Piped query name
+echo "my-query" | ark evaluation my-evaluator
+```
+
+## Uninstall
+
+**Using DevSpace:**
+```bash
+cd services/evaluator
+devspace purge
+```
+
+**Using Helm:**
+```bash
+helm uninstall evaluator -n default
+```
+
+## Additional Resources
+
+- [Evaluator Service README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/evaluator)
+- [ARK Platform](https://github.com/mckinsey/agents-at-scale-ark)

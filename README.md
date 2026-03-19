@@ -33,6 +33,7 @@ Services are designed to integrate seamlessly with the [ARK platform](https://gi
 | Service                                       | Description                                                                | Chart                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
 | [`a2a-inspector`](./services/a2a-inspector)   | Developer tool for testing and debugging A2A protocol agents               | [Chart](./services/a2a-inspector/chart)    |
+| [`evaluator`](./services/evaluator)            | AI evaluation service with LLM-as-a-Judge, metrics, RAGAS, and Langfuse   | [Chart](./services/evaluator/chart)        |
 | [`ark-sandbox`](./services/ark-sandbox)       | Isolated container environments for AI agent code execution with MCP tools | [Chart](./services/ark-sandbox/chart)      |
 | [`file-gateway`](./services/file-gateway)     | S3-compatible file storage gateway with REST API for shared storage access | [Chart](./services/file-gateway/chart)     |
 | [`langfuse`](./services/langfuse)             | Open-source LLM observability and analytics platform with session tracking | [Chart](./services/langfuse/chart)         |
@@ -56,6 +57,7 @@ The easiest way to install marketplace services and agents is using the [ARK CLI
 ```bash
 # Install services
 ark install marketplace/services/a2a-inspector
+ark install marketplace/services/evaluator
 ark install marketplace/services/ark-sandbox
 ark install marketplace/services/file-gateway
 ark install marketplace/services/langfuse

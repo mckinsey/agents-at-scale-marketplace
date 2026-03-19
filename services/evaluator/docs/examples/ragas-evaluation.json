@@ -1,0 +1,15 @@
+{
+  "type": "direct",
+  "config": {
+    "input": "What is renewable energy?",
+    "output": "Renewable energy comes from natural sources that are constantly replenished."
+  },
+  "parameters": {
+    "provider": "ragas",
+    "openai.api_key": "${OPENAI_API_KEY}",
+    "openai.base_url": "https://api.openai.com/v1",
+    "openai.model": "gpt-4",
+    "metrics": "relevance,correctness,faithfulness",
+    "threshold": "0.7"
+  }
+}

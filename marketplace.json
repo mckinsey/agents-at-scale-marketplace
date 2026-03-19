@@ -293,6 +293,33 @@
         "k8sServicePort": 8000,
         "k8sDeploymentName": "executor-langchain"
       }
+    },
+    {
+      "name": "evaluator",
+      "type": "service",
+      "displayName": "Evaluator",
+      "description": "AI evaluation service with LLM-as-a-Judge, deterministic metrics, RAGAS, and Langfuse integration",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["evaluation", "llm-as-judge", "metrics", "ragas", "langfuse", "quality"],
+      "category": "observability",
+      "icon": "https://example.com/evaluator-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/evaluator/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/evaluator",
+        "namespace": "default",
+        "helmReleaseName": "evaluator",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "evaluator",
+        "k8sServicePort": 8000,
+        "k8sDeploymentName": "evaluator"
+      }
     }
   ]
 }

@@ -1,0 +1,17 @@
+{{- if .Values.evaluatorCRD.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Evaluator
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.app.name }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  address:
+    value: "http://{{ .Values.service.name }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}"
+  description: {{ .Values.evaluatorCRD.description | quote }}
+{{- end }}

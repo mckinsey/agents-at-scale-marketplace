@@ -1,0 +1,9 @@
+apiVersion: v2
+name: evaluator
+description: AI evaluation service with LLM-as-a-Judge, RAGAS, and Langfuse
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+annotations:
+  ark.mckinsey.com/service: evaluator
+  ark.mckinsey.com/resources: service

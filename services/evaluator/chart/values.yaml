@@ -1,0 +1,83 @@
+# Default values for evaluator
+
+# Global annotations added to all resources
+global:
+  annotations:
+    ark.mckinsey.com/service: evaluator
+
+# Application configuration
+app:
+  name: evaluator
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/evaluator
+    pullPolicy: IfNotPresent
+    # tag: defaults to appVersion
+
+  env:
+    - name: HOST
+      value: "0.0.0.0"
+    - name: PORT
+      value: "8000"
+    - name: WORKERS
+      value: "4"
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+# Service configuration
+service:
+  name: evaluator
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# HTTPRoute configuration (Gateway API - modern routing method)
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  hostnames:
+    - "evaluator.default.127.0.0.1.nip.io"
+
+# Service account configuration
+serviceAccount:
+  name: evaluator-sa
+  create: true
+
+# When Ark operator is present, create an Evaluator CRD resource
+evaluatorCRD:
+  enabled: true
+  description: "Marketplace evaluator service"
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Health check configuration
+healthCheck:
+  path: /health
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5

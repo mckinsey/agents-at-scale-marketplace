@@ -1,0 +1,12 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Evaluation
+metadata:
+  name: query-eval-example
+spec:
+  type: query
+  evaluator:
+    name: ark-evaluator
+  config:
+    queryRef:
+      name: completed-research-query
+      namespace: default

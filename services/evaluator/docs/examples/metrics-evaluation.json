@@ -1,0 +1,16 @@
+{
+  "type": "direct",
+  "config": {
+    "input": "What is machine learning?",
+    "output": "Machine learning is a subset of artificial intelligence that enables computers to learn and improve from experience without being explicitly programmed."
+  },
+  "parameters": {
+    "maxTokens": "1000",
+    "maxCostPerQuery": "0.05",
+    "maxDuration": "30s",
+    "tokenWeight": "0.3",
+    "costWeight": "0.3",
+    "performanceWeight": "0.2",
+    "qualityWeight": "0.2"
+  }
+}

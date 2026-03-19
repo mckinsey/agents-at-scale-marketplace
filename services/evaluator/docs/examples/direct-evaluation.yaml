@@ -1,0 +1,14 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Evaluation
+metadata:
+  name: direct-eval-example
+spec:
+  type: direct
+  evaluator:
+    name: evaluator
+    parameters:
+      - name: scope
+        value: "accuracy,clarity"
+  config:
+    input: "What is the capital of France?"
+    output: "Paris is the capital of France."

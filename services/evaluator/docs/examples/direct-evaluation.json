@@ -1,0 +1,12 @@
+{
+  "type": "direct",
+  "config": {
+    "input": "What are the benefits of renewable energy?",
+    "output": "Renewable energy offers environmental sustainability through reduced carbon emissions, economic benefits through lower long-term operational costs, energy independence by reducing reliance on fossil fuel imports, and job creation in the growing green energy sector."
+  },
+  "parameters": {
+    "provider": "ark",
+    "scope": "relevance,accuracy,completeness,clarity",
+    "threshold": "0.8"
+  }
+}

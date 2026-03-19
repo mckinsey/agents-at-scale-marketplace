@@ -1,0 +1,19 @@
+{
+  "type": "direct",
+  "config": {
+    "input": "Explain the benefits of containerization",
+    "output": "Containerization provides consistency across environments, efficient resource utilization, rapid deployment, and isolation between applications."
+  },
+  "parameters": {
+    "provider": "langfuse",
+    "langfuse.host": "https://cloud.langfuse.com",
+    "langfuse.public_key": "${LANGFUSE_PUBLIC_KEY}",
+    "langfuse.secret_key": "${LANGFUSE_SECRET_KEY}",
+    "langfuse.azure_api_key": "${AZURE_OPENAI_API_KEY}",
+    "langfuse.azure_endpoint": "${AZURE_OPENAI_ENDPOINT}",
+    "langfuse.azure_deployment": "gpt-4o",
+    "langfuse.model_version": "2024-02-01",
+    "metrics": "relevance,correctness,faithfulness",
+    "threshold": "0.8"
+  }
+}

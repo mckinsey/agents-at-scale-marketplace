@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+docs/
+chart/
+*.md
+.gitignore
+.dockerignore
+devspace.yaml
+Makefile
