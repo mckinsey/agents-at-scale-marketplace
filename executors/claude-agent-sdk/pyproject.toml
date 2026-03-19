@@ -1,0 +1,90 @@
+[project]
+name = "executor-claude-agent-sdk"
+# Version is managed via Release Please
+version = "0.1.0"
+description = "Claude Agent SDK executor with built-in tool access and session persistence"
+authors = [
+    {name = "McKinsey Agent Platform Team"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0", # web framework
+    "uvicorn[standard]>=0.24.0", # ASGI server
+    "pydantic>=2.0.0", # data validation
+    "claude-agent-sdk>=0.1.0", # Claude Agent SDK
+    "openinference-instrumentation-claude-agent-sdk>=0.1.0", # OTEL instrumentation
+    "opentelemetry-sdk>=1.20.0", # OTEL SDK
+    "opentelemetry-exporter-otlp>=1.20.0", # OTLP exporter
+    "ark-sdk",
+    "urllib3>=2.6.0",
+    "a2a-sdk[http-server]>=0.3.0",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Repository = "https://github.com/mckinsey/agents-at-scale-marketplace"
+Documentation = "https://mckinsey.github.io/agents-at-scale-marketplace/executors/claude-agent-sdk/"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = [
+    "pyright>=1.1.402",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project.scripts]
+executor-claude-agent-sdk = "claude_agent_executor.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/claude_agent_executor"]
+
+# Black configuration - follow AI developer guide for 120 char line length
+[tool.black]
+line-length = 120
+target-version = ['py311']
+include = '\.pyi?$'
+
+# Flake8 configuration - allow 120 character lines per AI developer guide
+[tool.flake8]
+max-line-length = 120
+extend-ignore = ["E203", "W503"]
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+pythonpath = [
+    "."
+]
+testpaths = [
+    "tests"
+]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.3.0",
+]
