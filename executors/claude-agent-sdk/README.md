@@ -51,7 +51,7 @@ spec:
 
 - Each `conversationId` gets an isolated directory at `/data/sessions/<conversationId>/`
 - The Claude Agent SDK's built-in tools operate within that directory
-- Sessions persist across requests via `ClaudeSDKClient` with `resume`
+- Sessions persist across requests via `ClaudeSDKClient` with `continue_conversation`
 - Session data survives pod restarts via a PersistentVolumeClaim
 
 ## Configuration
