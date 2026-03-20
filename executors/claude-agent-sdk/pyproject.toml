@@ -12,7 +12,8 @@ dependencies = [
     "fastapi>=0.104.0", # web framework
     "uvicorn[standard]>=0.24.0", # ASGI server
     "pydantic>=2.0.0", # data validation
-    "claude-agent-sdk>=0.1.0", # Claude Agent SDK
+    # claude-agent-sdk is pre-installed from a Linux wheel built in the Dockerfile
+    # (PyPI only ships macOS wheels; we build from source for Linux)
     "openinference-instrumentation-claude-agent-sdk>=0.1.0", # OTEL instrumentation
     "opentelemetry-sdk>=1.20.0", # OTEL SDK
     "opentelemetry-exporter-otlp>=1.20.0", # OTLP exporter
