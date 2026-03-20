@@ -16,7 +16,7 @@ rules:
     resources: ["queries", "agents", "models", "tools"]
     verbs: ["get"]
   - apiGroups: [""]
-    resources: ["secrets"]
+    resources: ["secrets", "configmaps", "services"]
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

@@ -4,10 +4,10 @@
 import logging
 import os
 
-from .app import app_instance
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+from .app import app_instance
 
 
 def main() -> None:
