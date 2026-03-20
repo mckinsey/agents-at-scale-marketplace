@@ -16,7 +16,8 @@ dependencies = [
     # (PyPI only ships macOS wheels; we build from source for Linux)
     "openinference-instrumentation-claude-agent-sdk>=0.1.0", # OTEL instrumentation
     "opentelemetry-sdk>=1.20.0", # OTEL SDK
-    "opentelemetry-exporter-otlp>=1.20.0", # OTLP exporter
+    "opentelemetry-exporter-otlp-proto-http>=1.20.0", # OTLP HTTP exporter
+    "opentelemetry-instrumentation-asgi>=0.40b0", # extract propagated trace context from incoming requests
     "ark-sdk",
     "urllib3>=2.6.0",
     "a2a-sdk[http-server]>=0.3.0",

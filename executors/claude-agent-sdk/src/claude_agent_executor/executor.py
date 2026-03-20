@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List
 
 from ark_sdk.executor import BaseExecutor, Message
+from ark_sdk.executor_app import is_otel_enabled
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 
 logger = logging.getLogger(__name__)
@@ -13,32 +14,14 @@ logger = logging.getLogger(__name__)
 SESSIONS_DIR = Path(os.getenv("SESSIONS_DIR", "/data/sessions"))
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
-
-def _init_otel() -> None:
-    """Initialize OTEL tracing if OTEL_EXPORTER_OTLP_ENDPOINT is set."""
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-    if not endpoint:
-        logger.info("OTEL_EXPORTER_OTLP_ENDPOINT not set, tracing disabled")
-        return
-
+# Executor-specific instrumentation — only the Claude Agent SDK instrumentor
+if is_otel_enabled():
     try:
-        from opentelemetry import trace
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
         from openinference.instrumentation.claude_agent_sdk import ClaudeAgentSDKInstrumentor
-
-        provider = TracerProvider()
-        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-        trace.set_tracer_provider(provider)
         ClaudeAgentSDKInstrumentor().instrument()
-        logger.info(f"OTEL tracing enabled, exporting to {endpoint}")
+        logger.info("Claude Agent SDK OTEL instrumentation enabled")
     except Exception:
-        logger.exception("Failed to initialize OTEL tracing")
-
-
-# Initialize OTEL at module load time
-_init_otel()
+        logger.exception("Failed to instrument Claude Agent SDK")
 
 
 class ClaudeAgentExecutor(BaseExecutor):
@@ -62,17 +45,17 @@ class ClaudeAgentExecutor(BaseExecutor):
         session_dir = SESSIONS_DIR / conversation_id
         session_dir.mkdir(parents=True, exist_ok=True)
 
-        # Check if a previous session exists to resume
-        claude_state_dir = session_dir / ".claude"
+        # SDK stores sessions at ~/.claude/projects/<mangled-cwd>/, not in cwd
+        mangled = str(session_dir).replace("/", "-")
+        sdk_session_dir = Path.home() / ".claude" / "projects" / mangled
+        has_previous_session = sdk_session_dir.exists() and any(sdk_session_dir.iterdir())
         options = ClaudeAgentOptions(
             model=self.model,
             cwd=str(session_dir),
+            continue_conversation=has_previous_session,
+            permission_mode="bypassPermissions",
         )
-        if claude_state_dir.exists():
-            options.resume = True
-            logger.info(f"Resuming existing session for conversation {conversation_id}")
-        else:
-            logger.info(f"Starting new session for conversation {conversation_id}")
+        logger.info(f"{'Resuming' if has_previous_session else 'Starting new'} session for conversation {conversation_id}")
 
         try:
             result_text = ""
