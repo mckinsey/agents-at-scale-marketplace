@@ -45,14 +45,6 @@ dev:
   executor-claude-agent-sdk:
     imageSelector: executor-claude-agent-sdk
     namespace: default
-    sync:
-      - path: ./src:/app/src
-      - path: ${devspace.userHome}/ws/agents-at-scale-ark/lib/ark-sdk/gen_sdk/overlay/python:/app/ark-sdk
-        disableDownload: true
-    command:
-      - /bin/sh
-      - -c
-      - "until [ -f /app/ark-sdk/ark_sdk/executor_app.py ] && [ -d /app/ark-sdk/ark_sdk/extensions ]; do sleep 1; done && cp -r /app/ark-sdk/ark_sdk/* /app/.venv/lib/python3.12/site-packages/ark_sdk/ && exec uv run executor-claude-agent-sdk"
     logs:
       lastLines: 50
 
