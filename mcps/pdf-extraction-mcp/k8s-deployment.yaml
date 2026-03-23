@@ -3,14 +3,12 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: pdf-extraction-mcp
-  namespace: default
 automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: pdf-extraction-mcp
-  namespace: default
 spec:
   selector:
     app: pdf-extraction-mcp
@@ -24,7 +22,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pdf-extraction-mcp
-  namespace: default
 spec:
   replicas: 1
   selector:
@@ -43,7 +40,7 @@ spec:
       containers:
       - name: pdf-extraction-mcp
         image: pdf-extraction-mcp:v2
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
           name: http
@@ -77,7 +74,6 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: MCPServer
 metadata:
   name: pdf-extraction-mcp
-  namespace: default
 spec:
   description: "Lightweight PDF extraction server for ownership information"
   transport: http

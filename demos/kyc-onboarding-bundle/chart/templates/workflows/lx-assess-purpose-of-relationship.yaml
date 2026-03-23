@@ -70,7 +70,7 @@ spec:
           BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
           MCP_DATA="/data/aas-files"
           for dir in "$BASE/profile_sections"; do
-            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
           done
           echo "Created output directories"
 

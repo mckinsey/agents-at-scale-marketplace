@@ -60,7 +60,7 @@ spec:
         source: |
           MCP_DATA="/data/aas-files"
           OUTPUT_DIR=$(dirname "$MCP_DATA/{{ "{{inputs.parameters.output-memo}}" }}")
-          kubectl exec deployment/mcp-filesystem -- mkdir -p "$OUTPUT_DIR"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$OUTPUT_DIR"
           echo "Created directory: $OUTPUT_DIR"
 
     - name: kyc-memo-query

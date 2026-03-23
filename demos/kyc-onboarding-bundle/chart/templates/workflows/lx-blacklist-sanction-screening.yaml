@@ -205,7 +205,7 @@ spec:
           BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
           MCP_DATA="/data/aas-files"
           for dir in "$BASE/downloads" "$BASE/tmp" "$BASE/screening/blacklist_report" "$BASE/screening/sanction_report" "$BASE/profile_sections" "$BASE/output"; do
-            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
           done
           echo "Created output directories"
 
@@ -238,14 +238,14 @@ spec:
           OUTPUT_FILE="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
 
           # Create output directory
-          kubectl exec deployment/mcp-filesystem -- mkdir -p "$(dirname $OUTPUT_FILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTPUT_FILE)"
 
           # Download UK sanctions list
           curl -L "https://www.gov.uk/government/publications/financial-sanctions-consolidated-list-of-targets/consolidated-list-of-targets" \
             -o /tmp/uk_sanctions_list.txt
 
           # Use kubectl to copy to mcp-filesystem
-          kubectl exec -i deployment/mcp-filesystem -- tee "$OUTPUT_FILE" < /tmp/uk_sanctions_list.txt > /dev/null
+          kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTPUT_FILE" < /tmp/uk_sanctions_list.txt > /dev/null
 
           echo "Downloaded UK sanctions list to $OUTPUT_FILE"
 
@@ -320,7 +320,7 @@ spec:
           SECTION="{{ "{{inputs.parameters.section}}" }}"
 
           # Use kubectl exec to read file via mcp-filesystem
-          NAMES_JSON=$(kubectl exec deployment/mcp-filesystem -- cat "$YAML_FILE" | yq eval ".${SECTION}" -o=json)
+          NAMES_JSON=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$YAML_FILE" | yq eval ".${SECTION}" -o=json)
 
           echo "$NAMES_JSON" > /tmp/names.json
           cat /tmp/names.json
@@ -501,7 +501,7 @@ spec:
           BASE_DIR="{{ "{{inputs.parameters.base-dir}}" }}"
 
           # Use kubectl exec to find files via mcp-filesystem (paths under MCP base)
-          FILES=$(kubectl exec deployment/mcp-filesystem -- find "$MCP_DATA/$BASE_DIR" -type f -name "*.json" 2>/dev/null || echo "[]")
+          FILES=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- find "$MCP_DATA/$BASE_DIR" -type f -name "*.json" 2>/dev/null || echo "[]")
 
           if [ "$FILES" = "[]" ] || [ -z "$FILES" ]; then
             echo "[]" > /tmp/file_paths.json
@@ -535,12 +535,12 @@ spec:
           WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
 
           # Create output directory
-          kubectl exec deployment/mcp-filesystem -- mkdir -p "$(dirname $OUTFILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTFILE)"
 
           # Combine all JSON files using kubectl exec
           COMBINED="[]"
           for file in $(echo "$FILE_PATHS" | jq -r '.[]'); do
-            CONTENT=$(kubectl exec deployment/mcp-filesystem -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
+            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
             COMBINED=$(echo "$COMBINED" | jq ". += [$CONTENT]")
           done
 
@@ -550,7 +550,7 @@ spec:
           fi
 
           # Write combined JSON
-          echo "$COMBINED" | kubectl exec -i deployment/mcp-filesystem -- tee "$OUTFILE" > /dev/null
+          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTFILE" > /dev/null
 
           echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
 

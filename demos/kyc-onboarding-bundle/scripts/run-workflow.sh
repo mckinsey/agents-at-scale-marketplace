@@ -14,8 +14,8 @@
 #
 # Execution modes:
 #   - fake: Use fake data (fast testing)
-#   - seq: Sequential extraction (slower, more reliable)
-#   - parallel: Parallel extraction (faster, default)
+#   - seq: Sequential extraction (slower, more reliable, default)
+#   - parallel: Parallel extraction (faster)
 # ============================================================
 
 set -e

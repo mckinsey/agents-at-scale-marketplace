@@ -3,14 +3,12 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: perplexity-ask-mcp
-  namespace: default
 automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: perplexity-ask-mcp
-  namespace: default
 spec:
   selector:
     app: perplexity-ask-mcp
@@ -24,7 +22,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: perplexity-ask-mcp
-  namespace: default
 spec:
   replicas: 1
   selector:
@@ -39,7 +36,7 @@ spec:
       containers:
         - name: perplexity-ask-mcp
           image: perplexity-ask-mcp:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
               name: http
@@ -65,7 +62,6 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: MCPServer
 metadata:
   name: perplexity
-  namespace: default
 spec:
   description: "Perplexity Ask (LegacyX-compatible); tool perplexity-ask for web search"
   transport: http

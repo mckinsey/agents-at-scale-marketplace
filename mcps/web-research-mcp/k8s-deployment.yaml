@@ -3,14 +3,12 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: web-research-mcp
-  namespace: default
 automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: web-research-mcp
-  namespace: default
 spec:
   selector:
     app: web-research-mcp
@@ -24,7 +22,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web-research-mcp
-  namespace: default
 spec:
   replicas: 1
   selector:
@@ -39,7 +36,7 @@ spec:
       containers:
       - name: web-research-mcp
         image: web-research-mcp:latest
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
           name: http
@@ -70,7 +67,6 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: MCPServer
 metadata:
   name: web-research-mcp
-  namespace: default
 spec:
   description: "Lightweight web research server for ownership information"
   transport: http

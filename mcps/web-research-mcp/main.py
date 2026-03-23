@@ -53,7 +53,8 @@ def search_perplexity(query: str, max_results: int = 5) -> str:
         "model": "sonar",
         "messages": [
             {"role": "user", "content": query}
-        ]
+        ],
+        "top_k": max_results
     }
     
     with httpx.Client(timeout=60.0) as client:

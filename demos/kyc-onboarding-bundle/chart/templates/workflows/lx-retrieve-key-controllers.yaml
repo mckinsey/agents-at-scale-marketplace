@@ -177,7 +177,7 @@ spec:
           BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
           MCP_DATA="/data/aas-files"
           for dir in "$BASE/intermediate/key_controllers" "$BASE/intermediate/tmp" "$BASE/profile_sections"; do
-            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
           done
           echo "Created output directories"
 
@@ -208,7 +208,7 @@ spec:
           PROMPTS_FILE="$MCP_DATA/{{ "{{inputs.parameters.prompts-file-path}}" }}"
 
           # Use kubectl exec to read file via mcp-filesystem and convert to array format
-          kubectl exec deployment/mcp-filesystem -- cat "$PROMPTS_FILE" | yq eval -o=json '.' | jq '
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$PROMPTS_FILE" | yq eval -o=json '.' | jq '
             to_entries[0].value |
             to_entries | map({
               section: .key,
@@ -517,7 +517,7 @@ spec:
           BASE_DIR="{{ "{{inputs.parameters.base-dir}}" }}"
 
           # Use kubectl exec to find files via mcp-filesystem (paths under MCP base)
-          FILES=$(kubectl exec deployment/mcp-filesystem -- find "$MCP_DATA/$BASE_DIR" -type f -name "*.json" 2>/dev/null || echo "[]")
+          FILES=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- find "$MCP_DATA/$BASE_DIR" -type f -name "*.json" 2>/dev/null || echo "[]")
 
           if [ "$FILES" = "[]" ] || [ -z "$FILES" ]; then
             echo "[]" > /tmp/file_paths.json
@@ -551,12 +551,12 @@ spec:
           WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
 
           # Create output directory
-          kubectl exec deployment/mcp-filesystem -- mkdir -p "$(dirname $OUTFILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTFILE)"
 
           # Combine all JSON files using kubectl exec
           COMBINED="[]"
           for file in $(echo "$FILE_PATHS" | jq -r '.[]'); do
-            CONTENT=$(kubectl exec deployment/mcp-filesystem -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
+            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
             COMBINED=$(echo "$COMBINED" | jq ". += [$CONTENT]")
           done
 
@@ -566,7 +566,7 @@ spec:
           fi
 
           # Write combined JSON
-          echo "$COMBINED" | kubectl exec -i deployment/mcp-filesystem -- tee "$OUTFILE" > /dev/null
+          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTFILE" > /dev/null
 
           echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
 
@@ -586,13 +586,13 @@ spec:
           OUTPUT="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
 
           # Get file list
-          FILES=$(kubectl exec deployment/mcp-filesystem -- find "$INT_DIR" -type f -name "*.json" 2>/dev/null)
+          FILES=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- find "$INT_DIR" -type f -name "*.json" 2>/dev/null)
           echo "Found files: $FILES"
 
           # Read each file and write to temp files, then slurp
           > /tmp/all_files.json
           for f in $FILES; do
-            kubectl exec deployment/mcp-filesystem -- cat "$f" 2>/dev/null >> /tmp/all_files.json
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$f" 2>/dev/null >> /tmp/all_files.json
             echo "" >> /tmp/all_files.json
           done
 
@@ -645,8 +645,8 @@ spec:
               ]
             }' > /tmp/final.json
 
-          kubectl exec deployment/mcp-filesystem -- mkdir -p "$(dirname $OUTPUT)"
-          cat /tmp/final.json | kubectl exec -i deployment/mcp-filesystem -- tee "$OUTPUT" > /dev/null
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTPUT)"
+          cat /tmp/final.json | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTPUT" > /dev/null
           echo "Wrote $BOARD_COUNT board members + $MGMT_COUNT mgmt roles to $OUTPUT"
 
     # ARK Query: Consolidate key controllers information (ACTIVE — used by Step 7)

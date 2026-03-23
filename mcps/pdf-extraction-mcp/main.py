@@ -32,6 +32,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     if pdf_path.startswith("http://") or pdf_path.startswith("https://"):
         # Download PDF from URL
         response = httpx.get(pdf_path, timeout=30.0)
+        response.raise_for_status()
         pdf_content = response.content
         doc = fitz.open(stream=pdf_content, filetype="pdf")
     else:
@@ -63,11 +64,12 @@ def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 200) -> List[st
     return chunks
 
 
-def call_llm(prompt: str, model: str = None) -> str:
+def call_llm(prompt: str, model: str = None, provider: str = None) -> str:
     """Call LLM API (OpenAI or Anthropic)"""
     model = model or LLM_MODEL
-    
-    if LLM_PROVIDER == "anthropic":
+    provider = provider or LLM_PROVIDER
+
+    if provider == "anthropic":
         return call_anthropic(prompt, model)
     else:
         return call_openai(prompt, model)
@@ -153,16 +155,9 @@ def analyze_pdf_ownership(
     Returns:
         Dictionary with ownership_table, extracted_entities, and summary
     """
-    # Override provider if specified
-    global LLM_PROVIDER, LLM_MODEL
-    original_provider = LLM_PROVIDER
-    original_model = LLM_MODEL
-    
-    if extraction_provider:
-        LLM_PROVIDER = extraction_provider
-    if extraction_model:
-        LLM_MODEL = extraction_model
-    
+    provider = extraction_provider or LLM_PROVIDER
+    model = extraction_model or LLM_MODEL
+
     try:
         # Extract text from PDF
         full_text = extract_text_from_pdf(pdf_path)
@@ -257,8 +252,8 @@ Extract the following in JSON format:
 Return ONLY valid JSON, no markdown formatting."""
 
         # Call LLM
-        response = call_llm(prompt, extraction_model or LLM_MODEL)
-        
+        response = call_llm(prompt, model=model, provider=provider)
+
         # Parse response
         # Remove markdown code blocks if present
         if "```json" in response:
@@ -286,10 +281,6 @@ Return ONLY valid JSON, no markdown formatting."""
             "summary": f"Error analyzing PDF: {str(e)}",
             "error": str(e)
         }
-    finally:
-        # Restore original settings
-        LLM_PROVIDER = original_provider
-        LLM_MODEL = original_model
 
 
 @mcp.tool()
@@ -374,12 +365,7 @@ def extract_pdf_sections(
     Returns:
         Dictionary with extracted data and source pages
     """
-    global LLM_PROVIDER, LLM_MODEL
-    original_provider = LLM_PROVIDER
-    original_model = LLM_MODEL
-
-    if extraction_model:
-        LLM_MODEL = extraction_model
+    model = extraction_model or LLM_MODEL
 
     try:
         full_text = extract_text_from_pdf(pdf_path)
@@ -421,7 +407,7 @@ Document content (relevant pages):
 
 Return ONLY valid JSON, no markdown formatting."""
 
-        response = call_llm(prompt, extraction_model or LLM_MODEL)
+        response = call_llm(prompt, model=model)
 
         # Parse response
         if "```json" in response:
@@ -440,9 +426,6 @@ Return ONLY valid JSON, no markdown formatting."""
             "summary": f"Error extracting from PDF: {str(e)}",
             "error": str(e)
         }
-    finally:
-        LLM_PROVIDER = original_provider
-        LLM_MODEL = original_model
 
 
 @mcp.tool()
