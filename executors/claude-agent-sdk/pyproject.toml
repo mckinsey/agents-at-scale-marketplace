@@ -1,8 +1,8 @@
 [project]
-name = "executor-langchain"
+name = "executor-claude-agent-sdk"
 # Version is managed via Release Please
 version = "0.1.0"
-description = "LangChain executor service with RAG support"
+description = "Claude Agent SDK executor with built-in tool access and session persistence"
 authors = [
     {name = "McKinsey Agent Platform Team"}
 ]
@@ -12,12 +12,12 @@ dependencies = [
     "fastapi>=0.104.0", # web framework
     "uvicorn[standard]>=0.24.0", # ASGI server
     "pydantic>=2.0.0", # data validation
-    "langchain-core>=0.3.0", # langchain core types
-    "langchain-openai>=0.1.0", # openai integration
-    "langchain-community>=0.0.20", # community integrations (FAISS)
-    "langchain-text-splitters>=0.3.0", # text splitting
-    "faiss-cpu>=1.7.4", # vector search
-    "tiktoken>=0.5.0",
+    # claude-agent-sdk is pre-installed from a Linux wheel built in the Dockerfile
+    # (PyPI only ships macOS wheels; we build from source for Linux)
+    "openinference-instrumentation-claude-agent-sdk>=0.1.0", # OTEL instrumentation
+    "opentelemetry-sdk>=1.20.0", # OTEL SDK
+    "opentelemetry-exporter-otlp-proto-http>=1.20.0", # OTLP HTTP exporter
+    "opentelemetry-instrumentation-asgi>=0.40b0", # extract propagated trace context from incoming requests
     "ark-sdk",
     "urllib3>=2.6.0",
     "a2a-sdk[http-server]>=0.3.0",
@@ -32,7 +32,7 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/mckinsey/agents-at-scale-marketplace"
-Documentation = "https://mckinsey.github.io/agents-at-scale-marketplace/services/executor-langchain/"
+Documentation = "https://mckinsey.github.io/agents-at-scale-marketplace/executors/claude-agent-sdk/"
 
 [build-system]
 requires = ["hatchling"]
@@ -47,10 +47,10 @@ dev = [
 allow-direct-references = true
 
 [project.scripts]
-executor-langchain = "langchain_executor.__main__:main"
+executor-claude-agent-sdk = "claude_agent_executor.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/langchain_executor"]
+packages = ["src/claude_agent_executor"]
 
 # Black configuration - follow AI developer guide for 120 char line length
 [tool.black]

@@ -5,6 +5,7 @@ LangChain-based execution engine for ARK agents with RAG support.
 ## Features
 
 - **LangChain Agent Execution** - Execute agents using LangChain with OpenAI and Azure OpenAI models
+- **Conversation History** - Server-side conversation memory keyed by `conversationId`, using LangChain's `ChatMessageHistory`
 - **RAG Support** - Retrieval Augmented Generation with FAISS vector search for code-aware responses
 - **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless integration
 - **Health Checks** - Built-in health endpoint for Kubernetes liveness/readiness probes

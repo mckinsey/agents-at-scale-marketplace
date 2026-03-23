@@ -1,0 +1,198 @@
+---
+title: Claude Agent SDK Executor
+description: Native Claude executor with built-in tool access and session persistence
+---
+
+# Claude Agent SDK Executor
+
+Native Claude executor for ARK agents, built on the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview). Provides built-in tool access (Read, Write, Edit, Bash, Grep, Glob) with per-session filesystem isolation and optional OTEL tracing.
+
+## Overview
+
+The Claude Agent SDK Executor provides:
+
+- **Built-in Tool Access** - Read, Write, Edit, Bash, Grep, Glob available out of the box
+- **Session Persistence** - Multi-turn conversations via `ClaudeSDKClient` with `continue_conversation`, persisted on a PVC
+- **Filesystem Isolation** - Each `conversationId` gets its own directory at `/data/sessions/<conversationId>/`
+- **OTEL Tracing** - Optional observability via `openinference-instrumentation-claude-agent-sdk`
+- **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless ARK integration
+- **ExecutionEngine CRD** - Registers as a Kubernetes-native execution engine
+
+## Install
+
+```bash
+ark install marketplace/executors/executor-claude-agent-sdk
+```
+
+Or with DevSpace:
+
+```bash
+cd executors/claude-agent-sdk
+devspace deploy
+```
+
+Or with Helm:
+
+```bash
+helm install executor-claude-agent-sdk ./chart -n default --create-namespace
+```
+
+Access via:
+- Port forward: `kubectl port-forward svc/executor-claude-agent-sdk 8000:8000`
+- Health check: `curl http://localhost:8000/health`
+
+## Prerequisites
+
+### Anthropic API Key (Required)
+
+Create a Kubernetes secret with your Anthropic API key:
+
+```bash
+kubectl create secret generic anthropic-api-key \
+  --from-literal=ANTHROPIC_API_KEY=<your-api-key>
+```
+
+### OTEL Tracing (Optional)
+
+Enable observability by creating the `otel-environment-variables` secret:
+
+```bash
+kubectl create secret generic otel-environment-variables \
+  --from-literal=OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix.phoenix.svc.cluster.local:6006/v1/traces \
+  --from-literal=OTEL_EXPORTER_OTLP_HEADERS='Authorization=Bearer <token>'
+```
+
+Supported backends include Phoenix, Langfuse, Honeycomb, Jaeger, and any OTLP-compatible endpoint.
+
+## ExecutionEngine Resource
+
+The executor registers as an ExecutionEngine with A2A protocol:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1prealpha1
+kind: ExecutionEngine
+metadata:
+  name: executor-claude-agent-sdk
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: executor-claude-agent-sdk
+  description: "Claude Agent SDK Executor - A2A server with built-in tool access"
+```
+
+## Creating Agents
+
+Reference the execution engine in your agent spec:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: my-claude-agent
+spec:
+  executionEngine:
+    name: executor-claude-agent-sdk
+  prompt: |
+    You are a helpful assistant with access to filesystem tools.
+    You can read, write, and edit files in your working directory.
+```
+
+## Session Behavior
+
+Each conversation gets an isolated filesystem directory:
+
+```
+/data/sessions/
+├── <conversationId-1>/     ← Agent's working directory
+│   └── (agent-created files)
+├── <conversationId-2>/
+└── ...
+
+~/.claude/projects/
+├── -data-sessions-<conversationId-1>/  ← SDK session state (auto-managed)
+│   └── <session-id>.jsonl
+└── ...
+```
+
+- **New conversation**: A fresh directory is created, and the SDK starts a new session
+- **Continued conversation**: The SDK resumes the previous session via `continue_conversation`
+- **Pod restart**: Session data survives via the PersistentVolumeClaim (note: `~/.claude/` is ephemeral unless the home directory is also on persistent storage)
+
+## Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `app.image.repository` | Container image | `ghcr.io/mckinsey/agents-at-scale-marketplace/executor-claude-agent-sdk` |
+| `service.port` | Service port | `8000` |
+| `executionEngine.enabled` | Register ExecutionEngine CRD | `true` |
+| `httpRoute.enabled` | Enable Gateway API HTTPRoute | `false` |
+| `persistence.enabled` | Enable PVC for sessions | `true` |
+| `persistence.size` | PVC size | `10Gi` |
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ANTHROPIC_API_KEY` | Anthropic API key (from secret) | Required |
+| `ANTHROPIC_MODEL` | Claude model to use | `claude-sonnet-4-20250514` |
+| `HOST` | Server bind address | `0.0.0.0` |
+| `PORT` | Server port | `8000` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint (enables tracing) | Disabled |
+| `OTEL_EXPORTER_OTLP_HEADERS` | OTLP authentication headers | None |
+
+## Troubleshooting
+
+### Service Not Starting
+
+Check pod status and logs:
+```bash
+kubectl get pods -l app=executor-claude-agent-sdk
+kubectl logs -l app=executor-claude-agent-sdk
+```
+
+### API Key Missing
+
+If the pod fails to start, verify the secret exists:
+```bash
+kubectl get secret anthropic-api-key
+```
+
+### ExecutionEngine Not Registered
+
+Verify the ExecutionEngine CRD exists:
+```bash
+kubectl get executionengines
+```
+
+### Health Check Failing
+
+Test the health endpoint directly:
+```bash
+kubectl port-forward svc/executor-claude-agent-sdk 8000:8000
+curl http://localhost:8000/health
+```
+
+## Uninstall
+
+**Using DevSpace:**
+```bash
+cd executors/claude-agent-sdk
+devspace purge
+```
+
+**Using Helm:**
+```bash
+helm uninstall executor-claude-agent-sdk -n default
+```
+
+Note: The PVC is not deleted on uninstall. To remove session data:
+```bash
+kubectl delete pvc executor-claude-agent-sdk-sessions -n default
+```
+
+## Additional Resources
+
+- [Claude Agent SDK Executor README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/claude-agent-sdk)
+- [Claude Agent SDK Documentation](https://platform.claude.com/docs/en/agent-sdk/overview)
+- [A2A Protocol](https://google.github.io/A2A/)

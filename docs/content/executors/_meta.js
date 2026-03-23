@@ -1,3 +1,4 @@
 export default {
-  langchain: 'LangChain Executor'
+  langchain: 'LangChain Executor',
+  'claude-agent-sdk': 'Claude Agent SDK Executor'
 }

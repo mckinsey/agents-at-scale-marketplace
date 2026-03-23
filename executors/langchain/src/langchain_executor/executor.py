@@ -1,7 +1,8 @@
 """LangChain execution logic."""
 
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_community.vectorstores import FAISS
@@ -27,6 +28,7 @@ class LangChainExecutor(BaseExecutor):
         self._indexed = False
         self.code_directory = "."
         self.code_chunks: List[Document] = []
+        self.history_store: Dict[str, ChatMessageHistory] = {}
 
     async def execute_agent(self, request) -> List:
         """Execute agent with LangChain and return response messages."""
@@ -48,38 +50,32 @@ class LangChainExecutor(BaseExecutor):
             else:
                 logger.info(f"Standard LangChain execution (no RAG) for agent: {request.agent.name}")
 
-            # Convert message history to LangChain format
-            langchain_messages = []
-            for msg in request.history:
-                if msg.role == "user":
-                    langchain_messages.append(HumanMessage(content=msg.content))
-                elif msg.role == "assistant":
-                    langchain_messages.append(AIMessage(content=msg.content))
-                elif msg.role == "system":
-                    langchain_messages.insert(0, SystemMessage(content=msg.content))
+            # Retrieve or create conversation history
+            history = self.history_store.get(request.conversationId)
+            if history is None:
+                history = ChatMessageHistory()
+                resolved_prompt = self._resolve_prompt(request.agent)
+                history.add_message(SystemMessage(content=resolved_prompt))
+                self.history_store[request.conversationId] = history
 
-            # Add current user message
+            # Build user message content
             if use_rag and rag_context:
-                # For RAG, include context in the user message
                 rag_instruction = "Use this code context to answer the user's question accurately!"
                 user_content = f"🔥 RELEVANT CODE CONTEXT:\n\n{rag_context}\n\n{rag_instruction}\n\nUser: {request.userInput.content}"
             else:
                 user_content = request.userInput.content
 
-            langchain_messages.append(HumanMessage(content=user_content))
+            history.add_message(HumanMessage(content=user_content))
 
-            # If this is the first message, prepend the agent prompt as a system message
-            if len(request.history) == 0:
-                resolved_prompt = self._resolve_prompt(request.agent)
-                langchain_messages.insert(0, SystemMessage(content=resolved_prompt))
-
-            response = await chat_client.ainvoke(langchain_messages)
+            response = await chat_client.ainvoke(history.messages)
 
             # Handle response content
             if hasattr(response, "content"):
                 result = str(response.content)
             else:
                 result = str(response)
+
+            history.add_message(AIMessage(content=result))
 
             # Create response messages
             response_messages = []
