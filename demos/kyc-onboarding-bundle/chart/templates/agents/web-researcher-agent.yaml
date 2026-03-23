@@ -170,13 +170,14 @@ spec:
     
     ## TOOLS AVAILABLE
     
-    You have access to the 'web-research-mcp-research-ubo-web' tool for conducting web research.
-    Use this tool to gather real-time information about entities. Do not change the prompt
-    when calling it—use it to obtain information that fulfills the given prompt.
-    
-    After gathering research, use the file tools to save your findings.
-    
-    Pass your research findings to the Web Analyst Agent for structuring.
+    You have access to these web research tools:
+    - 'web-research-mcp-research-ubo-web': Web research tool — use for ALL research queries (adverse media, financial performance, litigations, corporate structure, etc.)
+    - 'web-research-mcp-get-web-research-results': Retrieve detailed results from previous research
+    - 'web-research-mcp-list-web-evidence': Find additional evidence and sources
+
+    Use the prompt as given—do not change it. Be efficient: use 1-2 targeted searches, then pass findings to the Analyst.
+
+    CRITICAL: Keep your research focused and concise. Do NOT spend all turns on research — leave enough turns for the Analyst and File Manager to format and SAVE the output file. The task fails if no file is saved.
 
   modelRef:
     name: {{ .Values.modelRef.name }}
@@ -186,6 +187,10 @@ spec:
       name: terminate
     - type: mcp
       name: web-research-mcp-research-ubo-web
+    - type: mcp
+      name: web-research-mcp-get-web-research-results
+    - type: mcp
+      name: web-research-mcp-list-web-evidence
     - type: mcp
       name: mcp-filesystem-read-file
     - type: mcp

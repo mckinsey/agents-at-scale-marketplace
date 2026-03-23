@@ -169,6 +169,8 @@ spec:
     - type: mcp
       name: pdf-extraction-mcp-analyze-pdf-ownership
     - type: mcp
+      name: pdf-extraction-mcp-extract-pdf-sections
+    - type: mcp
       name: pdf-extraction-mcp-get-analysis-results
     - type: mcp
       name: pdf-extraction-mcp-scout-pdf-for-ownership

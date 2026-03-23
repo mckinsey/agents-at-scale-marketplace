@@ -39,16 +39,13 @@ spec:
           - name: output-profile-json
           - name: output-profile-md
       steps:
-        - - name: merge-profile-sections
-            template: merge-profile-query
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
             arguments:
               parameters:
-                - name: profile-sections-dir
-                  value: "{{ "{{inputs.parameters.profile-sections-dir}}" }}"
-                - name: base-profile
-                  value: "{{ "{{inputs.parameters.base-profile}}" }}"
-                - name: output-profile-json
-                  value: "{{ "{{inputs.parameters.output-profile-json}}" }}"
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
         - - name: profile-json-to-markdown
             template: profile-json-to-markdown-query
             arguments:
@@ -58,7 +55,28 @@ spec:
                 - name: profile-md
                   value: "{{ "{{inputs.parameters.output-profile-md}}" }}"
 
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/output"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created output directories"
+
     - name: merge-profile-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: profile-sections-dir
@@ -86,14 +104,36 @@ spec:
 
               Read all JSON files from the profile sections directory: {{ "{{inputs.parameters.profile-sections-dir}}" }}/
               The expected section files are: ownership_structure.json, entities_vessels.json, key_controllers.json, adverse_media_screening.json, sanction_blacklist_screening.json, purpose_of_relationship.json, beneficial_ownership_tree.json.
-              Read each file individually using `mcp-filesystem-read-file`.
+              Read each file individually using `mcp-filesystem-read-file`. If a file does not exist, skip it.
 
               Merge the base profile with all profile sections into a single consolidated KYC profile JSON.
-              Preserve structure and ensure no data loss. Use clear section keys (e.g. ownership_structure, entities_vessels, key_controllers, adverse_media_screening, sanction_blacklist_screening, purpose_of_relationship).
+              Preserve ALL data — do not summarize or truncate. Include every entry from each section file.
 
+              The merged JSON MUST have these top-level keys in this order:
+              {
+                "inquiry_information": { ... from base profile ... },
+                "initial_profile": { ... from base profile (active_officers, geography, employees, company_website, basic_information, industry) ... },
+                "KYC Standards and Requirements": [ ... from base profile ... ],
+                "ownership_structure": { "entities_vessels": ..., "beneficial_owners": ... },
+                "key_controllers": [ ... from key_controllers.json ... ],
+                "screening": {
+                  "adverse_media_screening": [ ... from adverse_media_screening.json ... ],
+                  "blacklist_screening": [ ... from sanction_blacklist_screening.json ... ],
+                  "sanction_screening": [ ... from sanction_blacklist_screening.json ... ]
+                },
+                "purpose_of_relationship": [ ... from purpose_of_relationship.json ... ]
+              }
+
+              CRITICAL: Ensure the output JSON is valid. Every { must have a matching }. Every [ must have a matching ].
               You MUST use the `mcp-filesystem-write-file` tool to save the merged profile to: {{ "{{inputs.parameters.output-profile-json}}" }}
               Do NOT add /data or any other prefix to the path.
     - name: profile-json-to-markdown-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: profile-json
@@ -115,25 +155,71 @@ spec:
             timeout: 15m
             ttl: 24h
             input: |
-              Read the consolidated KYC profile JSON from: {{ "{{inputs.parameters.profile-json}}" }}
+              You will create a comprehensive KYC Markdown report by reading individual profile section files.
               Do NOT add /data or any other prefix to file paths when using MCP tools.
 
-              Convert it to a well-formatted MARKDOWN document (NOT JSON). The output MUST be valid Markdown (.md) format with headers, tables, and readable text.
+              Read these files one by one using `mcp-filesystem-read-file`:
+              1. Base profile: source_code_files/2-customer-due-diligence/input/kyc_profile.json
+              2. Key controllers: source_code_files/2-customer-due-diligence/profile_sections/key_controllers.json
+              3. Screening: source_code_files/2-customer-due-diligence/profile_sections/sanction_blacklist_screening.json
+              4. Adverse media: source_code_files/2-customer-due-diligence/profile_sections/adverse_media_screening.json
+              5. Purpose: source_code_files/2-customer-due-diligence/profile_sections/purpose_of_relationship.json
+              6. Ownership: source_code_files/2-customer-due-diligence/profile_sections/beneficial_ownership_tree.json
+              7. Entities: source_code_files/2-customer-due-diligence/profile_sections/entities_vessels.json
 
-              Main sections:
-              1. Inquiry information
-              2. Initial Profile
-              3. Requirements and KYC standards
-              4. Affiliates (4.1 Ownership structure: Entities/Vessels, 4.2 Ownership structure: Beneficial owners, 4.3 Key controllers)
-              5. Screening (5.1 Adverse media screening with Summary subsection, 5.2 Blacklist screening, 5.3 Sanction screening)
-              6. Purpose of relationship
+              If a file does not exist, skip it and note "No information available" in that section.
 
-              If a section is not available, write "No information available" under the section title.
-              Use Markdown TABLE format for 'Company Details', 'Basic Information', 'Active Officers', 'Affiliates', 'Screening'. For adverse media screening include columns for Relevance and Source.
+              Convert ALL data to a well-formatted MARKDOWN document. The output MUST be valid Markdown (.md) format.
 
-              IMPORTANT: The output MUST be Markdown, not JSON. Use # headers, | table | syntax, bullet points, and other Markdown formatting.
+              Use this EXACT structure:
 
-              You MUST use the `mcp-filesystem-write-file` tool to save the Markdown to: {{ "{{inputs.parameters.profile-md}}" }}
+              # Customer Profile for Associated British Foods plc
+
+              ## 1. Inquiry Information
+              #### 1.1 Company Details
+              (Table: Description | Information | Validation Status | Validation Source)
+              #### 1.2 Contact Details
+              (Bullet list)
+              #### 1.3 Inquiry Details
+              (Bullet list with products requested, account purpose, submitted documents)
+
+              ## 2. Initial Profile
+              #### 2.1 Active Officers
+              (Table: Name | Position | Appointed On | Nationality | Date of Birth | Country of Residency)
+              #### 2.2 Geography
+              #### 2.3 Employees
+              #### 2.4 Company Website
+              #### 2.5 Basic Information
+              (Table: Description | Information)
+              #### 2.6 Industry
+
+              ## 3. KYC Standards and Requirements
+              #### 3.1 Required Documents
+              #### 3.2 Required Checks
+
+              ## 4. Affiliates
+              #### 4.1 Ownership Structure: Entities/Vessels
+              #### 4.2 Ownership Structure: Beneficial Owners
+              #### 4.3 Key Controllers
+              (Table: Name | Role | Nationality | Country of Residency | Type | Blacklist Screening | Sanction List Screening)
+
+              ## 5. Screening
+              #### 5.1 Adverse Media Screening
+              (Summary paragraph, then for EACH subsection: a table with Text | Relevance columns, then Sources)
+              #### 5.2 Blacklist Screening
+              (Table: Name | Role | Nationality | Country of Residency | Type | Blacklist Screening)
+              #### 5.3 Sanction Screening
+              (Table: Name | Role | Nationality | Country of Residency | Type | Sanction List Screening)
+
+              ## 6. Purpose of Relationship
+              #### 6.1 Purpose of the Business Relationship
+              #### 6.2 Operational Needs
+              #### 6.3 Plausibility of the Business Relationship
+              (Table: Description | Information)
+
+              Include ALL data from the JSON — do not summarize or omit entries. Include source attributions and credibility scores where available.
+
+              CRITICAL: You MUST save the file using `mcp-filesystem-write-file`. The task is NOT complete until the file is written.
+              Save to: {{ "{{inputs.parameters.profile-md}}" }}
               Do NOT add /data or any other prefix to the path.
-              After saving, confirm the file was written successfully.
 {{- end }}

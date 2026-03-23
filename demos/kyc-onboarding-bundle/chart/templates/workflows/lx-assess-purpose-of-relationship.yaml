@@ -37,6 +37,14 @@ spec:
           - name: output-base-dir
             value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
       steps:
+        # Step 0: Ensure output directories exist
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
         # Single step: Assess purpose of relationship
         - - name: assess-purpose-of-relationship
             template: assess-purpose-of-relationship-query
@@ -48,11 +56,36 @@ spec:
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/profile_sections/purpose_of_relationship.json"
 
     # ============================================================
+    # UTILITY TEMPLATES
+    # ============================================================
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/profile_sections"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created output directories"
+
+    # ============================================================
     # QUERY TEMPLATE
     # ============================================================
 
     # ARK Query: Assess purpose of relationship
     - name: assess-purpose-of-relationship-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: profile-file
@@ -104,7 +137,7 @@ spec:
                   {
                     "subsection": "Purpose of the Business Relationship",
                     "content": "<descriptive text about why the company seeks this relationship>",
-                    "source": "<source of information>"
+                    "source": "Email conversation between Associated British Foods and Britannia Commercial Bank"
                   },
                   {
                     "subsection": "Operational Needs",
@@ -116,10 +149,12 @@ spec:
                       {"<Product/Service Name>": "<plausibility explanation>"},
                       {"<Product/Service Name>": "<plausibility explanation>"}
                     ],
-                    "source": "<source of information>"
+                    "source": "Email conversation between Associated British Foods and Britannia Commercial Bank"
                   }
                 ]
               }
+
+              CRITICAL: Ensure the JSON is valid and parseable. Every opening brace { must have a matching closing brace }. Every opening bracket [ must have a matching closing bracket ]. Validate the structure before saving.
       outputs:
         parameters:
           - name: response

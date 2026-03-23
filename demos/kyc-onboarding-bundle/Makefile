@@ -1,10 +1,11 @@
-.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents
+.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents
 
 NAMESPACE ?= $(or $(K8S_NAMESPACE),default)
 MCP_SOURCE_NAMESPACE ?= $(or $(MCP_NAMESPACE),default)
 RELEASE_NAME ?= kyc-onboarding-bundle
 FILESYSTEM_MCP_IMAGE ?= filesystem-mcp-server:latest
 PDF_EXTRACTION_MCP_IMAGE ?= pdf-extraction-mcp:latest
+COMPANIES_HOUSE_MCP_IMAGE ?= companies-house-mcp:latest
 WEB_RESEARCH_MCP_IMAGE ?= web-research-mcp:latest
 PERPLEXITY_ASK_MCP_IMAGE ?= perplexity-ask-mcp:latest
 DATA_SEEDER_IMAGE ?= kyc-demo-data-seeder
@@ -89,6 +90,18 @@ build-pdf-mcp:
 	@echo "Deploying pdf-extraction MCP..."
 	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/pdf-extraction-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
+
+build-companies-house-mcp:
+	@echo "Building companies-house MCP image..."
+	@docker build -t $(COMPANIES_HOUSE_MCP_IMAGE) ../../mcps/companies-house-mcp/
+	@if kubectl config current-context 2>/dev/null | grep -q minikube; then \
+		echo "Loading image into minikube..."; \
+		minikube image load $(COMPANIES_HOUSE_MCP_IMAGE); \
+	fi
+	@echo "Deploying companies-house MCP..."
+	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/companies-house-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@echo "Done."
+	@echo "NOTE: Create API key secret with: kubectl create secret generic companies-house-api-key --from-literal=api-key=YOUR_KEY"
 
 build-web-mcp:
 	@echo "Building web-research MCP image..."
@@ -206,17 +219,28 @@ delete-data-seeder-job:
 uninstall:
 	@echo "Uninstalling KYC Onboarding Bundle..."
 	@helm uninstall $(RELEASE_NAME) -n $(NAMESPACE) 2>/dev/null || true
+	@echo "Removing ARK custom resources..."
+	@kubectl delete agents -n $(NAMESPACE) -l bundle=kyc-onboarding --timeout=60s 2>/dev/null || true
+	@kubectl delete teams -n $(NAMESPACE) -l bundle=kyc-onboarding --timeout=60s 2>/dev/null || true
+	@kubectl delete models -n $(NAMESPACE) -l bundle=kyc-onboarding --timeout=60s 2>/dev/null || true
+	@kubectl delete tools -n $(NAMESPACE) -l bundle=kyc-onboarding --timeout=60s 2>/dev/null || true
+	@kubectl delete mcpservers -n $(NAMESPACE) -l bundle=kyc-onboarding --timeout=60s 2>/dev/null || true
+	@kubectl delete queries -n $(NAMESPACE) -l use-case=kyc-onboarding --timeout=30s 2>/dev/null || true
+	@kubectl delete workflows -n $(NAMESPACE) -l use-case=kyc-onboarding --timeout=30s 2>/dev/null || true
 	@kubectl delete rolebinding argo-workflow-default-access -n $(NAMESPACE) 2>/dev/null || true
-	@echo "Removing file-gateway and MCP resources..."
+	@echo "Removing MCP servers..."
+	@kubectl delete mcpserver pdf-extraction-mcp perplexity web-research-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete mcpserver -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete mcpserver -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@echo "Removing file-gateway and MCP deployments..."
 	@kubectl delete deployment -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
 	@kubectl delete deployment -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
-	@kubectl delete deployment pdf-extraction-mcp web-research-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
+	@kubectl delete deployment pdf-extraction-mcp web-research-mcp perplexity-ask-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
 	@kubectl delete service,serviceaccount,secret -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
-	@kubectl delete service,mcpserver,serviceaccount -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
-	@kubectl delete service pdf-extraction-mcp mcpserver pdf-extraction-mcp serviceaccount pdf-extraction-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
-	@kubectl delete service web-research-mcp mcpserver web-research-mcp serviceaccount web-research-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete service,serviceaccount -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete service pdf-extraction-mcp web-research-mcp perplexity-ask-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete serviceaccount pdf-extraction-mcp web-research-mcp perplexity-ask-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete httproute -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
-	@kubectl delete mcpserver -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@sleep 3
 	@kubectl delete pvc file-gateway-storage -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete pvc -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true

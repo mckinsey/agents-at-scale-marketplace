@@ -38,31 +38,28 @@ spec:
       serviceAccountName: pdf-extraction-mcp
       volumes:
       - name: mcp-filesystem-volume
-        hostPath:
-          path: /mnt/output
-          type: DirectoryOrCreate
+        persistentVolumeClaim:
+          claimName: file-gateway-storage
       containers:
       - name: pdf-extraction-mcp
-        image: pdf-extraction-mcp:latest
+        image: pdf-extraction-mcp:v2
         imagePullPolicy: Never
         ports:
         - containerPort: 8000
           name: http
         volumeMounts:
         - name: mcp-filesystem-volume
-          mountPath: /mnt/output
+          mountPath: /data
           readOnly: true
         env:
         - name: LLM_PROVIDER
           value: "openai"
         - name: LLM_MODEL
-          value: "gpt-4"
+          value: "gpt-4o"
         - name: LLM_BASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: ai-gateway-azure-openai
-              key: base-url
-              optional: true
+          value: "https://azure.prod.ai-gateway.quantumblack.com/6d3b969b-d376-4948-8e55-aa762149b982/openai/deployments/gpt-4o"
+        - name: LLM_API_VERSION
+          value: "2024-04-01-preview"
         - name: LLM_API_KEY
           valueFrom:
             secretKeyRef:

@@ -10,9 +10,7 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.webAnalyst.name }}
-  annotations:
-    helm.sh/hook: pre-install
-    helm.sh/hook-weight: "-1"
+  annotations: {}
   labels:
     project: kyc-onboarding
     role: analysis
@@ -238,6 +236,12 @@ spec:
       name: mcp-filesystem-write-file
     - type: mcp
       name: mcp-filesystem-list-directory
+    - type: mcp
+      name: web-research-mcp-get-web-research-results
+    - type: mcp
+      name: web-research-mcp-list-web-evidence
+    - type: mcp
+      name: web-research-mcp-research-ubo-web
     - type: built-in
       name: terminate
 {{- end }}

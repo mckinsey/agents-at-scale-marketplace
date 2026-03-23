@@ -48,6 +48,14 @@ spec:
           - name: execution-mode
             value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
+        # Step 0: Ensure output directories exist
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
         # Step 1: Get current date
         - - name: get-current-date
             template: get-current-date-script
@@ -99,6 +107,8 @@ spec:
 
         # Step 5: Determine relevance for each file
         - - name: determine-relevance
+            continueOn:
+              failed: true
             template: relevance-classification-query
             arguments:
               parameters:
@@ -135,6 +145,21 @@ spec:
     # ============================================================
     # UTILITY TEMPLATES
     # ============================================================
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate/adverse_media_screening" "$BASE/profile_sections" "$BASE/output" "$BASE/screening"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created output directories"
 
     # Get current date
     - name: get-current-date-script
@@ -263,27 +288,54 @@ spec:
               {{ "{{inputs.parameters.prompt}}" }}
 
               INSTRUCTIONS:
-              1. Use the 'web-research-mcp-research-ubo-web' tool to research adverse media information about the company
-              2. After collecting the information, save it to a JSON file using the 'mcp-filesystem-write-file' tool
-              3. Use the section name as part of the filename: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              1. Research adverse media information about the company using available web research tools:
+                 - Use 'web-research-mcp-research-ubo-web' to search for information about the company
+                 - Use 'web-research-mcp-get-web-research-results' to retrieve detailed results
+                 - Use 'web-research-mcp-list-web-evidence' to find additional evidence
+                 Try multiple search queries if the first one returns limited results. Include the company name and specific keywords from the research task in your queries.
+              2. Assess the reliability of each source using these rules:
+                 - high: Government/regulatory websites (SEC, FCA, Companies House), reputable news agencies (Reuters, Bloomberg, BBC, Financial Times, Law360), court records, audited corporate disclosures (annual reports, 10-K filings)
+                 - medium: Industry-specific publications, NGO reports, law firm publications, unaudited corporate disclosures (press releases), social media from verified accounts
+                 - low: Tabloid media, unverified social media, blogs, anonymous sources, outdated content
+              3. Save findings to a JSON file using the 'mcp-filesystem-write-file' tool
+              4. Use the section name as part of the filename: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
+
+              CRITICAL: You MUST save the JSON file. This is the most important step. Without the file, the entire workflow fails.
 
               The JSON MUST follow this exact LegacyX subsection format:
               {
                 "subsection": "{{ "{{inputs.parameters.section}}" }}",
                 "content": [
                   {
-                    "text": "<summary of the adverse media finding>",
-                    "source": "<URL or source reference>",
-                    "source_reliability_score": "high",
-                    "source_reliability_rationale": "<why this source is reliable>"
+                    "text": "<concise summary of the adverse media finding>",
+                    "relevance": [
+                      {
+                        "classification": "low|medium|high",
+                        "justification": "<brief explanation of the classification>",
+                        "confidence score": 8
+                      }
+                    ],
+                    "source": "[Source Name](URL)",
+                    "source_reliability_score": "high|medium|low",
+                    "source_reliability_rationale": "<rationale for the reliability score>"
                   }
                 ]
               }
 
               Each item in the "content" array represents one finding. Include all relevant findings for this section.
-              The "text" field should contain a concise summary of the finding.
-              Do NOT include a "relevance" field yet — that will be added in a later step.
+              The "text" field should contain a concise, factual summary of the finding.
+              The "source" field should be a markdown link: [Source Name](URL). Use "NA" if no source is available.
+
+              Relevance classification rules:
+              - "high": Direct and significant adverse information about the company (lawsuits, sanctions, fraud allegations, regulatory fines)
+              - "medium": Potentially relevant but indirect issues (industry-wide scandals, minor operational challenges, moderate financial decline)
+              - "low": Mentioned but not significantly relevant (general industry trends, proactive company policies, no adverse findings)
+              The "confidence score" should be 1-10 indicating how confident you are in the classification.
+
+              If there are NO relevant findings for this section, still save the file with empty content: {"subsection": "{{ "{{inputs.parameters.section}}" }}", "content": []}
+
+              PRIORITY: Saving the JSON file is MORE important than having perfect content. Research efficiently — do not use more than 2-3 search queries — then immediately format and save the JSON file. The task is NOT complete until the file is written.
       outputs:
         parameters:
           - name: response
@@ -443,24 +495,34 @@ spec:
               Read the adverse media screening results from: {{ "{{inputs.parameters.input-file}}" }}
               Do NOT add /data or any other prefix to file paths when using MCP tools.
 
-              Create a comprehensive summary of the adverse media screening in Markdown format.
+              Create a comprehensive summary of the adverse media screening in Markdown format following the EXACT structure below.
 
-              The summary should include:
-              1. Executive Summary
-              2. High Relevance Findings (if any)
-              3. Medium Relevance Findings (if any)
-              4. Low Relevance Findings (summary only)
-              5. Overall Risk Assessment
-              6. Recommendations
+              The report MUST have this structure:
 
-              For each finding, include:
-              - Title/headline
-              - Relevance classification
-              - Summary of the issue
-              - Sources
-              - Date of occurrence
+              # Adverse Media Screening Report
+              _<current date>_
 
-              Save the Markdown summary to: {{ "{{inputs.parameters.output-file}}" }}
+              ## Summary
+              | Category | Summary | Relevance | Source reliability score | Human review required |
+              | :--- | :--- | :--- | :--- | :--- |
+              <One row per subsection. Use colored spans for relevance and reliability:>
+              <**<span style="color: green"> low </span>** for low>
+              <**<span style="color: orange"> medium </span>** for medium>
+              <**<span style="color: red"> high </span>** for high>
+              <Human review required = "Yes" if any finding has high relevance, "No" otherwise>
+
+              ## Details
+              <For each subsection, create a sub-heading and a table:>
+
+              #### <subsection name>
+              | Description | Relevance | Source |
+              | :--- | :--- | :--- |
+              <One row per finding in the content array. Include:>
+              <Description: the text field>
+              <Relevance: colored span with classification, justification in italic, confidence score with colored span>
+              <Source: markdown link, reliability score and rationale in italic>
+
+              CRITICAL: You MUST save the Markdown file. Save to: {{ "{{inputs.parameters.output-file}}" }}
       outputs:
         parameters:
           - name: response

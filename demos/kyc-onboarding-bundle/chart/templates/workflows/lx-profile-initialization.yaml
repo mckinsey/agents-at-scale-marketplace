@@ -33,6 +33,12 @@ spec:
           - name: input-file
           - name: output-file
       steps:
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
         - - name: extract-email-information
             template: extract-email-query
             arguments:
@@ -41,6 +47,21 @@ spec:
                   value: "{{ "{{inputs.parameters.input-file}}" }}"
                 - name: output-file
                   value: "{{ "{{inputs.parameters.output-file}}" }}"
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate" "$BASE/output"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created intermediate and output directories"
 
     - name: extract-email-query
       inputs:

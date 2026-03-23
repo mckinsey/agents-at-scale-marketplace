@@ -44,6 +44,14 @@ spec:
           - name: execution-mode
             value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
+        # Step 0: Ensure output directories exist
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
         # Step 1: Load UK sanctions list
         - - name: load-sanctions-list
             template: load-uk-sanctions-list
@@ -186,6 +194,21 @@ spec:
     # UTILITY TEMPLATES
     # ============================================================
 
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/downloads" "$BASE/tmp" "$BASE/screening/blacklist_report" "$BASE/screening/sanction_report" "$BASE/profile_sections" "$BASE/output"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created output directories"
+
     # Get current date
     - name: get-current-date-script
       script:
@@ -228,6 +251,12 @@ spec:
 
     # ARK Query: Create screening list from multiple sources
     - name: create-screening-list-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: owners-file
@@ -249,25 +278,25 @@ spec:
               name: consolidation-analyst-agent
             input: |
               Read the following files using `mcp-filesystem-read-file`:
-              - Beneficial owners: {{ "{{inputs.parameters.owners-file}}" }}
               - Key controllers: {{ "{{inputs.parameters.key-controllers-file}}" }}
-              - Entities and vessels: {{ "{{inputs.parameters.entities-vessels-file}}" }}
               Do NOT add /data or any other prefix to file paths when using MCP tools.
 
-              Extract all person names and entity names that need to be screened.
+              Extract ONLY individual person names from the key controllers file.
+              From "Board of Directors": extract all board member names.
+              From "Board of Management": extract all management role names.
+
+              IMPORTANT: Only include PERSON names. Do NOT include:
+              - Company names or subsidiary entities
+              - Investment vehicles or trusts
+              - Any non-person entries
+
+              Deduplicate: if the same person appears in both Board of Directors and Board of Management, include them only ONCE.
 
               Create a YAML file with a list of names to screen in the following format:
 
               key_controllers:
                 - name: "Person Name 1"
                 - name: "Person Name 2"
-                - name: "Entity Name 1"
-
-              Include:
-              - All beneficial owners (direct and indirect)
-              - All key controllers (directors and management)
-              - All subsidiary entities
-              - All vessel names (if any)
 
               Save the YAML file to: {{ "{{inputs.parameters.output-file}}" }}
       outputs:
@@ -391,6 +420,12 @@ spec:
 
     # ARK Query: Screen name in document (uses filesystem read, not PDF tools)
     - name: screening-in-document-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: name
@@ -420,23 +455,28 @@ spec:
               Search for "{{ "{{inputs.parameters.name}}" }}" in the file content.
               Check if the name (or close variations) appears in the {{ "{{inputs.parameters.screening-type}}" }}.
 
+              Also read the key controllers file to get the person's role, nationality, and country of residence:
+              source_code_files/2-customer-due-diligence/profile_sections/key_controllers.json
+
               The JSON MUST follow this exact LegacyX format:
               {
                 "name": "{{ "{{inputs.parameters.name}}" }}",
                 "screening_type": "{{ "{{inputs.parameters.screening-type}}" }}",
-                "role": "<role if known, e.g. Director, CEO>",
-                "nationality": "<nationality if known>",
-                "country_of_residency": "<country if known>",
+                "role": "<role from key_controllers.json, e.g. Director, Chairman, CEO>",
+                "nationality": "<nationality from key_controllers.json, or 'not available'>",
+                "country_of_residency": "<country_of_residence from key_controllers.json, or 'not available'>",
                 "type": "key controller",
-                "screening_result": {
+                "{{ "{{inputs.parameters.screening-type}}" }} screening": {
                   "status": "not on {{ "{{inputs.parameters.screening-type}}" }}",
                   "confidence score": "10",
                   "justification": "<brief explanation of screening result>"
                 }
               }
 
-              If the person IS found on the list, set status to "on {{ "{{inputs.parameters.screening-type}}" }}" and lower the confidence score.
-              Use "not on {{ "{{inputs.parameters.screening-type}}" }}" when no match is found.
+              Screening status rules:
+              - "not on {{ "{{inputs.parameters.screening-type}}" }}": No match found (confidence score: 10)
+              - "possible match": Similar name found but not exact (confidence score: 3-7, explain the similarity)
+              - "on {{ "{{inputs.parameters.screening-type}}" }}": Exact match found (confidence score: 10)
 
               Calculate the hash of the name using MD5 for the filename.
               Save the result to: {{ "{{inputs.parameters.output-dir}}" }}/[name_hash].json
@@ -597,13 +637,37 @@ spec:
               You MUST use the `mcp-filesystem-write-file` tool to save the JSON to: {{ "{{inputs.parameters.json-output-file}}" }}
               Do NOT add /data or any other prefix to the path.
 
-              2. Also create a Markdown report with:
-              - Executive Summary
-              - Blacklist Screening Results (table with name, status, confidence)
-              - Sanctions Screening Results (table with name, status, confidence)
-              - Detailed Findings (for each hit)
-              - Risk Assessment
-              - Recommendations
+              2. Also create a Markdown report with this EXACT structure:
+
+              # Blacklist and UK Sanction List Screening Report
+              _<current date>_
+
+              ## Summary: Blacklist
+              - Individuals on list: <count or "None">
+              - Entities/vessels on list: <count or "None">
+              - Possible matches:
+                - **<name>** - <justification> - _Confidence_ **<span style="color: orange"><score></span>**
+                (or "None" if no possible matches)
+
+              ## Summary: UK Sanction list
+              - Individuals on list: <count or "None">
+              - Entities/vessels on list: <count or "None">
+              - Possible matches: <count or "None">
+
+              ## Details
+              #### Key controllers
+              For each person, list:
+              - <Name> (<nationality>, <country_of_residence>)
+                - **<span style="color: green">not on blacklist</span>** - <justification> - _Confidence_ **<span style="color: green"><score></span>**
+                - **<span style="color: green">not on sanction list</span>** - <justification> - _Confidence_ **<span style="color: green"><score></span>**
+
+              Use green for "not on" statuses, orange for "possible match", red for "on list".
+
+              #### Beneficial owners
+              - None (or list if any)
+
+              #### Entities and vessels
+              - None (or list if any)
 
               You MUST use the `mcp-filesystem-write-file` tool to save the Markdown to: {{ "{{inputs.parameters.md-output-file}}" }}
               Do NOT add /data or any other prefix to the path.

@@ -112,7 +112,7 @@ teams:
     enabled: true
     name: web-research-team
     strategy: sequential
-    maxTurns: 12
+    maxTurns: 18
   # Multi-source data consolidation (4 agents: planner→file-manager→analyst→critic, each needs multiple turns)
   consolidationTeam:
     enabled: true

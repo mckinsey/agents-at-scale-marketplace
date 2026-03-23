@@ -36,6 +36,12 @@ spec:
           - name: profile-md
           - name: risk-report
       steps:
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
         - - name: consolidate-and-validate
             template: consolidate-validate-query
             arguments:
@@ -60,6 +66,21 @@ spec:
                   value: "{{ "{{inputs.parameters.profile-json}}" }}"
                 - name: risk-report
                   value: "{{ "{{inputs.parameters.risk-report}}" }}"
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate" "$BASE/output"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created intermediate and output directories"
 
     - name: consolidate-validate-query
       inputs:
@@ -204,6 +225,8 @@ spec:
             ttl: 24h
             input: |
               You must complete this task yourself and save the output; do not hand off or terminate.
+
+              **CRITICAL — FILE OUTPUT REQUIRED:** Your task is NOT complete until you call mcp-filesystem-write-file to save the report. You MUST call mcp-filesystem-write-file with path: {{ "{{inputs.parameters.risk-report}}" }} and content: your full Markdown report. Do NOT just respond with the report text — you MUST save it to the file. Do NOT add /data or /mnt prefix to the path.
 
               Read the KYC profile from: {{ "{{inputs.parameters.profile-json}}" }} using mcp-filesystem-read-file.
 

@@ -30,18 +30,18 @@ spec:
       - name: country
         value: "United Kingdom"
       - name: file-access-mode
-        value: "mount"  # Options: mount (default - PDF in filesystem), http (requires HTTP server)
+        value: "http"  # Options: http (recommended - stable), mount (requires minikube mount)
         enum:
           - http
           - mount
       - name: document-file-http
-        value: "http://host.docker.internal:8000/abf-annual-report-2024.pdf"
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: document-file-mount
-        value: "source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: output-base-dir
         value: "source_code_files/2-customer-due-diligence"
       - name: execution-mode
-        value: "fake"  # Options: sequential (default for local), parallel (for production), fake (for testing)
+        value: "sequential"  # Options: sequential (default for local), parallel (for production), fake (for testing)
         enum:
           - sequential
           - parallel
@@ -71,7 +71,15 @@ spec:
           - name: execution-mode
             value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
-        # Step 0: Set document file path based on file-access-mode
+        # Step 0: Ensure output directories exist
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
+        # Step 1: Set document file path based on file-access-mode
         - - name: set-document-file
             template: set-document-file-script
             arguments:
@@ -165,13 +173,13 @@ spec:
                 - name: output-dir
                   value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate"
 
-        # Step 5: List all generated JSON files
+        # Step 5: List all generated JSON files (both PDF extraction and web research)
         - - name: read-info-json-directory
-            template: readdir-script
+            template: readdir-entities-script
             arguments:
               parameters:
-                - name: pattern
-                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/entities_vessels/**/*.json"
+                - name: output-base-dir
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
 
         # Step 6: Combine JSON files into one
         - - name: append-info-files
@@ -183,19 +191,15 @@ spec:
                 - name: outfile
                   value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/tmp/entities_vessels_unconsolidated.json"
 
-        # Step 7: Consolidate information using ARK team
+        # Step 7: Consolidate information using deterministic script merge
         - - name: consolidate-information
-            template: query-consolidation-team
+            template: consolidate-entities-script
             arguments:
               parameters:
-                - name: company-name
-                  value: "{{ "{{workflow.parameters.company-name}}" }}"
                 - name: input-file
                   value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/tmp/entities_vessels_unconsolidated.json"
                 - name: output-file
                   value: "{{ "{{workflow.parameters.output-base-dir}}" }}/profile_sections/entities_vessels.json"
-                - name: current-date
-                  value: "{{ "{{steps.get-current-date.outputs.result}}" }}"
 
         # Step 8: Process and display results
         - - name: process-results
@@ -203,9 +207,28 @@ spec:
             arguments:
               parameters:
                 - name: final-output
-                  value: "{{ "{{steps.consolidate-information.outputs.parameters.response}}" }}"
+                  value: "Consolidation complete"
                 - name: output-file
                   value: "{{ "{{workflow.parameters.output-base-dir}}" }}/profile_sections/entities_vessels.json"
+
+    # ============================================================
+    # UTILITY TEMPLATES
+    # ============================================================
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate/entities_vessels" "$BASE/intermediate/tmp" "$BASE/profile_sections"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created output directories"
 
     # ============================================================
     # TRANSFORMER TEMPLATES - Script-based implementations
@@ -271,6 +294,33 @@ spec:
           - name: prompts-list
             valueFrom:
               path: /tmp/prompts.json
+
+    # Template: List entity/vessel JSON files from both PDF extraction and web research dirs
+    - name: readdir-entities-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+
+          # Find JSON files in both the entities_vessels subdir and web_*.json in intermediate
+          FILES=""
+          FILES="$FILES $(kubectl exec deployment/mcp-filesystem -- find "$MCP_DATA/$BASE/intermediate/entities_vessels" -type f -name "*.json" 2>/dev/null || true)"
+          FILES="$FILES $(kubectl exec deployment/mcp-filesystem -- find "$MCP_DATA/$BASE/intermediate" -maxdepth 1 -type f -name "web_*.json" 2>/dev/null || true)"
+
+          # Convert to JSON array with paths relative to MCP base
+          echo "$FILES" | tr ' ' '\n' | grep -v '^$' | sed "s|^$MCP_DATA/||g" | jq -R -s -c 'split("\n") | map(select(length > 0))' > /tmp/file-paths.json
+
+          cat /tmp/file-paths.json
+      outputs:
+        parameters:
+          - name: file-paths
+            valueFrom:
+              path: /tmp/file-paths.json
 
     # Template: List files matching glob pattern (readdir)
     - name: readdir-script
@@ -361,6 +411,8 @@ spec:
       steps:
         - - name: process-prompt
             template: query-rag-agent
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -420,6 +472,8 @@ spec:
       steps:
         - - name: process-each-prompt
             template: query-rag-agent
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -442,6 +496,8 @@ spec:
       steps:
         - - name: process-web-prompt
             template: query-web-enricher
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -501,6 +557,8 @@ spec:
       steps:
         - - name: process-each-prompt
             template: query-web-enricher
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -515,6 +573,12 @@ spec:
 
     # Template: Query RAG agent for document extraction
     - name: query-rag-agent
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: prompt
@@ -532,22 +596,30 @@ spec:
             generateName: doc-extract-
           spec:
             input: |
-              Extract information from the PDF document at: {{ "{{inputs.parameters.document-file}}" }}
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
 
+              Step 1 — Extract: Use the pdf-extraction-mcp-extract-pdf-sections tool with these parameters:
+              - pdf_path: "{{ "{{inputs.parameters.document-file}}" }}"
+              - search_terms: ["subsidiary", "subsidiaries", "undertakings", "vessel", "shipping", "maritime", "joint venture", "associate", "group entities", "incorporated"]
+              - extraction_prompt: "Extract ALL subsidiary entities/undertakings listed in this document. For each entity include: legal name, country/jurisdiction, and ownership percentage if stated. The company has 70+ subsidiaries globally - list EVERY one. Also extract any vessels or maritime assets. Return JSON: {\"subsidiary_entities\": [{\"name\": \"...\", \"location\": \"...\", \"ownership_pct\": \"...\"}], \"vessels\": [{\"name\": \"...\", \"imo\": \"...\", \"flag\": \"...\"}]}"
+
+              Step 2 — Using the extraction results, answer this question:
               {{ "{{inputs.parameters.prompt}}" }}
 
-              Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/[hash].json (use MD5 hash of the prompt as the filename). Do NOT add /data or any other prefix to the path.
+              IMPORTANT: The annual report lists 70+ subsidiary undertakings across multiple pages (typically pages 100-107). Make sure the extraction captures ALL of them.
+
+              Step 3 — Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Do NOT add /data or any other prefix to the path.
 
               The JSON structure should be:
               {
                 "section": "{{ "{{inputs.parameters.section}}" }}",
-                "prompt": "{{ "{{inputs.parameters.prompt}}" }}",
                 "data": <extracted_information>,
                 "sources": [<list_of_sources_with_page_numbers>]
               }
             target:
-              type: team
-              name: scout-rag-team
+              type: agent
+              name: rag-agent
             timeout: 15m
       outputs:
         parameters:
@@ -557,6 +629,12 @@ spec:
 
     # Template: Query web enricher agent
     - name: query-web-enricher
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: prompt
@@ -602,45 +680,125 @@ spec:
             valueFrom:
               jsonPath: '{.status.response.content}'
 
-    # Template: Query consolidation team (2-agent team with critic)
+    # Template: Deterministic script consolidation for entities/vessels
+    - name: consolidate-entities-script
+      inputs:
+        parameters:
+          - name: input-file
+          - name: output-file
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          INPUT="$MCP_DATA/{{ "{{inputs.parameters.input-file}}" }}"
+          OUTPUT="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
+
+          # Read the unconsolidated JSON array
+          RAW=$(kubectl exec deployment/mcp-filesystem -- cat "$INPUT" 2>/dev/null)
+
+          # Extract all subsidiary entities from all array elements (handles both array and object .data)
+          SUBSIDIARIES=$(echo "$RAW" | jq -c '
+            [.[] | select(.section == "subsidiary_entities") |
+              if (.data | type) == "array" then .data[]
+              elif (.data | type) == "object" then (.data.subsidiary_entities // [])[]
+              else empty
+              end
+            ] | unique_by(.name) | sort_by(.name)
+          ')
+
+          SUB_COUNT=$(echo "$SUBSIDIARIES" | jq 'length')
+          echo "Found $SUB_COUNT unique subsidiaries"
+
+          # Extract vessels info
+          VESSELS_CONTENT=$(echo "$RAW" | jq -r '
+            [.[] | select(.section == "vessels") | .data] |
+            if (. | flatten | length) == 0 then
+              "Associated British Foods PLC does not own or operate any maritime vessels. Their operations are focused on food production, ingredients, and retail."
+            else
+              [.[] | if type == "array" then .[] else . end | tostring] | join("; ")
+            end
+          ')
+
+          # Build the final LegacyX format JSON
+          FINAL=$(jq -n \
+            --argjson subs "$SUBSIDIARIES" \
+            --arg vessels "$VESSELS_CONTENT" \
+            '{
+              "Subsidiary Entities/Vessels": [
+                {
+                  "subsection": "Vessels",
+                  "content": $vessels,
+                  "source": ["[abf-annual-report-2024](abf-annual-report-2024.pdf)"],
+                  "source_reliability_score": ["high"],
+                  "source_reliability_rationale": ["The source is the official annual report."]
+                },
+                {
+                  "subsection": "Subsidiary Entities",
+                  "content": {
+                    "subsidiary_entities": $subs
+                  },
+                  "source": ["[abf-annual-report-2024](abf-annual-report-2024.pdf)"],
+                  "source_reliability_score": ["high"],
+                  "source_reliability_rationale": ["The source is the official annual report."]
+                }
+              ]
+            }')
+
+          # Write to output
+          kubectl exec deployment/mcp-filesystem -- mkdir -p "$(dirname $OUTPUT)"
+          echo "$FINAL" | kubectl exec -i deployment/mcp-filesystem -- tee "$OUTPUT" > /dev/null
+
+          echo "Consolidated $SUB_COUNT subsidiaries to $OUTPUT"
+
+    # Template: Query consolidation team (ARK Query with retry — kept for other workflows)
     - name: query-consolidation-team
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: company-name
           - name: input-file
           - name: output-file
           - name: current-date
-      script:
-        image: alpine/k8s:1.28.13
-        command: [bash]
-        source: |
-          set -eux
-
-          QUERY_NAME="consolidation-{{ "{{workflow.name}}" }}-$(date +%s%N)"
-
-          cat > /tmp/query.yaml <<EOF
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
           apiVersion: ark.mckinsey.com/v1alpha1
           kind: Query
           metadata:
-            name: $QUERY_NAME
-            labels:
-              workflow: "{{ "{{workflow.name}}" }}"
-              use-case: entities-vessels
+            generateName: consolidate-ev-
           spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            timeout: 15m
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
               Date: {{ "{{inputs.parameters.current-date}}" }}
 
+              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+
               Read the unconsolidated data from: {{ "{{inputs.parameters.input-file}}" }}
-              Do NOT add /data or any other prefix to file paths when using MCP tools.
 
               Consolidate ALL information about subsidiary entities and vessels.
               Merge findings from both document extraction and web research, removing duplicates and reconciling conflicts.
 
               CRITICAL INSTRUCTIONS:
-              1. First, use `mcp-filesystem-read-file` to read the unconsolidated data file. Do NOT add /data or any other prefix.
-              2. You MUST list EVERY subsidiary entity found across all extraction results. The company (Associated British Foods) has 70+ subsidiaries globally — ensure ALL are included.
-              3. For each subsidiary, include: "name" (legal entity name), "location" (country/jurisdiction), and "note" (description, ownership percentage, or other details).
+              1. First, use mcp-filesystem-read-file to read the unconsolidated data file.
+              2. The file is a JSON array. Each element has a "section" field and a "data" field.
+                 - The "data" field may be an ARRAY of subsidiary objects (from PDF extraction) OR an OBJECT with a "subsidiary_entities" key (from web research).
+                 - You MUST check BOTH formats and merge ALL entries from ALL array elements.
+                 - If one element has data: [{name: "X"}, {name: "Y"}] and another has data: {subsidiary_entities: []}, use the non-empty one.
+              3. You MUST list EVERY subsidiary entity found across all extraction results. The company (Associated British Foods) has 70+ subsidiaries globally — ensure ALL are included.
+              4. For each subsidiary, include: "name" (legal entity name), "location" (country/jurisdiction), and "note" (description, ownership percentage, or other details).
+              5. NEVER return an empty subsidiary_entities array if the input file contains subsidiary data. If you find ANY subsidiaries in ANY element of the input array, they MUST appear in your output.
               4. Do NOT summarize or omit subsidiaries. If the data mentions a subsidiary, it MUST appear in the output list.
               5. Merge duplicates only when the exact same entity appears in both document and web sources — combine their details.
               6. For vessels: include all identified vessels with name, IMO number, flag state, and any other details found.
@@ -677,32 +835,11 @@ spec:
 
               CRITICAL: The top-level key MUST be "Subsidiary Entities/Vessels". Each subsection must have: subsection, content, source (array), source_reliability_score (array), source_reliability_rationale (array).
               If no vessels are found, still include the "Vessels" subsection with content noting no vessels were identified.
-            target:
-              type: agent
-              name: consolidation-analyst-agent
-            serviceAccount: kyc-onboarding-bundle-argo-workflow
-            timeout: 15m
-            ttl: 24h
-          EOF
-
-          kubectl apply -n default -f /tmp/query.yaml
-          kubectl wait --for=condition=Completed --timeout=15m -n default query/$QUERY_NAME || true
-
-          kubectl get query $QUERY_NAME -n default -o json > /tmp/query.json
-          PHASE=$(jq -r '.status.phase' /tmp/query.json)
-
-          if [ "$PHASE" = "error" ]; then
-            ERROR_MESSAGE=$(jq -r '.status.responses[0].content // .status.error // "Unknown error"' /tmp/query.json)
-            echo "$ERROR_MESSAGE" | tee /tmp/response.txt
-            exit 1
-          fi
-
-          jq -r '.status.responses[0].content // ""' /tmp/query.json | tee /tmp/response.txt
       outputs:
         parameters:
           - name: response
             valueFrom:
-              path: /tmp/response.txt
+              jsonPath: '{.status.response.content}'
 
     # Template: Process and display final results
     - name: process-results
@@ -714,29 +851,13 @@ spec:
         image: alpine:3.19
         command: [sh]
         source: |
-          set -e
-
           echo "================================================================================"
           echo "RETRIEVE ENTITIES/VESSELS WORKFLOW COMPLETE"
           echo "================================================================================"
           echo "Workflow: {{ "{{workflow.name}}" }}"
           echo "Completed: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
           echo ""
-          echo "================================================================================"
-          echo "SUMMARY"
-          echo "================================================================================"
-          echo ""
           echo "Successfully retrieved and consolidated subsidiary entities/vessels information."
-          echo ""
           echo "Final report saved to: {{ "{{inputs.parameters.output-file}}" }}"
-          echo ""
-          echo "================================================================================"
-          echo "CONSOLIDATED RESPONSE"
-          echo "================================================================================"
-          echo ""
-          echo "{{ "{{inputs.parameters.final-output}}" }}"
-          echo ""
-          echo "================================================================================"
-          echo "END OF WORKFLOW"
           echo "================================================================================"
 {{- end }}

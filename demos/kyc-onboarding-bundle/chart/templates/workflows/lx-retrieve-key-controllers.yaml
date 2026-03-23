@@ -27,7 +27,7 @@ spec:
       - name: company-name
         value: "ASSOCIATED BRITISH FOODS PLC"
       - name: document-file
-        value: "/data/data/pdfs/abf-annual-report-2024.pdf"
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: output-base-dir
         value: "source_code_files/2-customer-due-diligence"
       - name: execution-mode
@@ -52,6 +52,14 @@ spec:
           - name: execution-mode
             value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
+        # Step 0: Ensure output directories exist
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
         # Step 1: Get current date
         - - name: get-current-date
             template: get-current-date-script
@@ -140,7 +148,7 @@ spec:
                 - name: output-file
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/tmp/key_controllers_unconsolidated.json"
 
-        # Step 7: Consolidate information
+        # Step 7: Consolidate information (LLM-based — merges sources, deduplicates, enforces schema)
         - - name: consolidate-information
             template: consolidate-key-controllers-query
             arguments:
@@ -157,6 +165,21 @@ spec:
     # ============================================================
     # UTILITY TEMPLATES
     # ============================================================
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate/key_controllers" "$BASE/intermediate/tmp" "$BASE/profile_sections"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created output directories"
 
     # Get current date
     - name: get-current-date-script
@@ -212,6 +235,8 @@ spec:
       steps:
         - - name: process-prompt
             template: doc-extract-query
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -237,6 +262,8 @@ spec:
       steps:
         - - name: process-all-prompts
             template: doc-extract-query
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -262,6 +289,8 @@ spec:
       steps:
         - - name: process-web-prompt
             template: web-data-query
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -287,6 +316,8 @@ spec:
       steps:
         - - name: process-all-web-prompts
             template: web-data-query
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -303,6 +334,12 @@ spec:
 
     # ARK Query: Extract information from document using RAG agent
     - name: doc-extract-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: prompt
@@ -326,20 +363,52 @@ spec:
             input: |
               Current date: {{ "{{inputs.parameters.current-date}}" }}
 
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
+
+              Step 1 — Extract: Use the pdf-extraction-mcp-extract-pdf-sections tool with these parameters:
+              - pdf_path: "{{ "{{inputs.parameters.document-file}}" }}"
+              - search_terms: ["director", "chairman", "board", "appointed", "independent", "non-executive", "executive", "officer", "committee", "senior management", "governance"]
+              - extraction_prompt: "Extract ALL board members and key management personnel. For each person include: full name (as printed in the document), role/title, appointment date, nationality, date of birth, country of residence, independence status (independent/non-independent/executive), tenure, and any committee memberships. Return JSON: {\"board_members\": [{\"name\": \"...\", \"role\": \"...\", \"appointed_on\": \"...\", \"nationality\": \"...\", \"date_of_birth\": \"...\", \"country_of_residence\": \"...\", \"independence_status\": \"...\", \"tenure\": \"...\"}], \"management_roles\": [{\"name\": \"...\", \"role\": \"...\"}]}"
+
+              Step 2 — Answer this question using the extracted data:
               {{ "{{inputs.parameters.prompt}}" }}
 
-              Use the `pdf-extraction-mcp-analyze-pdf-ownership` tool to extract information from the PDF file at: {{ "{{inputs.parameters.document-file}}" }}
+              Important: Only include ACTIVE members. Exclude anyone who has resigned, stepped down, or whose tenure has ended.
 
-              After extracting the information, save it to a JSON file using the `filesystem-write-file` tool.
-
-              Save the output file to: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Step 3 — Save the extracted information as a JSON file using mcp-filesystem-write-file.
+              Save to: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
 
               The JSON structure should follow this format:
               {
                 "section": "{{ "{{inputs.parameters.section}}" }}",
                 "prompt": "{{ "{{inputs.parameters.prompt}}" }}",
-                "data": <extracted_information>,
+                "data": {
+                  "board_members": [
+                    {
+                      "name": "<full name>",
+                      "role": "<role/title>",
+                      "appointed_on": "<YYYY-MM-DD>",
+                      "nationality": "<nationality>",
+                      "date_of_birth": "<birth info>",
+                      "country_of_residence": "<country>",
+                      "independence_status": "<independent|not independent|executive>",
+                      "tenure": "<tenure info>",
+                      "source": ["<[document name](document path)>"],
+                      "source_reliability_score": ["high"],
+                      "source_reliability_rationale": ["The source is the official annual report."]
+                    }
+                  ],
+                  "management_roles": [
+                    {
+                      "name": "<full name>",
+                      "role": "<role>",
+                      "source": ["<[document name](document path)>"],
+                      "source_reliability_score": ["high"],
+                      "source_reliability_rationale": ["The source is the official annual report."]
+                    }
+                  ]
+                },
                 "sources": [<list_of_sources_with_page_numbers>]
               }
       outputs:
@@ -350,6 +419,12 @@ spec:
 
     # ARK Query: Collect web data using web enricher agent
     - name: web-data-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: prompt
@@ -378,7 +453,14 @@ spec:
 
               Use the `web-research-mcp-research-ubo-web` tool to research information about the company.
 
-              After collecting the information, save it to a JSON file using the `filesystem-write-file` tool.
+              Important: Only include ACTIVE members. Exclude anyone who has resigned, stepped down, or whose tenure has ended.
+
+              After collecting the information, assess the reliability of each source and assign a score using these rules:
+              - high: Government and regulatory websites (e.g., Companies House, SEC, FCA), reputable news agencies (Reuters, Bloomberg, BBC, Financial Times), court records, audited corporate disclosures (annual reports, 10-K filings)
+              - medium: Industry-specific publications, NGO reports, unaudited corporate disclosures (press releases), social media from verified accounts
+              - low: Tabloid media, unverified social media, blogs, anonymous sources, outdated content
+
+              Save the output to a JSON file using the `filesystem-write-file` tool.
 
               Save the output file to: {{ "{{inputs.parameters.output-dir}}" }}/web_{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
@@ -388,7 +470,32 @@ spec:
                 "section": "{{ "{{inputs.parameters.section}}" }}",
                 "prompt": "{{ "{{inputs.parameters.prompt}}" }}",
                 "company": "{{ "{{inputs.parameters.company-name}}" }}",
-                "data": <researched_information>,
+                "data": {
+                  "board_members": [
+                    {
+                      "name": "<full name>",
+                      "role": "<role/title>",
+                      "appointed_on": "<YYYY-MM-DD>",
+                      "nationality": "<nationality>",
+                      "date_of_birth": "<birth info>",
+                      "country_of_residence": "<country>",
+                      "independence_status": "<independent|not independent|executive>",
+                      "tenure": "<tenure info>",
+                      "source": ["<[source name](url)>"],
+                      "source_reliability_score": ["high|medium|low"],
+                      "source_reliability_rationale": ["<rationale>"]
+                    }
+                  ],
+                  "management_roles": [
+                    {
+                      "name": "<full name>",
+                      "role": "<role>",
+                      "source": ["<[source name](url)>"],
+                      "source_reliability_score": ["high|medium|low"],
+                      "source_reliability_rationale": ["<rationale>"]
+                    }
+                  ]
+                },
                 "sources": [<list_of_web_sources>]
               }
       outputs:
@@ -463,8 +570,93 @@ spec:
 
           echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
 
-    # ARK Query: Consolidate key controllers information
+    # DEPRECATED: Deterministic script consolidation — replaced by consolidate-key-controllers-query
+    # Kept for reference; remove once LLM consolidation is validated
+    - name: consolidate-key-controllers-script
+      inputs:
+        parameters:
+          - name: intermediate-dir
+          - name: output-file
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          INT_DIR="$MCP_DATA/{{ "{{inputs.parameters.intermediate-dir}}" }}"
+          OUTPUT="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
+
+          # Get file list
+          FILES=$(kubectl exec deployment/mcp-filesystem -- find "$INT_DIR" -type f -name "*.json" 2>/dev/null)
+          echo "Found files: $FILES"
+
+          # Read each file and write to temp files, then slurp
+          > /tmp/all_files.json
+          for f in $FILES; do
+            kubectl exec deployment/mcp-filesystem -- cat "$f" 2>/dev/null >> /tmp/all_files.json
+            echo "" >> /tmp/all_files.json
+          done
+
+          # Use jq slurp to combine (handles multiple JSON objects in one file)
+          jq -s '.' /tmp/all_files.json > /tmp/raw.json 2>/dev/null || echo "[]" > /tmp/raw.json
+          echo "Combined $(jq 'length' /tmp/raw.json) entries"
+
+          # Extract board members
+          jq -c '
+            [.[] | select(.data != null) |
+              if (.data | type) == "object" then
+                (.data.board_members // [])[]
+              elif (.data | type) == "array" then
+                .data[] | select(.name != null)
+              else empty end
+            ] | unique_by(.name) | sort_by(.name)
+          ' /tmp/raw.json > /tmp/board.json 2>/dev/null || echo "[]" > /tmp/board.json
+
+          # Extract management roles
+          jq -c '
+            [.[] | select(.data != null) |
+              if (.data | type) == "object" then
+                (.data.management_roles // [])[]
+              else empty end
+            ] | unique_by(.name // .role) | sort_by(.name // .role)
+          ' /tmp/raw.json > /tmp/mgmt.json 2>/dev/null || echo "[]" > /tmp/mgmt.json
+
+          BOARD_COUNT=$(jq 'length' /tmp/board.json)
+          MGMT_COUNT=$(jq 'length' /tmp/mgmt.json)
+          echo "Found $BOARD_COUNT board members, $MGMT_COUNT management roles"
+
+          # Build final JSON using file-based jq (avoids shell escaping issues)
+          jq -n \
+            --slurpfile board /tmp/board.json \
+            --slurpfile mgmt /tmp/mgmt.json \
+            '{
+              "key_controllers": [
+                {
+                  "subsection": "Board of Directors",
+                  "content": {
+                    "board_members": $board[0]
+                  }
+                },
+                {
+                  "subsection": "Board of Management",
+                  "content": {
+                    "management_roles": $mgmt[0]
+                  }
+                }
+              ]
+            }' > /tmp/final.json
+
+          kubectl exec deployment/mcp-filesystem -- mkdir -p "$(dirname $OUTPUT)"
+          cat /tmp/final.json | kubectl exec -i deployment/mcp-filesystem -- tee "$OUTPUT" > /dev/null
+          echo "Wrote $BOARD_COUNT board members + $MGMT_COUNT mgmt roles to $OUTPUT"
+
+    # ARK Query: Consolidate key controllers information (ACTIVE — used by Step 7)
     - name: consolidate-key-controllers-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: company-name
@@ -487,19 +679,23 @@ spec:
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
 
-              Read the unconsolidated key controllers data from: {{ "{{inputs.parameters.input-file}}" }}
-              Read the existing customer profile data from: {{ "{{inputs.parameters.profile-file}}" }}
+              You are a KYC expert consolidating key controllers information from multiple sources.
+
+              Step 1: Read the unconsolidated key controllers data from: {{ "{{inputs.parameters.input-file}}" }}
+              Step 2: Read the existing customer profile data from: {{ "{{inputs.parameters.profile-file}}" }}
               Do NOT add /data or any other prefix to file paths when using MCP tools.
 
-              Goal: Consolidate different sources of output to determine the key controllers of the company.
-              The output should only contain the key controllers of the company, split into two subsections:
-              'Board of Directors' and 'Board of Management'.
+              Step 3: Consolidate following these rules:
+              - Identify subsections with similar content from different sources and map to overarching subsections
+              - The output must have exactly two subsections: "Board of Directors" and "Board of Management"
+              - ONLY include ACTIVE members — exclude anyone who has resigned, stepped down, or whose tenure has ended
+              - DEDUPLICATION (CRITICAL): Each person must appear EXACTLY ONCE in the board_members list. The same individual may appear in multiple source files under slightly different names (e.g., "Heather Rabbatts" vs "Heather Victoria Rabbatts", "Annie Murphy" vs "Anne Louise Murphy"). You MUST match these as the same person and merge their data into a single entry. When merging, prefer the full legal name from Companies House, combine all sources into one source array, and use the most complete data for each field. After building the final list, verify there are no duplicate names before saving.
+              - If content is in conflict between sources, highlight the discrepancies
+              - If multiple sources confirm content, include ALL sources in the source array
+              - From the customer profile, extract information on key controllers (Directors, Managers, C-suite, executives) — this is very reliable and should be included
+              - Use full legal names as they appear in official sources (e.g., Companies House)
 
-              From the customer profile, extract information on key controllers (Directors, Managers, C-suite, executives).
-              Do not use general information on the company, but only information on key controllers.
-              This information is very reliable and should be included.
-
-              Save the consolidated result to: {{ "{{inputs.parameters.output-file}}" }}
+              Step 4: Save the consolidated result to: {{ "{{inputs.parameters.output-file}}" }}
 
               The JSON MUST follow this exact LegacyX format:
               {
@@ -513,11 +709,13 @@ spec:
                           "role": "Chairman",
                           "appointed_on": "2020-01-15",
                           "nationality": "British",
-                          "independence_status": "Independent Non-Executive",
-                          "tenure": "4 years",
-                          "source": ["Annual Report 2024", "Companies House"],
+                          "date_of_birth": "born in March 1964",
+                          "country_of_residence": "United Kingdom",
+                          "independence_status": "independent",
+                          "tenure": "since 2020",
+                          "source": ["<[abf-annual-report-2024.pdf](abf-annual-report-2024.pdf)>", "<[UK Company Info](https://api.companieshouse.gov.uk/company/00293262/officers)>"],
                           "source_reliability_score": ["high", "high"],
-                          "source_reliability_rationale": ["Official company publication", "Government registry"]
+                          "source_reliability_rationale": ["The source is the official annual report.", "The source is an official UK government website, which is a reputable source for company information."]
                         }
                       ]
                     }
@@ -529,9 +727,9 @@ spec:
                         {
                           "name": "Person Name",
                           "role": "Chief Executive Officer",
-                          "source": ["Annual Report 2024"],
+                          "source": ["<[UK Company Info](https://api.companieshouse.gov.uk/company/00293262/officers)>"],
                           "source_reliability_score": ["high"],
-                          "source_reliability_rationale": ["Official company publication"]
+                          "source_reliability_rationale": ["The source is an official UK government website, which is a reputable source for company information."]
                         }
                       ]
                     }
@@ -539,7 +737,13 @@ spec:
                 ]
               }
 
-              CRITICAL: The top-level key MUST be "key_controllers". Each entry must have "subsection" and "content" fields. Board members must include: name, role, appointed_on, nationality, independence_status, tenure, source (array), source_reliability_score (array), source_reliability_rationale (array). Management roles must include: name, role, source (array), source_reliability_score (array), source_reliability_rationale (array).
+              CRITICAL SCHEMA REQUIREMENTS:
+              - The top-level key MUST be "key_controllers"
+              - Each entry must have "subsection" and "content" fields
+              - Board members MUST include ALL of: name, role, appointed_on, nationality, date_of_birth, country_of_residence, independence_status, tenure, source (array), source_reliability_score (array), source_reliability_rationale (array)
+              - Management roles MUST include ALL of: name, role, source (array), source_reliability_score (array), source_reliability_rationale (array)
+              - Sources must be formatted as markdown links: "<[link name](url)>"
+              - Source reliability scores must be: "high", "medium", or "low"
       outputs:
         parameters:
           - name: response

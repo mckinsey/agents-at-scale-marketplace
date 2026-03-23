@@ -34,13 +34,13 @@ spec:
           - http
           - mount
       - name: document-file-http
-        value: "http://host.docker.internal:8000/abf-annual-report-2024.pdf"
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: document-file-mount
-        value: "/data/data/pdfs/abf-annual-report-2024.pdf"
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: output-base-dir
         value: "source_code_files/2-customer-due-diligence"
       - name: execution-mode
-        value: "fake"  # Options: sequential, parallel, fake (for testing)
+        value: "sequential"  # Options: sequential, parallel, fake (for testing)
         enum:
           - sequential
           - parallel
@@ -320,6 +320,8 @@ spec:
       steps:
         - - name: process-prompt
             template: doc-extract-query
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -342,6 +344,8 @@ spec:
       steps:
         - - name: process-all-prompts
             template: doc-extract-query
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -393,6 +397,12 @@ spec:
 
     # ARK Query: Extract information from document using Scout-RAG team
     - name: doc-extract-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: prompt
@@ -410,17 +420,24 @@ spec:
             generateName: doc-extract-
           spec:
             input: |
-              Extract information from the PDF document at: {{ "{{inputs.parameters.document-file}}" }}
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
 
+              Step 1 — Scout: Use pdf-extraction-mcp-scout-pdf-for-ownership to find ownership-relevant pages in the PDF at: {{ "{{inputs.parameters.document-file}}" }}
+              Use search terms: ["owner", "ownership", "beneficial", "shareholder", "stake", "voting rights", "substantial", "major interest", "Wittington", "Garfield Weston", "share capital"]
+
+              Step 2 — Extract: Use pdf-extraction-mcp-analyze-pdf-ownership with the same PDF path and target_company "ASSOCIATED BRITISH FOODS PLC" to extract structured ownership data. The tool now intelligently reads ownership-relevant pages, not just the beginning of the document.
+
+              Step 3 — Answer this question using the extracted data:
               {{ "{{inputs.parameters.prompt}}" }}
 
-              Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/[hash].json (use MD5 hash of the prompt as the filename). Do NOT add /data or any other prefix to the path.
+              Step 3 — Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Do NOT add /data or any other prefix to the path.
 
               The JSON MUST follow this exact LegacyX subsection format:
               {
                 "subsection": "{{ "{{inputs.parameters.section}}" }}",
                 "content": <extracted_information>,
-                "source": "<source reference with page numbers>",
+                "source": "[abf-annual-report-2024](abf-annual-report-2024.pdf)",
                 "source_reliability_score": "high",
                 "source_reliability_rationale": "<why this source is reliable>"
               }
@@ -430,8 +447,8 @@ spec:
               - "source_reliability_score" should be "high", "medium", or "low"
               - "source_reliability_rationale" should explain why the source is reliable or not
             target:
-              type: team
-              name: scout-rag-team
+              type: agent
+              name: rag-agent
             timeout: 15m
       outputs:
         parameters:
@@ -532,6 +549,12 @@ spec:
 
     # ARK Query: Determine direct beneficial owners
     - name: determine-direct-beneficial-owners-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: company-name
@@ -595,6 +618,12 @@ spec:
 
     # ARK Query: Determine indirect beneficial owners
     - name: determine-indirect-beneficial-owners-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: owner-json
@@ -655,6 +684,12 @@ spec:
 
     # ARK Query: Create beneficial owner tree
     - name: create-beneficial-owner-tree-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: direct-owners-file
@@ -735,6 +770,12 @@ spec:
 
     # ARK Query: Consolidate ownership structure into LegacyX format
     - name: consolidate-ownership-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: company-name
@@ -773,41 +814,49 @@ spec:
               {
                 "ownership_structure": [
                   {
-                    "subsection": "Direct owners",
+                    "subsection": "direct_owners",
                     "content": {
                       "direct_owners": [
-                        {"name": "Owner Name", "percentage": "X%", "type": "entity/individual", "source": "..."}
-                      ]
+                        {"name": "<owner name>", "ownership_stake": "<X.X%>", "type": "<entity|individual|individuals>"},
+                        {"name": "<owner name>", "ownership_stake": "<X.X% or description>", "type": "<entity|individual|individuals>"}
+                      ],
+                      "combined_voting_rights": "<X.X%>"
                     },
-                    "source": ["<source references>"],
-                    "source_reliability_score": ["high"],
-                    "source_reliability_rationale": ["<rationale>"]
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
                   },
                   {
-                    "subsection": "Group structure",
+                    "subsection": "group_structure",
                     "content": "<narrative description of corporate group structure>",
-                    "source": ["<source references>"],
-                    "source_reliability_score": ["high"],
-                    "source_reliability_rationale": ["<rationale>"]
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
                   },
                   {
-                    "subsection": "Voting rights distribution",
+                    "subsection": "voting_rights_distribution",
                     "content": "<voting rights information>",
-                    "source": ["<source references>"],
-                    "source_reliability_score": ["high"],
-                    "source_reliability_rationale": ["<rationale>"]
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
                   },
                   {
-                    "subsection": "Historical changes",
+                    "subsection": "historical_changes",
                     "content": "<any historical ownership changes>",
-                    "source": ["<source references>"],
-                    "source_reliability_score": ["medium"],
-                    "source_reliability_rationale": ["<rationale>"]
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
                   }
                 ]
               }
 
-              CRITICAL: The top-level key MUST be "ownership_structure" containing an array of subsection objects. Each subsection must have: subsection, content, source (array), source_reliability_score (array), source_reliability_rationale (array).
+              CRITICAL FORMATTING RULES:
+              - The top-level key MUST be "ownership_structure" containing an array of subsection objects.
+              - Subsection names MUST be snake_case: "direct_owners", "group_structure", "voting_rights_distribution", "historical_changes".
+              - "source", "source_reliability_score", and "source_reliability_rationale" MUST be plain strings, NOT arrays.
+              - In the "direct_owners" subsection, each owner object uses "ownership_stake" (NOT "percentage") and "type" fields only — no "source" inside owner objects.
+              - Include "combined_voting_rights" in the direct_owners content if applicable.
+              - The direct_owners array MUST be populated with actual owners extracted from the data. Never return an empty direct_owners array.
       outputs:
         parameters:
           - name: response
@@ -816,6 +865,12 @@ spec:
 
     # ARK Query: Draw diagram
     - name: draw-diagram-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
       inputs:
         parameters:
           - name: company-name

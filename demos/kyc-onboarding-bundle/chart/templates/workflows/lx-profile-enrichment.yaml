@@ -33,6 +33,12 @@ spec:
           - name: company-name
           - name: company-number
       steps:
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
         - - name: enrich-web-data
             template: enrich-web-query
             arguments:
@@ -49,6 +55,21 @@ spec:
                   value: "{{ "{{inputs.parameters.company-number}}" }}"
                 - name: output-dir
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate"
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate" "$BASE/output"; do
+            kubectl exec deployment/mcp-filesystem -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created intermediate and output directories"
 
     - name: enrich-web-query
       inputs:
@@ -73,7 +94,7 @@ spec:
             ttl: 24h
             input: |
               **CRITICAL: You MUST save your output using mcp-filesystem-write-file. Do NOT just respond with text.**
-              
+
               Create an initial profile JSON for the company "{{ "{{inputs.parameters.company-name}}" }}". Include: company overview and description, industry and sector, key products/services, recent news or developments, basic financial or operational highlights. Use your knowledge, reasoning, or any available tools to populate the JSON. Structure it per your standard web research output format (business_overview, key_people, sources_consulted, research_status, etc.).
               
               You MUST then save the JSON file:
