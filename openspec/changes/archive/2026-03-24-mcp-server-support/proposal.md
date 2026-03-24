@@ -46,6 +46,7 @@ timeout: "30s"               →  (dropped — SDK uses 60s default, no per-serv
 
 ## Non-goals
 
+- New CRDs or changes to existing CRDs — this reuses the existing MCPServer and Tool CRDs unchanged (resolution logic is in [ark#1459](https://github.com/mckinsey/agents-at-scale-ark/pull/1459))
 - Changes to the ark-sdk (handled in separate change in bravo repo)
 - Support for non-MCP tool types (http, agent, team, builtin) — these are excluded by the ark-sdk
 - Per-server timeout configuration (SDK doesn't expose this)

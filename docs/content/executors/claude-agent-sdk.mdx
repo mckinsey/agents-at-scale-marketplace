@@ -12,6 +12,7 @@ Native Claude executor for ARK agents, built on the [Claude Agent SDK](https://p
 The Claude Agent SDK Executor provides:
 
 - **Built-in Tool Access** - Read, Write, Edit, Bash, Grep, Glob available out of the box
+- **MCP Tool Support** - MCP servers assigned to the agent are connected automatically alongside built-in tools
 - **Session Persistence** - Multi-turn conversations via `ClaudeSDKClient` with `continue_conversation`, persisted on a PVC
 - **Filesystem Isolation** - Each `conversationId` gets its own directory at `/data/sessions/<conversationId>/`
 - **OTEL Tracing** - Optional observability via `openinference-instrumentation-claude-agent-sdk`
@@ -118,6 +119,68 @@ Each conversation gets an isolated filesystem directory:
 - **New conversation**: A fresh directory is created, and the SDK starts a new session
 - **Continued conversation**: The SDK resumes the previous session via `continue_conversation`
 - **Pod restart**: Session data survives via the PersistentVolumeClaim (note: `~/.claude/` is ephemeral unless the home directory is also on persistent storage)
+
+## MCP Tools
+
+Agents can reference MCP-type tools in their spec. The executor resolves the backing MCPServer connection info (url, transport, headers) via the ark-sdk query extension and connects to each server using the Claude Agent SDK's native MCP support.
+
+### How it works
+
+1. The ark-sdk query extension resolves Tool CRDs → MCPServer CRDs, groups tools by server, and dereferences secrets in headers
+2. The executor maps each `MCPServerConfig` into the SDK's `mcp_servers` option (renaming `transport` → `type`)
+3. Each server's tool list acts as an **allowlist** — only tools the agent references are available, even if the server exposes more
+4. Built-in tools (Read, Write, Edit, Bash, Grep, Glob) remain available alongside MCP tools
+
+### Example
+
+Define an MCPServer and Tool CRDs:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: github-mcp
+spec:
+  address:
+    value: "http://github-mcp.default.svc.cluster.local:8080"
+  transport: http
+  timeout: 30s
+  headers:
+    - name: Authorization
+      valueFrom:
+        secretKeyRef:
+          name: github-token
+          key: token
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: github-mcp-search-repos
+spec:
+  type: mcp
+  mcp:
+    mcpServerRef:
+      name: github-mcp
+    toolName: search_repos
+```
+
+Reference the tools in your agent:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: my-claude-agent
+spec:
+  executionEngine:
+    name: executor-claude-agent-sdk
+  prompt: |
+    You are a helpful assistant with access to GitHub.
+  tools:
+    - name: github-mcp-search-repos
+```
+
+The Claude subprocess will have access to the `search_repos` tool via `mcp__github-mcp__search_repos`, in addition to all built-in tools.
 
 ## Configuration
 

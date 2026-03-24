@@ -3,9 +3,9 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
-from ark_sdk.executor import BaseExecutor, Message
+from ark_sdk.executor import BaseExecutor, MCPServerConfig, Message
 from ark_sdk.executor_app import is_otel_enabled
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 
@@ -32,6 +32,25 @@ class ClaudeAgentExecutor(BaseExecutor):
         self.model = os.getenv("ANTHROPIC_MODEL", DEFAULT_MODEL)
         logger.info(f"Claude Agent SDK executor initialized with model: {self.model}")
 
+    @staticmethod
+    def _build_mcp_options(mcp_servers: List[MCPServerConfig]) -> Tuple[Dict, List[str]]:
+        """Map Ark MCPServerConfig list to Claude SDK mcp_servers dict and allowed_tools list."""
+        sdk_servers: Dict[str, dict] = {}
+        allowed_tools: List[str] = []
+
+        for server in mcp_servers:
+            if not server.tools:
+                continue
+            sdk_servers[server.name] = {
+                "type": server.transport,
+                "url": server.url,
+                "headers": server.headers,
+            }
+            for tool_name in server.tools:
+                allowed_tools.append(f"mcp__{server.name}__{tool_name}")
+
+        return sdk_servers, allowed_tools
+
     async def execute_agent(self, request) -> List[Message]:
         """Execute agent using ClaudeSDKClient and return response messages."""
         conversation_id = request.conversationId
@@ -49,11 +68,23 @@ class ClaudeAgentExecutor(BaseExecutor):
         mangled = str(session_dir).replace("/", "-")
         sdk_session_dir = Path.home() / ".claude" / "projects" / mangled
         has_previous_session = sdk_session_dir.exists() and any(sdk_session_dir.iterdir())
+
+        mcp_kwargs: Dict = {}
+        mcp_servers = getattr(request, "mcpServers", None) or []
+        if mcp_servers:
+            sdk_servers, allowed_tools = self._build_mcp_options(mcp_servers)
+            if sdk_servers:
+                mcp_kwargs["mcp_servers"] = sdk_servers
+                mcp_kwargs["allowed_tools"] = allowed_tools
+                summary = ", ".join(f"{s.name} ({len(s.tools)} tools)" for s in mcp_servers if s.tools)
+                logger.info(f"Connecting {len(sdk_servers)} MCP servers: {summary}")
+
         options = ClaudeAgentOptions(
             model=self.model,
             cwd=str(session_dir),
             continue_conversation=has_previous_session,
             permission_mode="bypassPermissions",
+            **mcp_kwargs,
         )
         logger.info(f"{'Resuming' if has_previous_session else 'Starting new'} session for conversation {conversation_id}")
 

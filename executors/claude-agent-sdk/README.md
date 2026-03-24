@@ -54,6 +54,27 @@ spec:
 - Sessions persist across requests via `ClaudeSDKClient` with `continue_conversation`
 - Session data survives pod restarts via a PersistentVolumeClaim
 
+## MCP Tools
+
+Agents can reference MCP-type tools, and the executor will connect to the backing MCP servers alongside its built-in tools. The tool list per server acts as an allowlist — only referenced tools are available to the agent.
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: my-claude-agent
+spec:
+  executionEngine:
+    name: executor-claude-agent-sdk
+  prompt: |
+    You are a helpful assistant with access to GitHub.
+  tools:
+    - name: github-mcp-search-repos
+    - name: github-mcp-create-issue
+```
+
+The executor maps each MCPServer's resolved connection info (url, transport, headers) into the Claude Agent SDK's native `mcp_servers` option. Built-in tools (Read, Write, Edit, Bash, Grep, Glob) remain available.
+
 ## Configuration
 
 | Variable | Description | Default |
