@@ -1,0 +1,11 @@
+# Default values for ark-marketplace-common library chart.
+# This is a library chart and doesn't install any resources on its own.
+# It provides reusable templates to be included in other charts.
+
+# This file is here for documentation purposes only.
+# Values are provided by the parent chart that includes this library.
+
+# Expected structure in parent chart's values.yaml:
+# global:
+#   labels:
+#     ark.mckinsey.com/marketplace-item: "your-service-name"

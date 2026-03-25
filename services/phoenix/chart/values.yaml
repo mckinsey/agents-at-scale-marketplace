@@ -1,9 +1,11 @@
 # Phoenix wrapper chart values
 
-# Global annotations
+# Global annotations and labels
 global:
   annotations:
     ark.mckinsey.com/service: phoenix
+  labels:
+    ark.mckinsey.com/marketplace-item: "phoenix"
 
 # HTTPRoute configuration (Gateway API - modern routing method)
 # Disabled by default. Enable this for Gateway API routing with namespace-based access.
@@ -45,6 +47,9 @@ otelEnvironmentVariableSecrets:
 
 # Phoenix helm chart values (passed to dependency)
 phoenix-helm:
+  # Add marketplace label to phoenix deployment
+  labels:
+    ark.mckinsey.com/marketplace-item: "phoenix"
   service:
     type: ClusterIP
   auth:

@@ -8,6 +8,9 @@ annotations:
   ark.mckinsey.com/service: phoenix
   ark.mckinsey.com/resources: service
 dependencies:
+  - name: ark-marketplace-common
+    version: "0.1.0"
+    repository: "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts"
   - name: phoenix-helm
     version: 4.0.5
     repository: oci://registry-1.docker.io/arizephoenix

@@ -1,9 +1,11 @@
 # A2A Inspector chart values
 
-# Global annotations
+# Global annotations and labels
 global:
   annotations:
     ark.mckinsey.com/service: a2a-inspector
+  labels:
+    ark.mckinsey.com/marketplace-item: "a2a-inspector"
 
 # Image configuration
 image:

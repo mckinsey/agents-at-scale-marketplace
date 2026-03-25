@@ -1,0 +1,15 @@
+apiVersion: v2
+name: ark-marketplace-common
+description: Common library chart for ARK Marketplace items
+type: library
+version: 0.1.0
+keywords:
+  - ark
+  - marketplace
+  - library
+home: https://github.com/mckinsey/agents-at-scale-marketplace
+sources:
+  - https://github.com/mckinsey/agents-at-scale-marketplace
+maintainers:
+  - name: ARK Team
+    url: https://github.com/mckinsey/agents-at-scale-marketplace

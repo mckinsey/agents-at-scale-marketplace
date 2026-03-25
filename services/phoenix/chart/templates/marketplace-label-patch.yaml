@@ -1,0 +1,1 @@
+{{- include "ark-marketplace.labelPatchHook" (dict "Chart" .Chart "Release" .Release "Values" .Values) }}

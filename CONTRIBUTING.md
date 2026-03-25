@@ -80,17 +80,98 @@ Each marketplace item should include:
    - Usage examples
    - Troubleshooting
 
-3. **Helm Chart** (for services): 
+3. **Helm Chart** (for services):
    - Place in `chart/` subdirectory
    - Include `Chart.yaml` with proper metadata
    - Provide `values.yaml` with sensible defaults
    - Include necessary templates
+   - **REQUIRED**: Add marketplace identification label
+
+   **For charts with custom templates (you control the templates):**
+
+   Add the label to `values.yaml`:
+   ```yaml
+   global:
+     labels:
+       ark.mckinsey.com/marketplace-item: "your-service-name"
+   ```
+
+   Apply labels in `templates/_helpers.tpl`:
+   ```yaml
+   {{- with .Values.global.labels }}
+   {{ toYaml . }}
+   {{- end }}
+   ```
+
+   **For external OCI charts (wrapper charts):**
+
+   If your service wraps an external OCI chart that doesn't support custom labels, use the **ark-marketplace-common library chart**:
+
+   1. Add library dependency in `Chart.yaml`:
+      ```yaml
+      dependencies:
+        - name: ark-marketplace-common
+          version: "0.1.x"
+          repository: "file://../../charts/ark-marketplace-common"
+        - name: external-chart
+          version: "1.0.0"
+          repository: "oci://registry.example.com/charts"
+      ```
+
+   2. Add label to `values.yaml`:
+      ```yaml
+      global:
+        labels:
+          ark.mckinsey.com/marketplace-item: "your-service-name"
+      ```
+
+   3. Create `templates/marketplace-label-patch.yaml`:
+      ```yaml
+      {{- include "ark-marketplace.labelPatchHook" (dict "Chart" .Chart "Release" .Release "Values" .Values) }}
+      ```
+
+   4. Update dependencies:
+      ```bash
+      helm dependency update chart/
+      ```
+
+   See `services/phoenix/` for a complete example and `charts/ark-marketplace-common/README.md` for details.
+
+   **Why this is required:** The label enables installation status detection in the ARK dashboard. Without it, services will work but show as "not installed" in the UI. The label value MUST match the `name` field in `marketplace.json`.
 
 4. **DevSpace Configuration** (recommended):
    - `devspace.yaml` for local development
    - Enables hot-reload and easy testing
 
 5. **Documentation Page**: Add a corresponding page in `docs/content/` to appear in the online documentation
+
+**External OCI Chart Label Problem**
+
+When your marketplace service wraps an **external OCI chart** (a chart you don't control, like `oci://registry-1.docker.io/arizephoenix/phoenix-helm`), the external chart typically hardcodes its deployment labels and ignores your `global.labels` values. This prevents the marketplace label from being applied, causing the ARK dashboard to show the service as "not installed" even when it's running.
+
+**Solution: Use the ark-marketplace-common Library Chart**
+
+The `ark-marketplace-common` library provides a **post-install hook** that automatically patches deployments with the marketplace label after installation:
+
+1. **What it does:**
+   - Waits for external chart to create deployment
+   - Patches deployment with `ark.mckinsey.com/marketplace-item` label
+   - Handles race conditions and retries automatically
+   - Creates necessary RBAC resources
+
+2. **When to use it:**
+   - ✅ Wrapping external OCI charts
+   - ✅ External chart doesn't support custom labels
+   - ✅ Service creates Deployments
+
+3. **How to use it:**
+   - See complete instructions in `charts/ark-marketplace-common/README.md`
+   - Reference implementation: `services/phoenix/`
+
+4. **Alternatives (not recommended):**
+   - Fork the external chart and modify templates
+   - Manual `kubectl patch` after installation (not automated)
+   - Helm `--post-renderer` with kustomize (requires changing installation commands)
 
 **Testing Your Contribution**
 
@@ -99,6 +180,49 @@ Before submitting:
 - Verify all documentation is accurate
 - Ensure examples work as described
 - Check that your item integrates properly with the ARK platform
+- Verify the marketplace label is correctly applied:
+  ```bash
+  kubectl get deployment -n <namespace> -l ark.mckinsey.com/marketplace-item=<your-service-name> -o yaml
+  ```
+
+**Troubleshooting**
+
+If your item shows as "not installed" in the ARK dashboard despite being deployed:
+
+1. **Verify label exists on deployment:**
+   ```bash
+   kubectl get deployment -n <namespace> -l ark.mckinsey.com/marketplace-item=<service-name>
+   ```
+
+   If no deployment is found:
+   - For custom templates: Ensure labels are applied from `Values.global.labels` in `_helpers.tpl`
+   - For external OCI charts: Use the `ark-marketplace-common` library chart (see above)
+
+2. **Verify label value matches marketplace.json:**
+   ```bash
+   kubectl get deployment -n <namespace> <deployment-name> -o jsonpath='{.metadata.labels.ark\.mckinsey\.com/marketplace-item}'
+   ```
+
+   This must exactly match the `name` field in `marketplace.json`
+
+3. **Check post-install hook (for external OCI charts):**
+   ```bash
+   kubectl get jobs -n <namespace> | grep label-patcher
+   kubectl logs -n <namespace> job/<service-name>-label-patcher
+   ```
+
+   If the job failed, check RBAC permissions and retry the installation
+
+4. **Verify ARK API supports labelSelector** (requires ARK v0.2.0+):
+   ```bash
+   kubectl port-forward -n ark-system svc/ark-api 8080:8080
+   curl "http://localhost:8080/v1/resources/apis/apps/v1/Deployment?namespace=<namespace>&labelSelector=ark.mckinsey.com%2Fmarketplace-item%3D<service-name>"
+   ```
+
+For more details, see:
+- `charts/ark-marketplace-common/README.md` - Library chart documentation
+- `services/phoenix/` - Reference implementation
+- CI logs for validation failures
 
 **Language and Technology Choices**
 

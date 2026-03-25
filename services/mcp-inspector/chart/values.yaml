@@ -1,9 +1,11 @@
 # MCP Inspector chart values
 
-# Global annotations
+# Global annotations and labels
 global:
   annotations:
     ark.mckinsey.com/service: mcp-inspector
+  labels:
+    ark.mckinsey.com/marketplace-item: "mcp-inspector"
 
 # Image configuration
 image:
