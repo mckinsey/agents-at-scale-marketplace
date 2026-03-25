@@ -13,7 +13,7 @@ metadata:
     {{- end }}
 rules:
   - apiGroups: ["ark.mckinsey.com"]
-    resources: ["queries", "agents", "models", "tools"]
+    resources: ["queries", "agents", "models", "tools", "mcpservers"]
     verbs: ["get"]
   - apiGroups: [""]
     resources: ["secrets", "configmaps", "services"]
