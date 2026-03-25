@@ -25,7 +25,7 @@ annotations:
   ark.mckinsey.com/components: agents
 dependencies:
   - name: file-gateway
-    version: 0.1.4
+    version: 0.1.5
     repository: file://../../../services/file-gateway/chart
   - name: speech-mcp-server
     version: 0.1.1
