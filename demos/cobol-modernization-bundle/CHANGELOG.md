@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.2...cobol-modernization-bundle-v0.1.3) (2026-03-25)
+
+
+### Features
+
+* kyc onboarding bundle ([#123](https://github.com/mckinsey/agents-at-scale-marketplace/issues/123)) ([1470e6c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1470e6c14ebd9b28634b8b504962c5d56008248b))
+
 ## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.1...cobol-modernization-bundle-v0.1.2) (2026-03-11)
 
 

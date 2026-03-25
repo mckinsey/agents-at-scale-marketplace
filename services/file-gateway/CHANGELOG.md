@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.4...file-gateway-v0.1.5) (2026-03-25)
+
+
+### Features
+
+* kyc onboarding bundle ([#123](https://github.com/mckinsey/agents-at-scale-marketplace/issues/123)) ([1470e6c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1470e6c14ebd9b28634b8b504962c5d56008248b))
+
+
+### Bug Fixes
+
+* file gateway name ([#145](https://github.com/mckinsey/agents-at-scale-marketplace/issues/145)) ([e19e994](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e19e994c749ec0e21d512ca0f72fcf1a8caa4bcf))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.3...file-gateway-v0.1.4) (2026-02-26)
 
 

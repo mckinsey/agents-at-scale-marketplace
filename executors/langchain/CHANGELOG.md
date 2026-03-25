@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.2...executor-langchain-v0.1.3) (2026-03-25)
+
+
+### Features
+
+* **executor-langchain:** add RBAC for query extension CRD resolution ([#136](https://github.com/mckinsey/agents-at-scale-marketplace/issues/136)) ([c9f836e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c9f836e66a37d718f920fd29516b5f18c9caa6bf))
+* **executor-langchain:** conversation history management ([#138](https://github.com/mckinsey/agents-at-scale-marketplace/issues/138)) ([b7b4241](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b7b42417cdeb8fc988dace57952b2c5f49a30c21))
+
 ## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.1...executor-langchain-v0.1.2) (2026-03-11)
 
 
