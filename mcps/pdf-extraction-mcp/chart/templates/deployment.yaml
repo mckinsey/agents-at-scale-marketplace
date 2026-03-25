@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pdf-extraction-mcp.fullname" . }}
+  labels:
+    {{- include "pdf-extraction-mcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "pdf-extraction-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "pdf-extraction-mcp.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "pdf-extraction-mcp.fullname" . }}-sa
+      automountServiceAccountToken: false
+      {{- if .Values.dataVolume.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.dataVolume.claimName | default "file-gateway-storage" }}
+      {{- end }}
+      containers:
+        - name: pdf-extraction-mcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- if .Values.dataVolume.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.dataVolume.mountPath }}
+              readOnly: {{ .Values.dataVolume.readOnly }}
+          {{- end }}
+          env:
+            - name: LLM_PROVIDER
+              value: {{ .Values.llm.provider | quote }}
+            - name: LLM_MODEL
+              value: {{ .Values.llm.model | quote }}
+            - name: LLM_BASE_URL
+              value: {{ .Values.llm.baseUrl | quote }}
+            - name: LLM_API_VERSION
+              value: {{ .Values.llm.apiVersion | quote }}
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.llm.apiKeySecret.name }}
+                  key: {{ .Values.llm.apiKeySecret.key }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

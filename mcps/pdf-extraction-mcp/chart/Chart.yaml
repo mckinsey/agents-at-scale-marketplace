@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pdf-extraction-mcp
+description: Lightweight PDF extraction server for ownership information using LLM-based analysis
+type: application
+version: 0.1.0
+appVersion: 0.1.0

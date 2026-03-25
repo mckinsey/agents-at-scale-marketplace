@@ -27,7 +27,7 @@ help:
 	@echo "  make install-with-argo      Install bundle + WorkflowTemplates"
 	@echo "  make install                Install bundle (without WorkflowTemplates)"
 	@echo "  make upgrade                Upgrade bundle (auto-detects existing file-gateway)"
-	@echo "  make build                  Deploy all MCPs (filesystem + pdf + web + perplexity)"
+	@echo "  make build                  Deploy all MCPs (filesystem + pdf + web + perplexity + companies-house)"
 	@echo "  make build-data-seeder      Build data-seeder image (Option A)"
 	@echo "  make upload-data            Upload sample data to file-gateway (Option B)"
 	@echo ""
@@ -125,7 +125,7 @@ build-perplexity-mcp:
 	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/perplexity-ask-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
-build: build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp
+build: build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp
 	@echo ""
 	@echo "All MCPs deployed. Run 'make ready' to verify."
 

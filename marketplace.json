@@ -243,6 +243,114 @@
       }
     },
     {
+      "name": "pdf-extraction-mcp",
+      "type": "mcp",
+      "displayName": "PDF Extraction MCP Server",
+      "description": "Lightweight PDF extraction server for ownership information using LLM-based analysis",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["mcp", "pdf", "extraction", "ownership", "kyc", "llm"],
+      "category": "mcps",
+      "icon": "https://example.com/pdf-extraction-mcp-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/pdf-extraction-mcp/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/pdf-extraction-mcp",
+        "namespace": "default",
+        "helmReleaseName": "pdf-extraction-mcp",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "pdf-extraction-mcp",
+        "k8sServicePort": 8000,
+        "k8sDeploymentName": "pdf-extraction-mcp"
+      }
+    },
+    {
+      "name": "web-research-mcp",
+      "type": "mcp",
+      "displayName": "Web Research MCP Server",
+      "description": "Lightweight web research server for ownership information discovery via Tavily or Perplexity",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["mcp", "web-research", "search", "tavily", "ownership", "kyc"],
+      "category": "mcps",
+      "icon": "https://example.com/web-research-mcp-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/web-research-mcp/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/web-research-mcp",
+        "namespace": "default",
+        "helmReleaseName": "web-research-mcp",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "web-research-mcp",
+        "k8sServicePort": 8000,
+        "k8sDeploymentName": "web-research-mcp"
+      }
+    },
+    {
+      "name": "perplexity-ask-mcp",
+      "type": "mcp",
+      "displayName": "Perplexity Ask MCP Server",
+      "description": "Conversational AI with real-time web search via Perplexity API",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["mcp", "perplexity", "search", "ai", "web-search", "kyc"],
+      "category": "mcps",
+      "icon": "https://example.com/perplexity-ask-mcp-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/perplexity-ask-mcp/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/perplexity-ask-mcp",
+        "namespace": "default",
+        "helmReleaseName": "perplexity-ask-mcp",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "perplexity-ask-mcp",
+        "k8sServicePort": 8000,
+        "k8sDeploymentName": "perplexity-ask-mcp"
+      }
+    },
+    {
+      "name": "companies-house-mcp",
+      "type": "mcp",
+      "displayName": "Companies House MCP Server",
+      "description": "UK Companies House API integration for company search and beneficial ownership data",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["mcp", "companies-house", "uk", "ownership", "kyc", "api"],
+      "category": "mcps",
+      "icon": "https://example.com/companies-house-mcp-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/companies-house-mcp/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/companies-house-mcp",
+        "namespace": "default",
+        "helmReleaseName": "companies-house-mcp",
+        "installArgs": ["--create-namespace"],
+        "k8sServiceName": "companies-house-mcp",
+        "k8sServicePort": 8000,
+        "k8sDeploymentName": "companies-house-mcp"
+      }
+    },
+    {
       "name": "cobol-modernization-bundle",
       "type": "demo",
       "displayName": "COBOL Modernization Bundle",
@@ -265,6 +373,31 @@
         "helmReleaseName": "cobol-modernization-bundle",
         "installArgs": ["--create-namespace"],
         "dependencies": ["file-gateway", "speech-mcp-server"]
+      }
+    },
+    {
+      "name": "kyc-onboarding-bundle",
+      "type": "demo",
+      "displayName": "KYC Onboarding Bundle",
+      "description": "KYC onboarding workflows with specialized agents and teams for customer due diligence (LegacyX migration)",
+      "version": "0.1.0",
+      "author": "ARK Marketplace",
+      "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+      "license": "Apache-2.0",
+      "tags": ["demo", "kyc", "agents", "teams", "multi-agent", "onboarding", "legacyx", "workflows"],
+      "category": "demos",
+      "icon": "https://example.com/kyc-onboarding-icon.png",
+      "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/demos/kyc-onboarding-bundle/",
+      "support": {
+        "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+      },
+      "ark": {
+        "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/kyc-onboarding-bundle",
+        "namespace": "default",
+        "helmReleaseName": "kyc-onboarding-bundle",
+        "installArgs": ["--create-namespace"],
+        "dependencies": ["file-gateway", "pdf-extraction-mcp", "web-research-mcp", "perplexity-ask-mcp", "companies-house-mcp"]
       }
     },
     {

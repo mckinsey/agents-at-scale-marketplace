@@ -14,7 +14,7 @@ End-to-end KYC (Know Your Customer) onboarding workflows for customer due dilige
 | `doc-analyst-agent` | Analyzes document content |
 | `web-planner-agent` | Plans web research tasks |
 | `web-analyst-agent` | Analyzes web research results |
-| `web-researcher-agent` | Performs web research via Perplexity |
+| `web-researcher-agent` | Performs web research via Tavily or Perplexity |
 | `ch-planner-agent` | Plans Companies House lookups |
 | `ch-analyst-agent` | Analyzes Companies House data |
 | `ch-api-agent` | Queries Companies House API |
@@ -40,7 +40,7 @@ End-to-end KYC (Know Your Customer) onboarding workflows for customer due dilige
 - **Profile finalization** — `lx-profile-finalization`
 - **Phase III** — `lx-kyc-memo`
 
-**Supporting infrastructure:** File Gateway (Helm dependency), PDF extraction MCP, web research MCP, Perplexity Ask MCP, data seeder job, RBAC.
+**Supporting infrastructure:** File Gateway (Helm dependency), PDF extraction MCP, web research MCP, Perplexity Ask MCP, Companies House MCP, data seeder job, RBAC.
 
 ## Prerequisites
 

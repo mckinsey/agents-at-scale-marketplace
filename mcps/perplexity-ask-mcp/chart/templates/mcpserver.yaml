@@ -1,0 +1,18 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ .Values.mcpServer.nameOverride | default (include "perplexity-ask-mcp.fullname" .) }}
+  labels:
+    {{- include "perplexity-ask-mcp.labels" . | nindent 4 }}
+spec:
+  description: "Perplexity Ask (LegacyX-compatible); tool perplexity-ask for web search"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "perplexity-ask-mcp.fullname" . }}
+        port: http
+        path: /mcp
+  timeout: {{ .Values.mcpServer.timeout }}
+{{- end }}
