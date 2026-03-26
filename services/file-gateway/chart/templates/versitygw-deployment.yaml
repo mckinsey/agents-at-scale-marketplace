@@ -22,20 +22,15 @@ spec:
       initContainers:
       - name: fix-data-permissions
         image: busybox:1.37.0
-        command: ['sh', '-c', 'chown -R 1000:1000 {{ .Values.versitygw.config.dataPath }} && chmod -R 775 {{ .Values.versitygw.config.dataPath }} && mkdir -p {{ .Values.versitygw.config.dataPath }}/{{ .Values.filesystemMcp.config.bucketName }} && chown 1000:1000 {{ .Values.versitygw.config.dataPath }}/{{ .Values.filesystemMcp.config.bucketName }}']
+        command: ['sh', '-c', 'mkdir -p {{ .Values.versitygw.config.dataPath }}/{{ .Values.filesystemMcp.config.bucketName }}']
         volumeMounts:
         - name: data
           mountPath: {{ .Values.versitygw.config.dataPath }}
         securityContext:
-          runAsUser: 0
           allowPrivilegeEscalation: false
           capabilities:
             drop:
               - ALL
-            add:
-              - CHOWN
-              - FOWNER
-              - DAC_OVERRIDE
       containers:
       - name: versitygw
         securityContext:
