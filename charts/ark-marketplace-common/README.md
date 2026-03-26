@@ -215,4 +215,3 @@ This library chart is maintained alongside the marketplace repo. When updating:
 
 - [Helm Library Charts](https://helm.sh/docs/topics/library_charts/)
 - [Helm Hooks](https://helm.sh/docs/topics/charts_hooks/)
-- [EXTERNAL_CHART_LABEL_ISSUE.md](../../openspec/changes/2026-03-19-fix-marketplace-installation-detection/EXTERNAL_CHART_LABEL_ISSUE.md) - Detailed problem analysis
