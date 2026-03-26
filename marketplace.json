@@ -15,6 +15,7 @@
       "tags": ["observability", "evaluation", "telemetry", "monitoring"],
       "category": "observability",
       "icon": "https://example.com/phoenix-icon.png",
+      "installScope": "cluster",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/phoenix/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -42,6 +43,7 @@
       "tags": ["observability", "analytics", "llm", "tracking"],
       "category": "observability",
       "icon": "https://example.com/langfuse-icon.png",
+      "installScope": "cluster",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/langfuse/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -69,6 +71,7 @@
       "tags": ["a2a", "debugging", "development", "testing", "agent2agent"],
       "category": "development",
       "icon": "https://example.com/a2a-inspector-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/a2a-inspector/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -96,6 +99,7 @@
       "tags": ["mcp", "debugging", "development", "testing"],
       "category": "development",
       "icon": "https://example.com/mcp-inspector-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/mcp-inspector/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -123,6 +127,7 @@
       "tags": ["sandbox", "execution", "containers", "mcp", "development"],
       "category": "development",
       "icon": "https://example.com/ark-sandbox-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/ark-sandbox/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -150,6 +155,7 @@
       "tags": ["agent", "administration", "mcp", "runtime"],
       "category": "agents",
       "icon": "https://example.com/noah-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/agents/noah/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -177,6 +183,7 @@
       "tags": ["s3", "storage", "mcp", "filesystem", "versitygw"],
       "category": "storage",
       "icon": "https://example.com/file-gateway-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/file-gateway/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -204,6 +211,7 @@
       "tags": ["demo", "kyc", "agents", "teams", "multi-agent", "onboarding"],
       "category": "demos",
       "icon": "https://example.com/kyc-demo-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/demos/kyc-demo-bundle/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -228,6 +236,7 @@
       "tags": ["mcp", "speech", "transcription", "whisper", "audio", "ai"],
       "category": "mcps",
       "icon": "https://example.com/speech-mcp-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/speech-mcp-server/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -255,6 +264,7 @@
       "tags": ["mcp", "pdf", "extraction", "ownership", "kyc", "llm"],
       "category": "mcps",
       "icon": "https://example.com/pdf-extraction-mcp-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/pdf-extraction-mcp/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -282,6 +292,7 @@
       "tags": ["mcp", "web-research", "search", "tavily", "ownership", "kyc"],
       "category": "mcps",
       "icon": "https://example.com/web-research-mcp-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/web-research-mcp/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -309,6 +320,7 @@
       "tags": ["mcp", "perplexity", "search", "ai", "web-search", "kyc"],
       "category": "mcps",
       "icon": "https://example.com/perplexity-ask-mcp-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/perplexity-ask-mcp/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -336,6 +348,7 @@
       "tags": ["mcp", "companies-house", "uk", "ownership", "kyc", "api"],
       "category": "mcps",
       "icon": "https://example.com/companies-house-mcp-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/companies-house-mcp/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -363,6 +376,7 @@
       "tags": ["demo", "cobol", "modernization", "agents", "multi-agent", "legacy", "python", "pyspark", "transcription"],
       "category": "demos",
       "icon": "https://example.com/cobol-modernization-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/demos/cobol-modernization-bundle/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -388,6 +402,7 @@
       "tags": ["demo", "kyc", "agents", "teams", "multi-agent", "onboarding", "legacyx", "workflows"],
       "category": "demos",
       "icon": "https://example.com/kyc-onboarding-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/demos/kyc-onboarding-bundle/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -413,6 +428,7 @@
       "tags": ["claude", "anthropic", "execution-engine", "agent-sdk", "tools"],
       "category": "development",
       "icon": "https://example.com/executor-claude-agent-sdk-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/executors/claude-agent-sdk/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
@@ -440,6 +456,7 @@
       "tags": ["langchain", "execution-engine", "rag", "ai", "agents"],
       "category": "development",
       "icon": "https://example.com/executor-langchain-icon.png",
+      "installScope": "namespace",
       "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/executors/executor-langchain/",
       "support": {
         "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
