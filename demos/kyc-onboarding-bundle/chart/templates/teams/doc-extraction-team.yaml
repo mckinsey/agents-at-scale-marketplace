@@ -40,7 +40,8 @@ spec:
   # Sequential strategy: Each agent completes before next starts
   strategy: {{ .Values.teams.docExtractionTeam.strategy }}
   
-  # Maximum conversation turns to prevent infinite loops
+  # Enable loops with turn limit
+  loops: true
   maxTurns: {{ .Values.teams.docExtractionTeam.maxTurns }}
   
   # Team members in execution order

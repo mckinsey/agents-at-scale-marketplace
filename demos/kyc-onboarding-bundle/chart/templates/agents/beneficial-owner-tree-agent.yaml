@@ -4,6 +4,9 @@ metadata:
   name: beneficial-owner-tree-agent
   labels:
     project: kyc-onboarding
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   description: |
     KYC expert who creates beneficial ownership tree structures from direct and indirect owner data.
