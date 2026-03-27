@@ -7,6 +7,9 @@ metadata:
     helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   description: |
     KYC expert who creates comprehensive risk assessment reports from customer profiles.

@@ -4,7 +4,7 @@ End-to-end KYC (Know Your Customer) onboarding workflows for customer due dilige
 
 ## What's Included
 
-**17 agents** organized into **6 teams** covering Phase I–III of customer due diligence:
+**21 agents** organized into **6 teams** covering Phase I–III of customer due diligence:
 
 | ARK Agent | Description |
 |-----------|-------------|
@@ -25,6 +25,10 @@ End-to-end KYC (Know Your Customer) onboarding workflows for customer due dilige
 | `file-manager-agent` | Manages file read/write operations |
 | `critic-agent` | Reviews and validates outputs |
 | `summary-assessment-agent` | Generates summary assessments |
+| `bo-planner` | Plans beneficial ownership research missions |
+| `companies-house-expert` | UK Companies House API expert for ownership data |
+| `bo-web-researcher` | Web research for beneficial ownership information |
+| `bo-analyst` | Structures ownership data into tree format |
 
 **Teams:**
 - `scout-rag-team` — Two-stage PDF extraction (scout → RAG)
@@ -175,7 +179,7 @@ After each workflow completes, verify the output files in **ARK Dashboard → Fi
 | `make upload-data` | Upload sample data to file-gateway |
 | `make ready` | Full deployment readiness check |
 | `make verify-mcp` | Verify MCP servers and Tool CRs |
-| `make verify-agents` | List all agents (expects 17) |
+| `make verify-agents` | List all agents (expects 21) |
 | `make upgrade` | Helm upgrade (auto-detects existing file-gateway) |
 | `make uninstall` | Remove bundle |
 | `make clean` | Cleanup resources |

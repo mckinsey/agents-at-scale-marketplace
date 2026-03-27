@@ -45,7 +45,7 @@ help:
 	@echo "Verify:"
 	@echo "  make ready                  Full readiness check (MCP + tools)"
 	@echo "  make verify-mcp             Check MCPServer and Tool CRs"
-	@echo "  make verify-agents          List agents (expects 17)"
+	@echo "  make verify-agents          List agents (expects 21)"
 	@echo "  make wait-for-tools         Wait for Tool CRs to be created"
 	@echo "  make clean                  Remove workflow artifacts"
 	@echo "  make delete-data-seeder-job Delete data-seeder Job"
@@ -229,7 +229,7 @@ uninstall:
 	@kubectl delete workflows -n $(NAMESPACE) -l use-case=kyc-onboarding --timeout=30s 2>/dev/null || true
 	@kubectl delete rolebinding argo-workflow-default-access -n $(NAMESPACE) 2>/dev/null || true
 	@echo "Removing MCP servers..."
-	@kubectl delete mcpserver pdf-extraction-mcp perplexity web-research-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete mcpserver pdf-extraction-mcp perplexity web-research-mcp companies-house -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete mcpserver -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete mcpserver -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@echo "Removing file-gateway and MCP deployments..."
@@ -360,7 +360,7 @@ clean:
 	@echo "Done."
 
 verify-agents:
-	@echo "Agents in namespace $(NAMESPACE) (expects 17):"
+	@echo "Agents in namespace $(NAMESPACE) (expects 21):"
 	@kubectl get agents -n $(NAMESPACE) -l bundle=kyc-onboarding --no-headers 2>/dev/null | wc -l | xargs echo "  Count:"
 	@kubectl get agents -n $(NAMESPACE) -l bundle=kyc-onboarding 2>/dev/null || echo "  None found — run make install-with-argo"
 
