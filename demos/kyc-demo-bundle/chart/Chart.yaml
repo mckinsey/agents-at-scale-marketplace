@@ -22,5 +22,5 @@ annotations:
   ark.mckinsey.com/components: agents,teams
 dependencies:
   - name: file-gateway
-    version: 0.1.4
+    version: 0.1.5
     repository: file://../../../services/file-gateway/chart

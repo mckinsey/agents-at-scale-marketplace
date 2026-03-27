@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.23](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.22...v0.1.23) (2026-03-25)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** add MCP server support ([#150](https://github.com/mckinsey/agents-at-scale-marketplace/issues/150)) ([39caf9e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/39caf9e9aa25b67022d53e8d857b23955ff7a603))
+* **executor-claude-agent-sdk:** add native Claude Agent SDK executor ([#146](https://github.com/mckinsey/agents-at-scale-marketplace/issues/146)) ([af4ac81](https://github.com/mckinsey/agents-at-scale-marketplace/commit/af4ac81fb6d78eda5dfafd2461c18c41ac580a8d))
+* **executor-langchain:** add RBAC for query extension CRD resolution ([#136](https://github.com/mckinsey/agents-at-scale-marketplace/issues/136)) ([c9f836e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c9f836e66a37d718f920fd29516b5f18c9caa6bf))
+* **executor-langchain:** conversation history management ([#138](https://github.com/mckinsey/agents-at-scale-marketplace/issues/138)) ([b7b4241](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b7b42417cdeb8fc988dace57952b2c5f49a30c21))
+* kyc onboarding bundle ([#123](https://github.com/mckinsey/agents-at-scale-marketplace/issues/123)) ([1470e6c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1470e6c14ebd9b28634b8b504962c5d56008248b))
+
+
+### Bug Fixes
+
+* file gateway name ([#145](https://github.com/mckinsey/agents-at-scale-marketplace/issues/145)) ([e19e994](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e19e994c749ec0e21d512ca0f72fcf1a8caa4bcf))
+
 ## [0.1.22](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.21...v0.1.22) (2026-03-11)
 
 

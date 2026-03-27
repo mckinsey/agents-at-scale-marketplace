@@ -3,7 +3,7 @@ name: cobol-modernization-bundle
 description: >-
   COBOL modernization demo with agents for reverse engineering, pseudocode
   generation, Python conversion, and documentation
-version: 0.1.2
+version: 0.1.3
 type: application
 keywords:
   - ark
@@ -25,7 +25,7 @@ annotations:
   ark.mckinsey.com/components: agents
 dependencies:
   - name: file-gateway
-    version: 0.1.4
+    version: 0.1.5
     repository: file://../../../services/file-gateway/chart
   - name: speech-mcp-server
     version: 0.1.1
