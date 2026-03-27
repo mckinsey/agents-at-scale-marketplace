@@ -33,7 +33,8 @@ spec:
   # Sequential strategy: Each agent completes before next starts
   strategy: {{ .Values.teams.beneficialOwnersTeam.strategy | default "sequential" }}
   
-  # Maximum conversation turns
+  # Enable loops with turn limit
+  loops: true
   maxTurns: {{ .Values.teams.beneficialOwnersTeam.maxTurns | default 30 }}
   
   # Team members in execution order

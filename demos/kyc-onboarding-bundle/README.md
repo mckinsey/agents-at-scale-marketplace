@@ -95,6 +95,20 @@ make ready
 
 After `make ready`, wait 30–60s and refresh ARK Dashboard for agents/teams to show Available.
 
+### Troubleshooting: "File Gateway Service Not Configured"
+
+If the ARK Dashboard **Files** page shows **"File Gateway Service Not Configured"** instead of an empty file list, the File Gateway needs to be set up first before seeding data:
+
+1. Follow the [File Gateway Service](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/file-gateway) setup instructions in the ARK Dashboard
+2. Build and run the data seeder:
+   ```bash
+   make build-data-seeder
+   make install-with-argo
+   ```
+3. Verify files appear in **ARK Dashboard > Files**
+
+This typically happens on a fresh ARK cluster where the File Gateway has not been configured previously. Once the File Gateway service is registered with the dashboard, subsequent installs will work with either Option A or Option B above.
+
 ## Running Workflows
 
 ```bash
