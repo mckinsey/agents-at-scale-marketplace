@@ -3,7 +3,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ark_sdk.executor import BaseExecutor, MCPServerConfig, Message
 from ark_sdk.executor_app import is_otel_enabled
@@ -12,7 +12,6 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 logger = logging.getLogger(__name__)
 
 SESSIONS_DIR = Path(os.getenv("SESSIONS_DIR", "/data/sessions"))
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
 # Executor-specific instrumentation — only the Claude Agent SDK instrumentor
 if is_otel_enabled():
@@ -29,8 +28,37 @@ class ClaudeAgentExecutor(BaseExecutor):
 
     def __init__(self) -> None:
         super().__init__("ClaudeAgentSDK")
-        self.model = os.getenv("ANTHROPIC_MODEL", DEFAULT_MODEL)
-        logger.info(f"Claude Agent SDK executor initialized with model: {self.model}")
+        logger.info("Claude Agent SDK executor initialized")
+
+    @staticmethod
+    def _resolve_model_config(request) -> Tuple[str, str, Optional[str]]:
+        """Extract model name, API key, and optional base URL from the Model CRD config.
+
+        Returns (model_name, api_key, base_url).
+        """
+        model = getattr(request.agent, "model", None)
+        if model is None:
+            raise ValueError(
+                "Agent model must have provider 'anthropic' with apiKey configured via Model CRD"
+            )
+
+        config = getattr(model, "config", None) or {}
+        anthropic_config = config.get("anthropic")
+        if not anthropic_config:
+            raise ValueError(
+                "Agent model must have provider 'anthropic' with apiKey configured via Model CRD"
+            )
+
+        api_key = anthropic_config.get("apiKey")
+        if not api_key:
+            raise ValueError(
+                "Model CRD anthropic config must include an apiKey"
+            )
+
+        model_name = model.name
+        base_url = anthropic_config.get("baseUrl") or None
+
+        return model_name, api_key, base_url
 
     @staticmethod
     def _build_mcp_options(mcp_servers: List[MCPServerConfig]) -> Tuple[Dict, List[str]]:
@@ -59,7 +87,9 @@ class ClaudeAgentExecutor(BaseExecutor):
         if not user_input:
             return [Message(role="assistant", content="Error: user input is required", name=request.agent.name)]
 
-        logger.info(f"Executing Claude Agent SDK query for agent {request.agent.name} (conversation: {conversation_id})")
+        model_name, api_key, base_url = self._resolve_model_config(request)
+
+        logger.info(f"Executing Claude Agent SDK query for agent {request.agent.name} (model: {model_name}, conversation: {conversation_id})")
 
         session_dir = SESSIONS_DIR / conversation_id
         session_dir.mkdir(parents=True, exist_ok=True)
@@ -79,11 +109,16 @@ class ClaudeAgentExecutor(BaseExecutor):
                 summary = ", ".join(f"{s.name} ({len(s.tools)} tools)" for s in mcp_servers if s.tools)
                 logger.info(f"Connecting {len(sdk_servers)} MCP servers: {summary}")
 
+        env: Dict[str, str] = {"ANTHROPIC_API_KEY": api_key}
+        if base_url:
+            env["ANTHROPIC_BASE_URL"] = base_url
+
         options = ClaudeAgentOptions(
-            model=self.model,
+            model=model_name,
             cwd=str(session_dir),
             continue_conversation=has_previous_session,
             permission_mode="bypassPermissions",
+            env=env,
             **mcp_kwargs,
         )
         logger.info(f"{'Resuming' if has_previous_session else 'Starting new'} session for conversation {conversation_id}")

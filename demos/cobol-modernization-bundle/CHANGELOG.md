@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.3...cobol-modernization-bundle-v0.1.4) (2026-03-30)
+
+
+### Bug Fixes
+
+* **charts:** bump file-gateway dependency to 0.1.5 in demo bundles ([#151](https://github.com/mckinsey/agents-at-scale-marketplace/issues/151)) ([9859d1d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9859d1d82c9552bd6da5d3177bb0a742513dbb49))
+
 ## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.2...cobol-modernization-bundle-v0.1.3) (2026-03-25)
 
 

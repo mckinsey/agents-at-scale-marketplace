@@ -18,12 +18,27 @@ helm install executor-claude-agent-sdk ./chart -n default --create-namespace
 
 ## Prerequisites
 
-Create the Anthropic API key secret:
+Create a Model CRD with your Anthropic configuration:
 
-```bash
-kubectl create secret generic anthropic-api-key \
-  --from-literal=ANTHROPIC_API_KEY=<your-key>
+```yaml
+apiVersion: ark.mckinsey.com/v1
+kind: Model
+metadata:
+  name: claude-sonnet
+spec:
+  model:
+    value: claude-sonnet-4-20250514
+  type: anthropic
+  config:
+    anthropic:
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: my-anthropic-secret
+            key: api-key
 ```
+
+Reference the Model from your Agent CRD via `spec.model.ref: claude-sonnet`.
 
 Optionally enable OTEL tracing:
 
@@ -43,6 +58,8 @@ metadata:
 spec:
   executionEngine:
     name: executor-claude-agent-sdk
+  model:
+    ref: claude-sonnet
   prompt: |
     You are a helpful assistant with access to filesystem tools.
 ```
@@ -77,9 +94,9 @@ The executor maps each MCPServer's resolved connection info (url, transport, hea
 
 ## Configuration
 
+Model name and API key are configured via the Model CRD (see [Prerequisites](#prerequisites)). The following environment variables are available for optional configuration:
+
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ANTHROPIC_API_KEY` | Anthropic API key (from secret) | Required |
-| `ANTHROPIC_MODEL` | Claude model to use | `claude-sonnet-4-20250514` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint for tracing | Disabled |
 | `OTEL_EXPORTER_OTLP_HEADERS` | OTLP auth headers | None |

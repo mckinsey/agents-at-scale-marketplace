@@ -1,4 +1,4 @@
-"""Tests for MCP server option mapping in ClaudeAgentExecutor."""
+"""Tests for MCP server option mapping and Model CRD config in ClaudeAgentExecutor."""
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,6 +15,17 @@ def _server(name="srv", url="http://srv:8080", transport="http", headers=None, t
         headers=headers or {},
         tools=tools or [],
     )
+
+
+def _model_config(name="claude-sonnet-4-20250514", api_key="sk-test-key", base_url=None):
+    """Build a mock model object matching Model CRD structure."""
+    anthropic = {"apiKey": api_key}
+    if base_url is not None:
+        anthropic["baseUrl"] = base_url
+    model = MagicMock()
+    model.name = name
+    model.config = {"anthropic": anthropic}
+    return model
 
 
 class TestBuildMcpOptions:
@@ -70,16 +81,62 @@ class TestBuildMcpOptions:
         assert allowed_tools == ["mcp__real-srv__do_thing"]
 
 
+class TestResolveModelConfig:
+    def test_valid_anthropic_config(self):
+        request = MagicMock()
+        request.agent.model = _model_config(
+            name="claude-opus-4-20250514",
+            api_key="sk-ant-abc123",
+            base_url="https://proxy.internal.example.com",
+        )
+
+        model_name, api_key, base_url = ClaudeAgentExecutor._resolve_model_config(request)
+
+        assert model_name == "claude-opus-4-20250514"
+        assert api_key == "sk-ant-abc123"
+        assert base_url == "https://proxy.internal.example.com"
+
+    def test_missing_anthropic_config(self):
+        request = MagicMock()
+        request.agent.model = MagicMock()
+        request.agent.model.config = {"openai": {"apiKey": "sk-openai"}}
+
+        with pytest.raises(ValueError, match="provider 'anthropic'"):
+            ClaudeAgentExecutor._resolve_model_config(request)
+
+    def test_missing_api_key(self):
+        request = MagicMock()
+        request.agent.model = MagicMock()
+        request.agent.model.name = "claude-sonnet-4-20250514"
+        request.agent.model.config = {"anthropic": {"baseUrl": "https://proxy.example.com"}}
+
+        with pytest.raises(ValueError, match="must include an apiKey"):
+            ClaudeAgentExecutor._resolve_model_config(request)
+
+    def test_no_base_url(self):
+        request = MagicMock()
+        request.agent.model = _model_config(
+            name="claude-sonnet-4-20250514",
+            api_key="sk-ant-xyz789",
+        )
+
+        model_name, api_key, base_url = ClaudeAgentExecutor._resolve_model_config(request)
+
+        assert model_name == "claude-sonnet-4-20250514"
+        assert api_key == "sk-ant-xyz789"
+        assert base_url is None
+
+
 class TestExecuteAgentMcpIntegration:
     @pytest.mark.asyncio
     async def test_mcp_servers_passed_to_options(self, tmp_path):
         executor = ClaudeAgentExecutor.__new__(ClaudeAgentExecutor)
-        executor.model = "claude-sonnet-4-20250514"
 
         request = MagicMock()
         request.conversationId = "test-conv"
         request.userInput.content = "hello"
         request.agent.name = "test-agent"
+        request.agent.model = _model_config()
         request.mcpServers = [
             _server(name="github-mcp", url="http://github:8080", headers={"Auth": "Bearer x"}, tools=["search"]),
         ]
@@ -115,12 +172,12 @@ class TestExecuteAgentMcpIntegration:
     @pytest.mark.asyncio
     async def test_no_mcp_servers_no_extra_options(self, tmp_path):
         executor = ClaudeAgentExecutor.__new__(ClaudeAgentExecutor)
-        executor.model = "claude-sonnet-4-20250514"
 
         request = MagicMock()
         request.conversationId = "test-conv-2"
         request.userInput.content = "hello"
         request.agent.name = "test-agent"
+        request.agent.model = _model_config()
         request.mcpServers = []
 
         captured_options = {}
