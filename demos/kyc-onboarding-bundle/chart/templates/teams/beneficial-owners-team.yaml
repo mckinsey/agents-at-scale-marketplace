@@ -33,7 +33,8 @@ spec:
   # Sequential strategy: Each agent completes before next starts
   strategy: {{ .Values.teams.beneficialOwnersTeam.strategy | default "sequential" }}
   
-  # Maximum conversation turns
+  # Enable loops with turn limit
+  loops: true
   maxTurns: {{ .Values.teams.beneficialOwnersTeam.maxTurns | default 30 }}
   
   # Team members in execution order
@@ -72,6 +73,9 @@ metadata:
     project: kyc-onboarding
     role: planner
     team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   description: |
     Mission planner for beneficial ownership research.
@@ -115,6 +119,9 @@ metadata:
     project: kyc-onboarding
     role: ch-api-expert
     team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   description: |
     UK Companies House API expert.
@@ -162,6 +169,9 @@ metadata:
     project: kyc-onboarding
     role: web-researcher
     team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   description: |
     Web expert for online ownership research.
@@ -215,6 +225,9 @@ metadata:
     project: kyc-onboarding
     role: analyst
     team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   description: |
     Company ownership analyst.

@@ -40,7 +40,8 @@ spec:
   # Sequential strategy: Each agent completes before next starts
   strategy: {{ .Values.teams.consolidationTeam.strategy }}
   
-  # Maximum conversation turns
+  # Enable loops with turn limit
+  loops: true
   maxTurns: {{ .Values.teams.consolidationTeam.maxTurns }}
   
   # Team members in execution order
