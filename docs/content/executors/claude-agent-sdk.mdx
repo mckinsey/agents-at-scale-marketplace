@@ -44,14 +44,31 @@ Access via:
 
 ## Prerequisites
 
-### Anthropic API Key (Required)
+### Model CRD (Required)
 
-Create a Kubernetes secret with your Anthropic API key:
+Create a Model CRD with your Anthropic configuration. The executor reads the API key, model name, and optional base URL from the Model CRD at request time:
 
-```bash
-kubectl create secret generic anthropic-api-key \
-  --from-literal=ANTHROPIC_API_KEY=<your-api-key>
+```yaml
+apiVersion: ark.mckinsey.com/v1
+kind: Model
+metadata:
+  name: claude-sonnet
+spec:
+  model:
+    value: claude-sonnet-4-20250514
+  type: anthropic
+  config:
+    anthropic:
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: my-anthropic-secret
+            key: api-key
+      # Optional: custom base URL for proxies or private endpoints
+      # baseUrl: https://proxy.internal.example.com
 ```
+
+Reference the Model from your Agent CRD via `spec.model.ref: claude-sonnet`.
 
 ### OTEL Tracing (Optional)
 
@@ -94,6 +111,8 @@ metadata:
 spec:
   executionEngine:
     name: executor-claude-agent-sdk
+  model:
+    ref: claude-sonnet
   prompt: |
     You are a helpful assistant with access to filesystem tools.
     You can read, write, and edit files in your working directory.
@@ -174,6 +193,8 @@ metadata:
 spec:
   executionEngine:
     name: executor-claude-agent-sdk
+  model:
+    ref: claude-sonnet
   prompt: |
     You are a helpful assistant with access to GitHub.
   tools:
@@ -195,10 +216,10 @@ The Claude subprocess will have access to the `search_repos` tool via `mcp__gith
 
 ### Environment Variables
 
+Model name and API key are configured via the Model CRD (see [Prerequisites](#prerequisites)).
+
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ANTHROPIC_API_KEY` | Anthropic API key (from secret) | Required |
-| `ANTHROPIC_MODEL` | Claude model to use | `claude-sonnet-4-20250514` |
 | `HOST` | Server bind address | `0.0.0.0` |
 | `PORT` | Server port | `8000` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint (enables tracing) | Disabled |
@@ -214,11 +235,12 @@ kubectl get pods -l app=executor-claude-agent-sdk
 kubectl logs -l app=executor-claude-agent-sdk
 ```
 
-### API Key Missing
+### Model Config Error
 
-If the pod fails to start, verify the secret exists:
+If requests fail with a "provider 'anthropic'" error, verify the Model CRD exists and is referenced from the Agent CRD:
 ```bash
-kubectl get secret anthropic-api-key
+kubectl get models
+kubectl get agent my-claude-agent -o yaml | grep modelRef
 ```
 
 ### ExecutionEngine Not Registered
