@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.24](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.23...v0.1.24) (2026-03-30)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** read model config from Model CRD ([#158](https://github.com/mckinsey/agents-at-scale-marketplace/issues/158)) ([df75acb](https://github.com/mckinsey/agents-at-scale-marketplace/commit/df75acb09ef1b57226b38fc857db0c0d566ca697))
+
+
+### Bug Fixes
+
+* **charts:** bump file-gateway dependency to 0.1.5 in demo bundles ([#151](https://github.com/mckinsey/agents-at-scale-marketplace/issues/151)) ([9859d1d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9859d1d82c9552bd6da5d3177bb0a742513dbb49))
+* remove root requirement from versitygw init container ([#155](https://github.com/mckinsey/agents-at-scale-marketplace/issues/155)) ([04952cc](https://github.com/mckinsey/agents-at-scale-marketplace/commit/04952cc21587fb6e8676a50a01ccdb5d631dadce))
+* resolve deployment failures for team CRDs and file-gateway dependency             ([#157](https://github.com/mckinsey/agents-at-scale-marketplace/issues/157)) ([d68bdc5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d68bdc58842314de3e877d0b58d118f38a78de78))
+
 ## [0.1.23](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.22...v0.1.23) (2026-03-25)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.1...executor-claude-agent-sdk-v0.1.2) (2026-03-30)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** read model config from Model CRD ([#158](https://github.com/mckinsey/agents-at-scale-marketplace/issues/158)) ([df75acb](https://github.com/mckinsey/agents-at-scale-marketplace/commit/df75acb09ef1b57226b38fc857db0c0d566ca697))
+
 ## [0.2.0](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.1...executor-claude-agent-sdk-v0.2.0) (2026-03-30)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.5...file-gateway-v0.1.6) (2026-03-30)
+
+
+### Bug Fixes
+
+* remove root requirement from versitygw init container ([#155](https://github.com/mckinsey/agents-at-scale-marketplace/issues/155)) ([04952cc](https://github.com/mckinsey/agents-at-scale-marketplace/commit/04952cc21587fb6e8676a50a01ccdb5d631dadce))
+
 ## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.4...file-gateway-v0.1.5) (2026-03-25)
 
 
