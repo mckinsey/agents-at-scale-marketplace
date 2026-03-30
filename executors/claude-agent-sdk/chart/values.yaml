@@ -18,8 +18,6 @@ app:
       value: "0.0.0.0"
     - name: PORT
       value: "8000"
-    - name: ANTHROPIC_MODEL
-      value: "claude-sonnet-4-20250514"
     - name: OTEL_INSTRUMENTATION_A2A_SDK_ENABLED
       value: "false"
 

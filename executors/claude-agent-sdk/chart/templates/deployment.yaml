@@ -44,8 +44,6 @@ spec:
             {{- end }}
           envFrom:
             - secretRef:
-                name: anthropic-api-key
-            - secretRef:
                 name: otel-environment-variables
                 optional: true
           resources:
