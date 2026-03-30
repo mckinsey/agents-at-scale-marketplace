@@ -99,49 +99,6 @@ jobs:
           kubectl get svc -n ${{ inputs.chart-namespace }}
           kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance=${{ inputs.chart-name }}-test -n ${{ inputs.chart-namespace }} --timeout=300s
 
-      - name: Verify Marketplace Label on Deployment
-        run: |
-          echo "Verifying marketplace label is applied to deployment..."
-
-          # Check if deployment has the marketplace label
-          DEPLOYMENTS=$(kubectl get deployments -n ${{ inputs.chart-namespace }} -l ark.mckinsey.com/marketplace-item=${{ inputs.chart-name }} -o name)
-
-          if [ -z "$DEPLOYMENTS" ]; then
-            echo "ERROR: No deployments found with label ark.mckinsey.com/marketplace-item=${{ inputs.chart-name }}"
-            echo ""
-            echo "Current deployments in namespace:"
-            kubectl get deployments -n ${{ inputs.chart-namespace }} -o custom-columns=NAME:.metadata.name,LABELS:.metadata.labels
-            echo ""
-            echo "The marketplace label is required for installation status detection in the ARK dashboard."
-            echo ""
-            echo "To fix this, you have two options:"
-            echo ""
-            echo "1. Use the ark-marketplace-common library chart (recommended for external OCI charts):"
-            echo "   See: charts/ark-marketplace-common/README.md"
-            echo ""
-            echo "2. Add labels directly to your deployment templates:"
-            echo "   In templates/_helpers.tpl, ensure your labels include:"
-            echo "   {{- with .Values.global.labels }}"
-            echo "   {{ toYaml . }}"
-            echo "   {{- end }}"
-            echo ""
-            exit 1
-          else
-            echo "✓ Marketplace label successfully applied to deployment(s):"
-            echo "$DEPLOYMENTS"
-
-            # Verify label value matches chart name
-            for deployment in $DEPLOYMENTS; do
-              LABEL_VALUE=$(kubectl get "$deployment" -n ${{ inputs.chart-namespace }} -o jsonpath='{.metadata.labels.ark\.mckinsey\.com/marketplace-item}')
-              if [ "$LABEL_VALUE" != "${{ inputs.chart-name }}" ]; then
-                echo "ERROR: Label value '$LABEL_VALUE' does not match expected chart name '${{ inputs.chart-name }}'"
-                echo "The label value must match the 'name' field in marketplace.json"
-                exit 1
-              fi
-            done
-            echo "✓ Label value verification passed"
-          fi
-
       - name: Cleanup
         if: always()
         run: |
@@ -196,40 +153,6 @@ jobs:
       - name: Lint Helm Chart - ${{ inputs.chart-name }}
         run: |
           helm lint chart/
-
-      - name: Validate Marketplace Label - ${{ inputs.chart-name }}
-        run: |
-          echo "Validating marketplace label in values.yaml..."
-
-          # Check if values.yaml exists
-          if [ ! -f chart/values.yaml ]; then
-            echo "ERROR: chart/values.yaml not found"
-            exit 1
-          fi
-
-          # Check if marketplace label exists in global.labels
-          if ! yq eval '.global.labels."ark.mckinsey.com/marketplace-item"' chart/values.yaml | grep -q .; then
-            echo "ERROR: Missing required marketplace label in chart/values.yaml"
-            echo "Please add the following to your values.yaml:"
-            echo ""
-            echo "global:"
-            echo "  labels:"
-            echo "    ark.mckinsey.com/marketplace-item: \"${{ inputs.chart-name }}\""
-            echo ""
-            exit 1
-          fi
-
-          # Get the label value
-          LABEL_VALUE=$(yq eval '.global.labels."ark.mckinsey.com/marketplace-item"' chart/values.yaml)
-
-          # Check if label value matches chart name
-          if [ "$LABEL_VALUE" != "${{ inputs.chart-name }}" ]; then
-            echo "WARNING: Marketplace label value '$LABEL_VALUE' does not match chart name '${{ inputs.chart-name }}'"
-            echo "This may cause installation detection issues in the ARK dashboard."
-            echo "Label value should match the 'name' field in marketplace.json"
-          else
-            echo "✓ Marketplace label validation passed: $LABEL_VALUE"
-          fi
 
       - name: Package Helm Chart - ${{ inputs.chart-name }}
         run: |

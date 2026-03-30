@@ -222,7 +222,6 @@ If your item shows as "not installed" in the ARK dashboard despite being deploye
 For more details, see:
 - `charts/ark-marketplace-common/README.md` - Library chart documentation
 - `services/phoenix/` - Reference implementation
-- CI logs for validation failures
 
 **Language and Technology Choices**
 
