@@ -1,7 +1,7 @@
 [project]
 name = "executor-claude-agent-sdk"
 # Version is managed via Release Please
-version = "0.1.0"
+version = "0.2.0"
 description = "Claude Agent SDK executor with built-in tool access and session persistence"
 authors = [
     {name = "McKinsey Agent Platform Team"}
