@@ -1,0 +1,136 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-profile-enrichment
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase I - Customer Profile Initialization - 2a. Profile Enrichment"
+    workflows.argoproj.io/description: "Enrich customer profile with web research and government (Companies House) data"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  arguments:
+    parameters:
+      - name: output-base-dir
+        value: "source_code_files/1-customer-profile-initialization"
+      - name: company-name
+        value: "ASSOCIATED BRITISH FOODS PLC"
+      - name: company-number
+        value: "00293262"
+
+  templates:
+    - name: main
+      inputs:
+        parameters:
+          - name: output-base-dir
+          - name: company-name
+          - name: company-number
+      steps:
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+        - - name: enrich-web-data
+            template: enrich-web-query
+            arguments:
+              parameters:
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate"
+          - name: enrich-government-data
+            template: enrich-government-query
+            arguments:
+              parameters:
+                - name: company-number
+                  value: "{{ "{{inputs.parameters.company-number}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate"
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate" "$BASE/output"; do
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created intermediate and output directories"
+
+    - name: enrich-web-query
+      inputs:
+        parameters:
+          - name: company-name
+          - name: output-dir
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: profile-enrich-web-
+          spec:
+            target:
+              type: agent
+              name: {{ .Values.agents.webAnalyst.name }}
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              **CRITICAL: You MUST save your output using mcp-filesystem-write-file. Do NOT just respond with text.**
+
+              Create an initial profile JSON for the company "{{ "{{inputs.parameters.company-name}}" }}". Include: company overview and description, industry and sector, key products/services, recent news or developments, basic financial or operational highlights. Use your knowledge, reasoning, or any available tools to populate the JSON. Structure it per your standard web research output format (business_overview, key_people, sources_consulted, research_status, etc.).
+              
+              You MUST then save the JSON file:
+              Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/web_data_initial_profile.json and content: your full JSON object.
+              
+              OUTPUT FILE PATH (use this exact path): {{ "{{inputs.parameters.output-dir}}" }}/web_data_initial_profile.json
+              Do NOT use /data or /mnt/output prefix. You must actually call mcp-filesystem-write-file—do not just respond with text.
+    - name: enrich-government-query
+      inputs:
+        parameters:
+          - name: company-number
+          - name: output-dir
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: profile-enrich-gov-
+          spec:
+            target:
+              type: agent
+              name: {{ .Values.agents.chAnalyst.name }}
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              **CRITICAL: You MUST save your output using mcp-filesystem-write-file. Do NOT just respond with text.**
+              
+              Create a Companies House style JSON for UK company number {{ "{{inputs.parameters.company-number}}" }} (ASSOCIATED BRITISH FOODS PLC). Include: company name and status, registered address, company type, incorporation date, **full list of active officers** (all directors and secretaries — do NOT include only one; include every officer with name, position, appointed_on, nationality, date_of_birth, country_of_residence), SIC codes. Structure it per your standard output (retrieval_metadata, company_profile, officers / current_officers / active_officers array with all entries, persons_with_significant_control, filing_history, kyc_insights, data_quality). Use reasoning and typical Companies House data structure if you do not have live API data; for mock data, generate a complete officers list (e.g. 10+ entries for a large company).
+              
+              You MUST then save the JSON file:
+              Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/government_data_initial_profile.json and content: your full JSON object.
+              
+              OUTPUT FILE PATH (use this exact path): {{ "{{inputs.parameters.output-dir}}" }}/government_data_initial_profile.json
+              Do NOT use /data or /mnt/output prefix. You must actually call mcp-filesystem-write-file—do not just respond with text.
+{{- end }}

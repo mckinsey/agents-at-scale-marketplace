@@ -1,0 +1,32 @@
+replicaCount: 1
+
+image:
+  repository: companies-house-mcp
+  tag: latest
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+companiesHouse:
+  apiKeySecret:
+    name: companies-house-api-key
+    key: api-key
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "50m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+
+mcpServer:
+  enabled: true
+  # MCPServer CRD name "companies-house" for LegacyX-compatible tool naming
+  nameOverride: "companies-house"
+  timeout: "30s"

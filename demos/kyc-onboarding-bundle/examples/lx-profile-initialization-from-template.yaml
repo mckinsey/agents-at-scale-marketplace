@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-profile-initialization-seq-
+  namespace: default
+spec:
+  workflowTemplateRef:
+    name: lx-profile-initialization
+  arguments:
+    parameters:
+      - name: input-file
+        value: "source_code_files/1-customer-profile-initialization/input/mock-up-email-abf.txt"
+      - name: output-file
+        value: "source_code_files/1-customer-profile-initialization/intermediate/inquiry_information.json"

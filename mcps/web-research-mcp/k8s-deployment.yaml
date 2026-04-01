@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: web-research-mcp
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-research-mcp
+spec:
+  selector:
+    app: web-research-mcp
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-research-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-research-mcp
+  template:
+    metadata:
+      labels:
+        app: web-research-mcp
+    spec:
+      serviceAccountName: web-research-mcp
+      containers:
+      - name: web-research-mcp
+        image: web-research-mcp:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: SEARCH_PROVIDER
+          value: "tavily"
+        - name: TAVILY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: web-search-credentials
+              key: tavily-api-key
+              optional: true
+        - name: PERPLEXITY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: web-search-credentials
+              key: perplexity-api-key
+              optional: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: web-research-mcp
+spec:
+  description: "Lightweight web research server for ownership information"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: web-research-mcp
+        port: http
+        path: /mcp
+  timeout: "60s"

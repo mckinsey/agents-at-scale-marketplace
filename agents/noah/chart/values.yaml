@@ -16,6 +16,7 @@ service:
 agent:
   enabled: true
   name: noah
+  modelRef: default  # Model reference for the agent (defaults to "default" if not specified)
 
 # MCP Server configuration
 mcpServer:

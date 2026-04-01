@@ -1,0 +1,35 @@
+# Secret and Model created only when modelRef.create is true (otherwise create Model in ARK Dashboard).
+{{- if .Values.modelRef.create }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gateway-azure-openai
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  token: {{ .Values.aigw.token | quote }}
+---
+# Model: Azure OpenAI GPT-4.1
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: {{ .Values.modelRef.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  provider: azure
+  type: completions
+  model:
+    value: gpt-4.1
+  pollInterval: 1m0s
+  config:
+    azure:
+      baseUrl:
+        value: https://azure.prod.ai-gateway.quantumblack.com/{{ .Values.aigw.uuid }}/
+      apiVersion:
+        value: 2024-04-01-preview
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: ai-gateway-azure-openai
+            key: token
+{{- end }}

@@ -1,0 +1,95 @@
+# Default values for executor-claude-agent-sdk
+
+# Global annotations added to all resources
+global:
+  annotations:
+    ark.mckinsey.com/service: executor-claude-agent-sdk
+
+# Application configuration
+app:
+  name: executor-claude-agent-sdk
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/executor-claude-agent-sdk
+    pullPolicy: IfNotPresent
+    # tag: defaults to appVersion
+
+  env:
+    - name: HOST
+      value: "0.0.0.0"
+    - name: PORT
+      value: "8000"
+    - name: OTEL_INSTRUMENTATION_A2A_SDK_ENABLED
+      value: "false"
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+# Service configuration
+service:
+  name: executor-claude-agent-sdk
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# HTTPRoute configuration (Gateway API - modern routing method)
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  hostnames:
+    - "executor-claude-agent-sdk.default.127.0.0.1.nip.io"
+
+# RBAC configuration
+rbac:
+  create: true
+
+# Service account configuration
+serviceAccount:
+  name: executor-claude-agent-sdk-sa
+  create: true
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Health check configuration
+healthCheck:
+  path: /health
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# ExecutionEngine CRD configuration
+executionEngine:
+  enabled: true
+  description: "Claude Agent SDK Executor - A2A server with built-in tool access and session persistence"
+
+# Persistent volume for session data
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi

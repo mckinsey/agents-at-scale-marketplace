@@ -1,0 +1,37 @@
+government_data:
+  basic_information:
+    objective: |
+      Identify basic information about the company.
+
+      Definition: Basic information includes the following subsections:
+          - Company Name
+          - Registered Address
+          - Incorporation Date
+          - Status (active, inactive, dissolved)
+          - Type (e.g., private limited company, public limited company, etc.)
+          - Nature of Business (2-3 sentence summary)
+          - Previous Names (Names and Dates)
+
+      Example: "
+        - Company Name: Company XYZ
+        - Registered Address: Colorful Street No 30, 76508 Great Town, England
+        - ...
+      "
+      
+
+  active_officers:
+    objective: |
+      Identify all active officers associated with the company.
+      
+      Definition: People information includes:
+          - Names
+          - Positions (e.g., director, secretary)
+          - Appointment dates
+          - Nationality
+          - Date of birth
+          - Country of residency
+        Only include active people.
+
+      Example: "The active officers associated with XYZ Ltd are:
+          1. John Smith (Director, appointed on 1 January 2020, British, born in January 1980, resides in England
+          2. Jane Doe (Secretary, appointed on 15 February 2021, American, born in February 1985, resides in Scotland"

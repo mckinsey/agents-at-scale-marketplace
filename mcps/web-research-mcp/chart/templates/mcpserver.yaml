@@ -1,0 +1,18 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ include "web-research-mcp.fullname" . }}
+  labels:
+    {{- include "web-research-mcp.labels" . | nindent 4 }}
+spec:
+  description: "Lightweight web research server for ownership information"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "web-research-mcp.fullname" . }}
+        port: http
+        path: /mcp
+  timeout: {{ .Values.mcpServer.timeout }}
+{{- end }}

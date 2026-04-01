@@ -1,0 +1,60 @@
+{{- if .Values.teams.consolidationTeam.enabled }}
+# ============================================================
+# CONSOLIDATION TEAM - Multi-Source Data Consolidation
+# ============================================================
+# Consolidates information from multiple sources into unified profiles
+# Consolidates information from multiple sources into one document
+# Translated from: consolidation_squad / entities_vessels_consolidation_team
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.consolidationTeam.name }}
+  labels:
+    project: kyc-onboarding
+    function: consolidation
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Team that consolidates multiple sources of information into one document.
+    Also used for purpose_of_relationship, json_to_markdown, information_validation,
+    email_information.
+    
+    Objective (consolidate subsection information):
+    Consolidate subsection information for section {{ "{{section}}" }}. Read {{ "{{file_path_input}}" }};
+    identify subsections with similar content and create overarching subsections;
+    consolidate in structured JSON: no duplicates, highlight conflicts, include all
+    confirming sources; ensure correct and complete; save to {{ "{{file_path_output}}" }}.
+    
+    Workflow:
+    1. Planner creates consolidation mission plan with merge logic
+    2. File Manager reads all source files (mcp-filesystem-read-file)
+    3. Analyst consolidates data per merge rules AND writes the output (mcp-filesystem-write-file)
+    4. Critic validates completeness and consistency
+    
+    Capabilities: Analyze different sources of information on different topics and consolidate the output.
+  
+  # Sequential strategy: Each agent completes before next starts
+  strategy: {{ .Values.teams.consolidationTeam.strategy }}
+  
+  # Enable loops with turn limit
+  loops: true
+  maxTurns: {{ .Values.teams.consolidationTeam.maxTurns }}
+  
+  # Team members in execution order
+  members:
+    - name: {{ .Values.agents.consolidationPlanner.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.fileManager.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.consolidationAnalyst.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.critic.name }}
+      type: agent
+{{- end }}

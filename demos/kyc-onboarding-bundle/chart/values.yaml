@@ -1,0 +1,202 @@
+# KYC Onboarding Bundle Configuration
+# Override these values during installation with --set or -f custom-values.yaml
+
+# AI Gateway (only used when modelRef.create is true; otherwise create Model in ARK Dashboard)
+aigw:
+  token: ""
+  uuid: ""
+# Model reference for agents
+# Set modelRef.create to true only if you want the chart to create the Model (and Secret).
+# If you already have a Model (e.g. from "ark models create default"), leave modelRef.create false
+# to avoid Helm adoption errors.
+modelRef:
+  name: default
+  create: false
+# Agents configuration  
+# All agents migrated from legacyX squads
+agents:
+  # Shared agents used across multiple teams
+  critic:
+    enabled: true
+    name: critic-agent
+  fileManager:
+    enabled: true
+    name: file-manager-agent
+  # Document Extraction Team agents
+  docPlanner:
+    enabled: true
+    name: doc-planner-agent
+  ragAgent:
+    enabled: true
+    name: rag-agent
+  docAnalyst:
+    enabled: true
+    name: doc-analyst-agent
+  scoutAgent:
+    enabled: true
+    name: scout-agent
+  # Web Research Team agents
+  webPlanner:
+    enabled: true
+    name: web-planner-agent
+  webResearcher:
+    enabled: true
+    name: web-researcher-agent
+  webAnalyst:
+    enabled: true
+    name: web-analyst-agent
+  # Consolidation Team agents
+  consolidationPlanner:
+    enabled: true
+    name: consolidation-planner-agent
+  consolidationAnalyst:
+    enabled: true
+    name: consolidation-analyst-agent
+  # Consolidated standalone agents (OPTION C)
+  relevanceClassificationAgent:
+    enabled: true
+    name: relevance-classification-agent
+    model: default
+  summaryAssessmentAgent:
+    enabled: true
+    name: summary-assessment-agent
+    model: default
+  beneficialOwnerTreeAgent:
+    enabled: true
+    name: beneficial-owner-tree-agent
+    model: default
+  # Companies House Team agents
+  chPlanner:
+    enabled: true
+    name: ch-planner-agent
+  chApiAgent:
+    enabled: true
+    name: ch-api-agent
+  chAnalyst:
+    enabled: true
+    name: ch-analyst-agent
+  # Beneficial Owners Team agents (used when teams.beneficialOwnersTeam.enabled is true)
+  boPlanner:
+    enabled: true
+    name: bo-planner
+    model: default
+  companiesHouseExpert:
+    enabled: true
+    name: companies-house-expert
+    model: default
+  boWebResearcher:
+    enabled: true
+    name: bo-web-researcher
+    model: default
+  boAnalyst:
+    enabled: true
+    name: bo-analyst
+    model: default
+# Teams configuration
+# All teams migrated from legacyX squads with maxTurns: 5
+teams:
+  # Document extraction from PDFs (5 agents: planner→rag→analyst→critic→file-manager, each needs multiple turns)
+  docExtractionTeam:
+    enabled: true
+    name: doc-extraction-team
+    strategy: sequential
+    maxTurns: 15
+  # Simplified 2-agent scout+RAG pattern (scout→rag-agent, each needs multiple turns for PDF analysis)
+  scoutRagTeam:
+    enabled: true
+    name: scout-rag-team
+    strategy: sequential
+    maxTurns: 15
+  # Web research needs more turns: Planner → Researcher → Analyst → Critic → File Manager (each may use multiple turns)
+  webResearchTeam:
+    enabled: true
+    name: web-research-team
+    strategy: sequential
+    maxTurns: 18
+  # Multi-source data consolidation (4 agents: planner→file-manager→analyst→critic, each needs multiple turns)
+  consolidationTeam:
+    enabled: true
+    name: consolidation-team
+    strategy: sequential
+    maxTurns: 15
+  # UK company registry data retrieval (needs more turns: Planner → API → Analyst → Critic → File Manager)
+  companiesHouseTeam:
+    enabled: true
+    name: companies-house-team
+    strategy: sequential
+    maxTurns: 12
+  # Beneficial Owners Team - CH API + Web Research (required for submit-ownership)
+  beneficialOwnersTeam:
+    enabled: true
+    name: beneficial-owners-team
+    strategy: sequential
+    maxTurns: 30
+# Demo metadata for ARK Dashboard namespace labels
+demo:
+  name: "KYC Onboarding"
+  description: "KYC onboarding workflows with specialized agents and teams for customer due diligence"
+# Labels to apply to all resources
+commonLabels:
+  bundle: kyc-onboarding
+  managed-by: helm
+  migrated-from: legacyx
+# Argo Workflows integration
+argoWorkflows:
+  rbac:
+    enabled: true
+  serviceAccount:
+    # Set to false if ServiceAccount already exists in the namespace (e.g., when deploying to default)
+    create: true
+    name: argo-workflow
+  workflowTemplate:
+    enabled: true
+# MCP Servers Configuration
+# Phase 1 (Current): Only filesystem-mcp required
+# Phase 2 (Future): Add specialized MCP servers for enhanced functionality
+mcpServers:
+  required:
+    - mcp-filesystem # File operations (read, write, list, directory management)
+  phase2_planned:
+    - rag-mcp # Document extraction with RAG capabilities
+    - web-search-mcp # Web research and search functionality
+    - companies-house-mcp # UK Companies House API integration
+    - plantuml-mcp # UML diagram generation (optional)
+  notes: |
+    **Phase 1 Implementation:**
+    Deploy filesystem MCP server:
+      kubectl apply -f mcp/filesystem-mcp/
+
+    Agents use prompt engineering with mcp-filesystem tools.
+    RAG, web search, and API calls are simulated via reasoning.
+
+    **Phase 2 Enhancement:**
+    Create and deploy specialized MCP servers as needed:
+      - RAG MCP: Enhanced PDF extraction with vector search
+      - Web Search MCP: Real web research capabilities
+      - Companies House MCP: Live UK registry API access
+
+    Update agent tool configurations to include new MCP tools.
+# Data seeder - auto-uploads sample data via file-gateway-api post-install hook
+dataSeeder:
+  enabled: true
+  fileGateway: "file-gateway-api:80"
+  prefix: "source_code_files/2-customer-due-diligence/input/"
+  image:
+    repository: kyc-demo-data-seeder
+    tag: latest
+    pullPolicy: IfNotPresent
+# Filesystem MCP deployment name (must match file-gateway subchart's fullnameOverride + "-filesystem-mcp")
+filesystemMcpDeployment: "file-gateway-filesystem-mcp"
+
+# File Gateway (installed with bundle; provides file-gateway-api and file-gateway-filesystem-mcp)
+file-gateway:
+  enabled: true
+  fullnameOverride: "file-gateway"
+  storage:
+    pvcName: "file-gateway-storage"
+  filesystemMcp:
+    enabled: true
+    # Register as "mcp-filesystem" so ARK uses this MCP for mcp-filesystem-* tools (no make build needed).
+    mcpserverName: "mcp-filesystem"
+  httpRoute:
+    enabled: false

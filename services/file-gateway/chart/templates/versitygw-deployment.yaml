@@ -19,6 +19,18 @@ spec:
       serviceAccountName: {{ include "file-gateway.versitygw.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.versitygw.podSecurityContext | nindent 8 }}
+      initContainers:
+      - name: fix-data-permissions
+        image: busybox:1.37.0
+        command: ['sh', '-c', 'mkdir -p {{ .Values.versitygw.config.dataPath }}/{{ .Values.filesystemMcp.config.bucketName }}']
+        volumeMounts:
+        - name: data
+          mountPath: {{ .Values.versitygw.config.dataPath }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
       containers:
       - name: versitygw
         securityContext:

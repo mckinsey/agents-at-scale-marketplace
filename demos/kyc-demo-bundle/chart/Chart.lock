@@ -1,0 +1,6 @@
+dependencies:
+- name: file-gateway
+  repository: file://../../../services/file-gateway/chart
+  version: 0.1.3
+digest: sha256:cd9f238964f0d919d9d98ba4b3d5bc9e5d551b6c45d9cc634a55cf142fb7946e
+generated: "2026-01-19T13:18:43.388846-03:00"

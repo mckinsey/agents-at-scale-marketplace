@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "web-research-mcp.fullname" . }}
+  labels:
+    {{- include "web-research-mcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "web-research-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "web-research-mcp.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "web-research-mcp.fullname" . }}-sa
+      automountServiceAccountToken: false
+      containers:
+        - name: web-research-mcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: SEARCH_PROVIDER
+              value: {{ .Values.search.provider | quote }}
+            - name: TAVILY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.search.credentialsSecret.name }}
+                  key: {{ .Values.search.credentialsSecret.tavilyApiKeyField }}
+                  optional: true
+            - name: PERPLEXITY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.search.credentialsSecret.name }}
+                  key: {{ .Values.search.credentialsSecret.perplexityApiKeyField }}
+                  optional: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

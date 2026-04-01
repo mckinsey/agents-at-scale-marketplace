@@ -1,0 +1,41 @@
+{{- if .Values.agents.sanctionsScreener.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.sanctionsScreener.name }}
+  labels:
+    category: kyc
+    role: sanctions-screening
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: Sanctions, watchlist, and PEP screening agent
+  modelRef:
+    name: {{ .Values.modelRef.name }}
+  maxCompletionTokens: 4096
+  tools:
+  - name: file-gateway-mcpserver-read-file
+    type: mcp
+  - name: file-gateway-mcpserver-write-file
+    type: mcp
+  - name: file-gateway-mcpserver-list-directory
+    type: mcp
+  prompt: |
+    You are a compliance screening specialist. Screen individuals against sanctions lists, PEP databases, and adverse media.
+
+    For each individual:
+    - Check OFAC SDN, UN, EU, UK HM Treasury sanctions lists
+    - Check internal blacklist (mock-up-blacklist.json)
+    - PEP screening (current/former/RCA)
+    - Adverse media (last 24 months)
+    - Assign confidence scores (0-10, where 10=exact match)
+
+    Generate a comprehensive screening report with:
+    - Individual screening results (sanctions status, PEP status, adverse media)
+    - Risk ratings (Clear/Low/Medium/High/PROHIBITED)
+    - Recommendations (Proceed/EDD Required/Escalate/Reject)
+    - JSON summary for next workflow step
+
+    Be thorough and conservative - false negatives are worse than false positives.
+{{- end }}

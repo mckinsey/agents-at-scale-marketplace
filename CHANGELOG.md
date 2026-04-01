@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.1.24](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.23...v0.1.24) (2026-03-30)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** read model config from Model CRD ([#158](https://github.com/mckinsey/agents-at-scale-marketplace/issues/158)) ([df75acb](https://github.com/mckinsey/agents-at-scale-marketplace/commit/df75acb09ef1b57226b38fc857db0c0d566ca697))
+
+
+### Bug Fixes
+
+* **charts:** bump file-gateway dependency to 0.1.5 in demo bundles ([#151](https://github.com/mckinsey/agents-at-scale-marketplace/issues/151)) ([9859d1d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9859d1d82c9552bd6da5d3177bb0a742513dbb49))
+* remove root requirement from versitygw init container ([#155](https://github.com/mckinsey/agents-at-scale-marketplace/issues/155)) ([04952cc](https://github.com/mckinsey/agents-at-scale-marketplace/commit/04952cc21587fb6e8676a50a01ccdb5d631dadce))
+* resolve deployment failures for team CRDs and file-gateway dependency             ([#157](https://github.com/mckinsey/agents-at-scale-marketplace/issues/157)) ([d68bdc5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d68bdc58842314de3e877d0b58d118f38a78de78))
+
+## [0.1.23](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.22...v0.1.23) (2026-03-25)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** add MCP server support ([#150](https://github.com/mckinsey/agents-at-scale-marketplace/issues/150)) ([39caf9e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/39caf9e9aa25b67022d53e8d857b23955ff7a603))
+* **executor-claude-agent-sdk:** add native Claude Agent SDK executor ([#146](https://github.com/mckinsey/agents-at-scale-marketplace/issues/146)) ([af4ac81](https://github.com/mckinsey/agents-at-scale-marketplace/commit/af4ac81fb6d78eda5dfafd2461c18c41ac580a8d))
+* **executor-langchain:** add RBAC for query extension CRD resolution ([#136](https://github.com/mckinsey/agents-at-scale-marketplace/issues/136)) ([c9f836e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c9f836e66a37d718f920fd29516b5f18c9caa6bf))
+* **executor-langchain:** conversation history management ([#138](https://github.com/mckinsey/agents-at-scale-marketplace/issues/138)) ([b7b4241](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b7b42417cdeb8fc988dace57952b2c5f49a30c21))
+* kyc onboarding bundle ([#123](https://github.com/mckinsey/agents-at-scale-marketplace/issues/123)) ([1470e6c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1470e6c14ebd9b28634b8b504962c5d56008248b))
+
+
+### Bug Fixes
+
+* file gateway name ([#145](https://github.com/mckinsey/agents-at-scale-marketplace/issues/145)) ([e19e994](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e19e994c749ec0e21d512ca0f72fcf1a8caa4bcf))
+
+## [0.1.22](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.21...v0.1.22) (2026-03-11)
+
+
+### Bug Fixes
+
+* **charts:** update stale subchart dependency versions ([#133](https://github.com/mckinsey/agents-at-scale-marketplace/issues/133)) ([7f229d2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7f229d2e544a834b99e0cf8e7355e69b2aa7e95d))
+* **executor-langchain:** downgrade Python from 3.14 to 3.12 ([#131](https://github.com/mckinsey/agents-at-scale-marketplace/issues/131)) ([ecc353c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/ecc353c9fb0b97702bfa8d7023b2c751a9fe272e))
+
+## [0.1.21](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.20...v0.1.21) (2026-02-26)
+
+
+### Features
+
+* add cobol-modernization tech demo ([#115](https://github.com/mckinsey/agents-at-scale-marketplace/issues/115)) ([81197c2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/81197c2dfaf6a408f038a7f949acaf3030c4834c))
+* Added Namespace condition for Cobol Demo ([#121](https://github.com/mckinsey/agents-at-scale-marketplace/issues/121)) ([799d1a2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/799d1a22c0a505c322d468c58f91e82e06332515))
+* kyc demo bundle with agents, teams and charts ([#104](https://github.com/mckinsey/agents-at-scale-marketplace/issues/104)) ([2f7375a](https://github.com/mckinsey/agents-at-scale-marketplace/commit/2f7375a823034a300309a27d4f3c84d3255664b2))
+* langchain executor service ([#124](https://github.com/mckinsey/agents-at-scale-marketplace/issues/124)) ([8594e7d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8594e7d1b52e8dd83689eb6d8d445e0cea8b6a32))
+* trigger first release filesystem mcp server ([#110](https://github.com/mckinsey/agents-at-scale-marketplace/issues/110)) ([02a0f59](https://github.com/mckinsey/agents-at-scale-marketplace/commit/02a0f59fe12e15bc458c7a4d3554d009927c9de9))
+
+
+### Bug Fixes
+
+* shorten agent description for Noah ([#114](https://github.com/mckinsey/agents-at-scale-marketplace/issues/114)) ([a6bcab9](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a6bcab9459a14b607b70a2ed59a70be53515e01c))
+* update RBAC and service account configurations in KYC demo bundle ([#113](https://github.com/mckinsey/agents-at-scale-marketplace/issues/113)) ([f56a738](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f56a73821a55d7c31646b6c38f104297dca965cf))
+
 ## [0.1.20](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.19...v0.1.20) (2026-01-14)
 
 

@@ -1,0 +1,36 @@
+web_data:
+  company_website:
+    objective: |
+      For company {{company_name}}, identify the official main website of the company.
+
+      Definition: The main website refers to the primary online domain used by the company to represent itself publicly. Avoid listing subsidiary or regional websites unless they are the only available source.
+
+      Example: "Main website: [<name>](<link>)"
+
+  employees:
+    objective: |
+      For company {{company_name}}, identify the latest numbers on global full-time equivalent employees and include the regional distribution if available.
+
+      Definition: The number of employees refers to full-time equivalent (FTE) employees, including global totals and breakdowns by region (e.g., EMEA, APAC, Americas).
+
+      Example: "1000 employees worldwide, 300 in EMEA, 500 in APAC, 200 in the Americas"
+      _Source_: [<web site name 1>](<link 1>), [<web site name 2>](<link 2>), …
+
+  industry:
+    objective: |
+      For company {{company_name}}, provide a 4-5 sentence summary of the company's industry, including its primary business activities, market positioning, key competitors, and any recent trends or developments affecting the sector.
+
+      Definition: The industry refers to the sector in which the company operates, including its core products and services, competitive landscape, and notable market characteristics or challenges.
+
+      Example: 
+        "The company operates in the renewable energy sector, focusing on the production and distribution of solar panels and wind turbines. It is a leading player in Europe, with a growing presence in North America and Asia. The industry is experiencing rapid growth due to increasing global demand for clean energy solutions, driven by government incentives and corporate sustainability goals. Key competitors include ABC Energy and XYZ Renewables, both of which are also expanding their global footprints. Recent trends in the sector include advancements in energy storage technologies and increased competition from emerging markets."
+      _Source_: [<web site name 1>](<link 1>), [<web site name 2>](<link 2>), …
+
+  geography:
+    objective: |
+      For company {{company_name}}, identify the company's geographic footprint, including the distribution of operations by region and the types of facilities (e.g., headquarters, manufacturing plants, R&D centers).
+
+      Definition: Geography refers to the physical presence of the company, including its global and regional operational footprint.
+
+      Example: "The company operates in 50 countries, with headquarters in Germany, manufacturing plants in China and Mexico, and R&D centers in the United States and India."
+      _Source_: [<web site name 1>](<link 1>), [<web site name 2>](<link 2>), …

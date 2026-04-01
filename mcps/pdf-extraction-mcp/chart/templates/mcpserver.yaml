@@ -1,0 +1,18 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ include "pdf-extraction-mcp.fullname" . }}
+  labels:
+    {{- include "pdf-extraction-mcp.labels" . | nindent 4 }}
+spec:
+  description: "Lightweight PDF extraction server for ownership information"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "pdf-extraction-mcp.fullname" . }}
+        port: http
+        path: /mcp
+  timeout: {{ .Values.mcpServer.timeout }}
+{{- end }}

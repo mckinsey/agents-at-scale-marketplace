@@ -1,0 +1,74 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: perplexity-ask-mcp
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: perplexity-ask-mcp
+spec:
+  selector:
+    app: perplexity-ask-mcp
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perplexity-ask-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: perplexity-ask-mcp
+  template:
+    metadata:
+      labels:
+        app: perplexity-ask-mcp
+    spec:
+      serviceAccountName: perplexity-ask-mcp
+      containers:
+        - name: perplexity-ask-mcp
+          image: perplexity-ask-mcp:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: PERPLEXITY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: web-search-credentials
+                  key: perplexity-api-key
+                  optional: true
+            - name: PERPLEXITY_MODEL
+              value: "sonar"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+# MCPServer name "perplexity" + tool "ask" => ARK Tool "perplexity-ask" (LegacyX-compatible)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: perplexity
+spec:
+  description: "Perplexity Ask (LegacyX-compatible); tool perplexity-ask for web search"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: perplexity-ask-mcp
+        port: http
+        path: /mcp
+  timeout: "90s"

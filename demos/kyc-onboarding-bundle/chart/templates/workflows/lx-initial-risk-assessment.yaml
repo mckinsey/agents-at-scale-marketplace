@@ -1,0 +1,268 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-initial-risk-assessment
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase I - Customer Profile Initialization - 3. Initial Risk Assessment and Company Verification"
+    workflows.argoproj.io/description: "Consolidate Phase I data, validate, produce KYC profile and preliminary risk assessment"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  arguments:
+    parameters:
+      - name: output-base-dir
+        value: "source_code_files/1-customer-profile-initialization"
+      - name: profile-json
+        value: "source_code_files/1-customer-profile-initialization/output/kyc_profile.json"
+      - name: profile-md
+        value: "source_code_files/1-customer-profile-initialization/output/kyc_profile.md"
+      - name: risk-report
+        value: "source_code_files/1-customer-profile-initialization/output/summary_risk_report.md"
+
+  templates:
+    - name: main
+      inputs:
+        parameters:
+          - name: output-base-dir
+          - name: profile-json
+          - name: profile-md
+          - name: risk-report
+      steps:
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+        - - name: consolidate-and-validate
+            template: consolidate-validate-query
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+                - name: profile-json
+                  value: "{{ "{{inputs.parameters.profile-json}}" }}"
+        - - name: json-to-markdown
+            template: json-to-markdown-query
+            arguments:
+              parameters:
+                - name: profile-json
+                  value: "{{ "{{inputs.parameters.profile-json}}" }}"
+                - name: profile-md
+                  value: "{{ "{{inputs.parameters.profile-md}}" }}"
+        - - name: summary-risk-assessment
+            template: summary-risk-query
+            arguments:
+              parameters:
+                - name: profile-json
+                  value: "{{ "{{inputs.parameters.profile-json}}" }}"
+                - name: risk-report
+                  value: "{{ "{{inputs.parameters.risk-report}}" }}"
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate" "$BASE/output"; do
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created intermediate and output directories"
+
+    - name: consolidate-validate-query
+      inputs:
+        parameters:
+          - name: output-base-dir
+          - name: profile-json
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: initial-risk-consolidate-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              You must complete this task yourself and save the output; do not hand off or terminate.
+
+              **CRITICAL RULE — SINGLE FILE OUTPUT:** You MUST produce exactly ONE JSON file containing ALL sections. Do NOT split the output into multiple files. Do NOT create separate files per section. You will call mcp-filesystem-write-file EXACTLY ONCE to write ONE file that contains the complete merged JSON object with all three top-level keys.
+
+              **CRITICAL — Populate with real data from files.** You MUST read the JSON files from the intermediate directory and **copy the actual values** from them into your output. Do NOT use "NA", "[sender company]", or placeholders for fields that exist in the source files. Only use NA or _Pending_ when a source file is missing or a field is genuinely absent in all sources.
+
+              Step 1 — List and read files: Call mcp-filesystem-list-directory on {{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ then mcp-filesystem-read-file for each JSON file (inquiry_information.json, web_data_initial_profile.json, government_data_initial_profile.json, kyc_standards.json). Read every file that exists.
+
+              Step 2 — Merge ALL data into ONE single KYC profile JSON object using the exact LegacyX schema below. The final JSON must be a SINGLE object with exactly three top-level keys. **Copy real values** from the files you read.
+
+              Your output JSON must match this exact skeleton (one object, three keys):
+              ```json
+              {
+                "KYC Standards and Requirements": [ ... ],
+                "Inquiry information": [ ... ],
+                "Initial Profile": [ ... ]
+              }
+              ```
+
+              **CRITICAL — Top-level keys:** Use these EXACT strings (with spaces, NO underscores): "KYC Standards and Requirements", "Inquiry information", "Initial Profile". Do NOT use "KYC_Standards_and_Requirements", "Inquiry_information", or "Initial_Profile".
+
+              **1. "KYC Standards and Requirements"** (array)
+              - Merge from kyc_standards.json. Subsections "Required documents" and "Required checks", each with "content" = array of strings ending with "(global requirement)" or "(UK requirement)".
+
+              **2. "Inquiry information"** (array)
+              - **Company details**: content = array of objects. Each object has the **field value as a key** and **validation status/source** as sibling keys. Example: { "Company Name": "Associated British Foods plc", "validation status": "_Validated_", "validation source": "[Companies House - Associated British Foods PLC](https://find-and-update.company-information.service.gov.uk/company/00293262)" }. When _Validated_, "validation source" MUST be a full markdown link with the actual URL (e.g. from government_data or https://find-and-update.company-information.service.gov.uk/company/00293262) — do NOT use "(url)" or placeholder text. Use _Pending_ and "NA" only when the field is from email only. Copy company name, address, number, nature of business, and Key Individuals from inquiry_information.json and government_data; include all key individuals from inquiry and add validated officers from government with _Validated_ and full link.
+              - **Contact details**: content = array of single-key objects with **actual values**, e.g. {"Contact name": "John Bason"}, {"Contact email address": "john.bason@..."}. Copy from inquiry_information.json. Key names: "Contact name", "Contact email address", "Contact phone number".
+              - **Inquiry details**: content = array with **actual values**, e.g. {"Customer Inquiry Date": "Monday, 9 June 2025"}, {"Product requested": ["Corporate Treasury Management Account", ...]}, {"Account purpose": "..."}, {"Submitted documents": [...]}. Copy from inquiry_information.json (use full date format e.g. "Monday, 9 June 2025" when present).
+              - **Fourth element**: { "source": "Email conversation between [actual sender company name] and [actual recipient]" }. Copy the exact source string from inquiry_information.json.
+
+              **3. "Initial Profile"** (array) — **exact key with space:** "Initial Profile", NOT "Initial_Profile".
+              The array must have **one separate object per subsection** (6 objects total): geography, employees, company_website, basic_information, industry, active_officers. Each object MUST be **{ "subsection": "<name>", "content": <...> }** only. Do NOT use a single object with keys "geography", "employees", etc.; use 6 array elements, each with "subsection" and "content".
+              - **geography, employees, company_website, industry**: "content" = array of objects { "text": "<actual text>", "source": ["<[label](url)>", ...], "source_reliability_score": ["high"|"medium"|"low"], "source_reliability_rationale": ["...", ...] }. Use string scores "high", "medium", "low" only — NOT numeric (e.g. not 95). Copy from web_data_initial_profile.json.
+              - **basic_information**: one object with "subsection": "basic_information", "content": { Company Name, Registered Address, Incorporation Date, Status, Type, Nature of Business, Previous Names }. **Previous Names**: when government_data has previous names use array of objects { "name", "effective_from", "ceased_on" }; otherwise "NA" or []. At subsection level use **scalar** strings: "source", "source_reliability_score" ("high"/"medium"/"low"), "source_reliability_rationale" — not arrays. Copy from government_data_initial_profile.json.
+              - **active_officers**: one object with "subsection": "active_officers", "content": { "active_officers": [ ... ] }. At subsection level use **scalar** strings: "source" (full markdown link when available), "source_reliability_score" ("high"/"medium"/"low"), "source_reliability_rationale". **Include ALL officers** from government_data_initial_profile.json — copy the complete list (e.g. 10 for ABF), do NOT output only one. Each officer: name, position, appointed_on, nationality, date_of_birth (string or null), country_of_residence.
+
+              If a file is missing, only then use minimal placeholders for that section. Otherwise **merge and copy the real data** from every file you read.
+
+              Step 3 — Write the SINGLE consolidated file:
+              You MUST call mcp-filesystem-write-file EXACTLY ONCE with:
+              - path: {{ "{{inputs.parameters.profile-json}}" }}
+              - content: your COMPLETE merged JSON (one object with all three top-level keys)
+              Do NOT write multiple files. Do NOT split by section. Do NOT add /data or /mnt prefix to the path. ONE call, ONE file, ALL data.
+    - name: json-to-markdown-query
+      inputs:
+        parameters:
+          - name: profile-json
+          - name: profile-md
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: initial-risk-json2md-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              You must complete this task yourself and save the output; do not hand off or terminate.
+
+              Read the KYC profile JSON from: {{ "{{inputs.parameters.profile-json}}" }} using mcp-filesystem-read-file.
+              The profile uses the LegacyX schema: "KYC Standards and Requirements", "Inquiry information", "Initial Profile".
+
+              Convert it to Markdown matching the **LegacyX kyc_profile.md** format exactly. **Use the actual values from the JSON** — do not use "NA", "(url)", or placeholders when the JSON has real data. Use the **exact section order** below.
+
+              **Title (first line):** # Customer Profile for [Company Name from JSON]
+
+              **Section order (mandatory):**
+              1. Inquiry Information
+              2. Initial Profile
+              3. KYC Standards and Requirements
+
+              **1. Inquiry Information**
+              - #### 1.1 Company Details — **table** with columns: Description | Information | Validation Status | Validation Source. Use table alignment like `| :--------- | :--------- | :---------------- | :---------------- |`. For Validation Source: use the **exact markdown link** from the JSON when _Validated_ (e.g. [Companies House - Company Name](https://...)); when _Pending_ use "No information available". If there are multiple Key Individuals, add **one table row per person** (each row "Key Individuals" with that person's details and their validation status/source).
+              - #### 1.2 Contact Details — bullet list: **Contact Name:**, **Contact Email Address:**, **Contact Phone Number:** (values from JSON).
+              - #### 1.3 Inquiry Details — **Customer Inquiry Date:** use full format from JSON (e.g. Monday, 9 June 2025). **Product Requested:** as a bullet list (one line per product). **Account Purpose:** and **Submitted Documents:** as bullets from JSON. End with a line: **Source:** Initial email inquiry
+
+              **2. Initial Profile** — use subsection numbering #### 2.1, #### 2.2, ... in this order:
+              - #### 2.1 Active Officers — **table** with columns: Name | Position | Appointed On | Nationality | Date of Birth | Country of Residency. Include **every** officer from the JSON. Below the table add **Source:** [link from JSON or "UK Government Company Information" with URL]. Then _Credibility score:_ high/medium/low and _Rationale:_ [from JSON]. Do NOT use "95% credibility"; use the string "high", "medium", or "low" from the profile.
+              - #### 2.2 Geography — paragraph of text from JSON; then **Source:** with each source as a link, and for each: <br>_Credibility score:_ high/medium/low <br>_Rationale:_ [text from JSON].
+              - #### 2.3 Employees — paragraph from JSON; then **Source:** with links and _Credibility score:_ / _Rationale:_ per source.
+              - #### 2.4 Company Website — main website link from JSON; **Source:** with credibility and rationale (use "high"/"medium"/"low", not percentages).
+              - #### 2.5 Basic Information — **table** with Description | Information (Company Name, Registered Address, Incorporation Date, Status, Type, Nature of Business, Previous Names). Previous Names: format as "NAME (Effective from: date, Ceased on: date)" or "NA" if absent. Below table: **Source:** [link] <br>_Credibility score:_ high/medium/low <br>_Rationale:_ [text].
+              - #### 2.6 Industry — industry description paragraph; **Sources:** with links and _Credibility score:_ / _Rationale:_ per source.
+
+              **3. KYC Standards and Requirements**
+              - #### 3.1 Required Documents — bullet list of document items from JSON (each line one item).
+              - #### 3.2 Required Checks — bullet list with **bold** check name and description, e.g. **Identity Verification:** Confirm authenticity... (global requirement). Use the exact strings from the JSON; bold the leading check name (e.g. **Key Controllers Verification:**, **Sanctions Screening:**).
+
+              You MUST call mcp-filesystem-write-file with path set to the exact string below (no leading slash, no /data or /mnt prefix) and content set to your full Markdown:
+              {{ "{{inputs.parameters.profile-md}}" }}
+    - name: summary-risk-query
+      inputs:
+        parameters:
+          - name: profile-json
+          - name: risk-report
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: initial-risk-summary-
+          spec:
+            target:
+              type: agent
+              name: summary-assessment-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              You must complete this task yourself and save the output; do not hand off or terminate.
+
+              **CRITICAL — FILE OUTPUT REQUIRED:** Your task is NOT complete until you call mcp-filesystem-write-file to save the report. You MUST call mcp-filesystem-write-file with path: {{ "{{inputs.parameters.risk-report}}" }} and content: your full Markdown report. Do NOT just respond with the report text — you MUST save it to the file. Do NOT add /data or /mnt prefix to the path.
+
+              Read the KYC profile from: {{ "{{inputs.parameters.profile-json}}" }} using mcp-filesystem-read-file.
+
+              Produce an **Initial risk assessment report** in Markdown matching the **LegacyX summary_risk_report.md** format exactly. **Use the actual values from the profile JSON** (company name, address, key individuals, geography, industry, purpose, etc.) — do not use "NA" or placeholders when the JSON contains real data.
+
+              **Title and date**
+              - First line: # Initial risk assessment report: [Company Name from JSON]
+              - Second line: _YYYY-MM-DD_ only (e.g. _2025-06-09_). Do NOT use "Report generated on:" or any other prefix — just the date in italics.
+
+              **Sections (use ### for main sections)**
+              - ### Executive summary — One or two paragraphs using **real data from the profile**: geography (e.g. "operates in 56 countries" when present), industry, identification (e.g. "mostly validated, with some key individuals pending validation" when mixed; "all validated" when all validated). When the profile has no media/blacklist/purpose info, say "There is no available information on media coverage, blacklist and sanction screening, or the purpose of the relationship" (or similar). When purpose is in the profile, use it. End with: "Overall, the risk rating for [Company] is **<span style="color: orange"> moderate </span>**." (or low/green, high/red as appropriate).
+
+              - ### Identification details — Format exactly as:
+                - **Company Name**: [value], **<span style="color: green"> Validated </span>** or **<span style="color: red"> Validation Pending </span>**
+                - **Company Address**: [value], **<span style="color: green"> Validated </span>** or **<span style="color: red"> Validation Pending </span>**
+                - **Company Number**: [value], **<span style="color: green"> Validated </span>** or **<span style="color: red"> Validation Pending </span>**
+                - **Key Individuals**: (then on the next line, one sub-bullet per person) e.g. "  - John Bason, Chief Financial Officer, Address: ..., Nationality: British, **<span style="color: red"> Validation Pending </span>**" and "  - George Weston, ..., **<span style="color: green"> Validated </span>**". Use validation status from the profile for each person; include every key individual from the profile.
+
+              - ### Geographical presence — _Summary_: [paragraph from profile geography]. _Risk assessment_: [your assessment]. _Risk rating_: **<span style="color: green"> low </span>** or **<span style="color: orange"> moderate </span>** or **<span style="color: red"> high </span>**
+
+              - ### Industry and business activities — _Summary_: [from profile industry]. _Risk assessment_: [your assessment]. _Risk rating_: [colored span]
+
+              - ### Ownership structure — _Summary_: [from profile or "not explicitly detailed" when absent]. _Risk assessment_: [your assessment]. _Recommendation_: when info is lacking, add "Collect more information to assess the associated risk." _Risk rating_: [colored span]
+
+              - ### Media Coverage — _Summary_: No or insufficient information available. (or use profile if present.) _Risk assessment_: NA. _Risk rating_: NA. _Recommendation_: Collect more information to assess the associated risk.
+
+              - ### Blacklist and sanction screening — _Summary_: No or insufficient information available. _Risk assessment_: NA. _Risk rating_: NA. _Recommendation_: Collect more information to assess the associated risk.
+
+              - ### Purpose of relationship — _Summary_: [from profile inquiry details when present, else "No or insufficient information available"]. _Risk assessment_: [paragraph when purpose exists, else NA]. _Risk rating_: [colored span or NA]
+
+              - ### Requirements and KYC standards
+                - ##### Required documents — **Table** with columns: Document | Requirement | Status. Use **exact** document strings from the profile's "KYC Standards and Requirements" (e.g. "Certificate of incorporation or equivalent.", "Business registration number and tax identification number (TIN)."). Requirement column: **lowercase** "global" or "UK". Status: **<span style="color: green"> Submitted by client </span>**, **<span style="color: red"> Missing </span>**, **<span style="color: green"> Collected from external sources </span>** (or "Collected from external source"), **<span style="color: red"> Not applicable </span>** as appropriate. Use table alignment like `| :--------------- | :-------------- | :--------------- |`.
+                - ##### Required checks — **Table** with columns: Check | Description | Requirement | Status. Use **exact** check names and descriptions from the profile (e.g. "Identity Verification", "Confirm authenticity of personal and corporate identity documents."). Requirement: **lowercase** "global" or "UK". Status: **<span style="color: green"> Completed </span>** or **<span style="color: red"> Pending </span>**. Alignment: `| :--------------- | :-------------- | :--------------- | :--------------- |`.
+
+              - ### Recommendations: — Bullet list of recommendations (e.g. collect missing documents, complete pending checks, monitor risks). Then on the next line: **Overall Risk Rating**: **<span style="color: orange"> moderate </span>** (or low/green, high/red).
+
+              You MUST call mcp-filesystem-write-file with path set to the exact string below (no leading slash, no /data or /mnt prefix) and content set to your full report:
+              {{ "{{inputs.parameters.risk-report}}" }}
+{{- end }}

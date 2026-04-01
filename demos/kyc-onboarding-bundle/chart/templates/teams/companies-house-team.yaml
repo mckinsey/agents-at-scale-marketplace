@@ -1,0 +1,66 @@
+{{- if .Values.teams.companiesHouseTeam.enabled }}
+# ============================================================
+# COMPANIES HOUSE TEAM - UK Company Registry Data Retrieval
+# ============================================================
+# Retrieves official UK company information from Companies House
+# Translated from: UK API data squad (Companies House)
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.companiesHouseTeam.name }}
+  labels:
+    project: kyc-onboarding
+    function: api-data-retrieval
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Team that retrieves and structures UK company information from
+    Companies House official business registries.
+    
+    Objective (government data collection):
+    Perform tasks for company number {{ "{{company_number}}" }} to solve {{ "{{prompt}}" }}.
+    Use get_uk_financial_data to download financial data; use get_uk_company_info
+    with subpage '' or 'officers' as needed; format in structured JSON with
+    source_reliability_score "high" and source_reliability_rationale (official UK
+    government website). When the prompt specifies an exact output path (e.g. .../intermediate/government_data_initial_profile.json),
+    save to that path; otherwise save to {{ "{{file_path_output}}" }}/{{ "{{section}}" }}/<subsection>.json.
+    
+    Workflow:
+    1. Planner creates data retrieval plan
+    2. API Agent retrieves Companies House data (get_uk_financial_data, get_uk_company_info)
+    3. Analyst structures API responses into KYC format
+    4. Critic validates data completeness
+    5. File Manager saves Companies House data
+    
+    When the user message specifies an exact output path (e.g. .../intermediate/government_data_initial_profile.json), the Companies House Analyst or File Manager MUST call mcp-filesystem-write-file to that path before the task is complete. The task is not done until that file exists. If the API Agent has no live data (e.g. Phase 1), the Analyst should still produce structured JSON from the plan and company number and save it to the specified path.
+    
+    Limitation: Not capable of reading and extracting information from non-text formats.
+  
+  # Sequential strategy: Each agent completes before next starts
+  strategy: {{ .Values.teams.companiesHouseTeam.strategy }}
+  
+  # Enable loops with turn limit
+  loops: true
+  maxTurns: {{ .Values.teams.companiesHouseTeam.maxTurns }}
+  
+  # Team members in execution order
+  members:
+    - name: {{ .Values.agents.chPlanner.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.chApiAgent.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.chAnalyst.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.critic.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.fileManager.name }}
+      type: agent
+{{- end }}

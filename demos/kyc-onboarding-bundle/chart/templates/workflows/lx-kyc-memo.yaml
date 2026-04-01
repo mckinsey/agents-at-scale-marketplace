@@ -1,0 +1,162 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-kyc-memo
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase III - KYC memo - 1. KYC memo"
+    workflows.argoproj.io/description: "Generate final KYC memo from consolidated customer profile"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  arguments:
+    parameters:
+      - name: input-profile
+        value: "source_code_files/3-kyc-memo/input/kyc_profile.json"
+      - name: output-memo
+        value: "source_code_files/3-kyc-memo/output/kyc_memo.md"
+      - name: risk-rating
+        value: "4"
+
+  templates:
+    - name: main
+      inputs:
+        parameters:
+          - name: input-profile
+          - name: output-memo
+          - name: risk-rating
+      steps:
+        - - name: ensure-output-dir
+            template: ensure-output-dir-script
+            arguments:
+              parameters:
+                - name: output-memo
+                  value: "{{ "{{inputs.parameters.output-memo}}" }}"
+        - - name: generate-kyc-memo
+            template: kyc-memo-query
+            arguments:
+              parameters:
+                - name: input-profile
+                  value: "{{ "{{inputs.parameters.input-profile}}" }}"
+                - name: output-memo
+                  value: "{{ "{{inputs.parameters.output-memo}}" }}"
+                - name: risk-rating
+                  value: "{{ "{{inputs.parameters.risk-rating}}" }}"
+
+    - name: ensure-output-dir-script
+      inputs:
+        parameters:
+          - name: output-memo
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          OUTPUT_DIR=$(dirname "$MCP_DATA/{{ "{{inputs.parameters.output-memo}}" }}")
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$OUTPUT_DIR"
+          echo "Created directory: $OUTPUT_DIR"
+
+    - name: kyc-memo-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+      inputs:
+        parameters:
+          - name: input-profile
+          - name: output-memo
+          - name: risk-rating
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: kyc-memo-
+          spec:
+            target:
+              type: agent
+              name: summary-assessment-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              Read these files using `mcp-filesystem-read-file` (skip any that don't exist):
+              1. Base profile: source_code_files/2-customer-due-diligence/input/kyc_profile.json
+              2. Key controllers: source_code_files/2-customer-due-diligence/profile_sections/key_controllers.json
+              3. Screening: source_code_files/2-customer-due-diligence/profile_sections/sanction_blacklist_screening.json
+              4. Adverse media: source_code_files/2-customer-due-diligence/profile_sections/adverse_media_screening.json
+              5. Purpose: source_code_files/2-customer-due-diligence/profile_sections/purpose_of_relationship.json
+              6. Ownership: source_code_files/2-customer-due-diligence/profile_sections/beneficial_ownership_tree.json
+              Do NOT add /data or any other prefix to file paths when using MCP tools.
+
+              Generate a KYC memo in Markdown using this EXACT structure:
+
+              # KYC memo: [Company Name]
+              _[current date YYYY-MM-DD]_
+
+              ### Executive Summary
+              2-3 paragraphs covering: company overview, geography, industry, ownership complexity, adverse media findings, blacklist/sanction results, purpose of relationship. End with overall risk rating using colored span:
+              **<span style="color: orange">medium</span>** (or green/low, red/high as appropriate).
+
+              ### Identification Details
+              Bullet list with validation status using colored spans:
+              - **Company Name**: [value], **<span style="color: green">Validated</span>**
+              - **Company Number**: [value], **<span style="color: green">Validated</span>**
+              - **Company Address**: [value], **<span style="color: green">Validated</span>**
+              - **Key Individuals**: (sub-bullets per person with validation status)
+
+              ### Geographical Presence
+              _Summary_: [paragraph]. _Risk assessment_: [paragraph]. _Risk rating_: **<span style="color: ...">...</span>**
+
+              ### Industry and Business Activities
+              _Summary_: [paragraph]. _Risk assessment_: [paragraph]. _Risk rating_: **<span style="color: ...">...</span>**
+
+              ### Ownership Structure
+              _Summary_: [paragraph about beneficial owners, voting rights, Weston family]. _Risk assessment_: [paragraph]. _Risk rating_: **<span style="color: ...">...</span>**
+
+              ### Adverse Media Screening
+              _Summary_: [paragraph covering all adverse media findings]. _Risk assessment_: [paragraph highlighting Malawi lawsuit if present]. _Risk rating_: **<span style="color: ...">...</span>**
+
+              ### Blacklist and Sanction Screening
+              _Summary_: [paragraph, mention John Bason possible match if present]. _Risk assessment_: [paragraph]. _Risk rating_: **<span style="color: ...">...</span>**
+
+              ### Purpose of Relationship
+              _Summary_: [paragraph about relationship with bank, products requested]. _Risk assessment_: [paragraph]. _Risk rating_: **<span style="color: ...">...</span>**
+
+              ### Requirements and KYC Standards
+              ##### Required Documents
+              Table: Document | Requirement | Status
+              Status values: **<span style="color: green">Submitted by client</span>**, **<span style="color: red">Missing</span>**, **<span style="color: green">Collected from external sources</span>**
+
+              ##### Required Checks
+              Table: Check | Description | Requirement | Status
+              Status values: **<span style="color: green">Completed</span>**, **<span style="color: red">Pending</span>**
+
+              ### Appendix
+              - Blacklist and Sanction screening report
+              - Adverse media screening report
+              - UBO diagram
+              - Customer profile
+
+              Include key data points from each section. For tables (Required Documents, Required Checks), include all rows.
+              For screening results, summarize per-person in tables rather than repeating full justifications.
+              Keep the memo under 15,000 characters to ensure it can be saved.
+
+              CRITICAL: You MUST save the file using `mcp-filesystem-write-file` to: {{ "{{inputs.parameters.output-memo}}" }}
+              Do NOT add /data or any other prefix to the path. The task is NOT complete until the file is written.
+              After writing, verify by reading the file back with `mcp-filesystem-read-file` to confirm it was saved.
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+{{- end }}

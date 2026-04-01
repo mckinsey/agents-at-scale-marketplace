@@ -2,7 +2,7 @@
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: MCPServer
 metadata:
-  name: {{ include "file-gateway.fullname" . }}-mcpserver
+  name: {{ include "file-gateway.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "file-gateway.labels" . | nindent 4 }}

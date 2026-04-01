@@ -1,0 +1,12 @@
+{{- if ne .Release.Namespace "default" }}
+# Skip when installing into default namespace — it already exists and must not be Helm-managed
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    ark.mckinsey.com/demo: "true"
+  annotations:
+    ark.mckinsey.com/demo-name: {{ .Values.demo.name | default "KYC Onboarding" | quote }}
+    ark.mckinsey.com/demo-description: {{ .Values.demo.description | default "KYC onboarding workflows with specialized agents and teams for customer due diligence" | quote }}
+{{- end }}

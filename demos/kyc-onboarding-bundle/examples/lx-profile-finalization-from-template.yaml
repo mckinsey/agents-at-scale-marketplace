@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-profile-finalization-
+  namespace: default
+spec:
+  workflowTemplateRef:
+    name: lx-profile-finalization
+  arguments:
+    parameters:
+      - name: profile-sections-dir
+        value: "source_code_files/2-customer-due-diligence/profile_sections"
+      - name: base-profile
+        value: "source_code_files/2-customer-due-diligence/input/kyc_profile.json"
+      - name: output-profile-json
+        value: "source_code_files/2-customer-due-diligence/output/kyc_profile.json"
+      - name: output-profile-md
+        value: "source_code_files/2-customer-due-diligence/output/kyc_profile.md"

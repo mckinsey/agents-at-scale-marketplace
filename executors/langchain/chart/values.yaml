@@ -1,0 +1,85 @@
+# Default values for executor-langchain
+
+# Global annotations added to all resources
+global:
+  annotations:
+    ark.mckinsey.com/service: executor-langchain
+
+# Application configuration
+app:
+  name: executor-langchain
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/executor-langchain
+    pullPolicy: IfNotPresent
+    # tag: defaults to appVersion
+
+  env:
+    - name: HOST
+      value: "0.0.0.0"
+    - name: PORT
+      value: "8000"
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Service configuration
+service:
+  name: executor-langchain
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# HTTPRoute configuration (Gateway API - modern routing method)
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  hostnames:
+    - "executor-langchain.default.127.0.0.1.nip.io"
+
+# RBAC configuration
+rbac:
+  create: true
+
+# Service account configuration
+serviceAccount:
+  name: executor-langchain-sa
+  create: true
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Health check configuration
+healthCheck:
+  path: /health
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# ExecutionEngine CRD configuration
+executionEngine:
+  enabled: true
+  description: "LangChain Executor - A2A server that executes agents using LangChain with RAG support"

@@ -1,0 +1,52 @@
+KYC CUSTOMER INFORMATION REQUEST
+
+================================================================================
+PERSONAL INFORMATION
+================================================================================
+
+Full Name: John Michael Smith
+Date of Birth: March 15, 1985
+Nationality: United States
+Residential Address: 123 Main Street, New York, NY 10001, USA
+
+Contact Information:
+- Phone: +1-555-0123
+- Email: john.smith@email.com
+
+================================================================================
+IDENTIFICATION DOCUMENTS
+================================================================================
+
+Primary Document:
+- Type: US Passport
+- Number: P123456789
+- Issue Date: January 15, 2020
+- Expiry Date: January 15, 2030
+- Issuing Authority: United States Department of State
+
+Secondary Document:
+- Type: NY Driver's License
+- Number: 123456789
+- Issue Date: May 10, 2019
+- Issuing Authority: New York State DMV
+
+================================================================================
+BUSINESS PROFILE
+================================================================================
+
+Account Purpose: Opening personal investment account
+
+Expected Transaction Activity:
+- Monthly deposits: $5,000 - $10,000
+- Transaction frequency: Regular monthly contributions
+
+Source of Funds: Employment income (software engineer)
+
+Employment Details:
+- Occupation: Software Engineer
+- Employer: Tech Solutions Inc.
+- Annual Income: $120,000
+
+================================================================================
+END OF CUSTOMER INFORMATION
+================================================================================

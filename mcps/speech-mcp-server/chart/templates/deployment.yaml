@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "speech-mcp.fullname" . }}
+  labels:
+    {{- include "speech-mcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "speech-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "speech-mcp.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "speech-mcp.fullname" . }}-sa
+      automountServiceAccountToken: false
+      containers:
+        - name: speech-mcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: BASE_DATA_DIR
+              value: {{ .Values.env.baseDateDir | quote }}
+            - name: WHISPER_MODEL
+              value: {{ .Values.whisperModel | quote }}
+            - name: CACHE_DIR
+              value: {{ .Values.env.cacheDir | quote }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.dataVolume.claimName | default "file-gateway-storage" }}

@@ -1,0 +1,73 @@
+# DevSpace configuration for executor-claude-agent-sdk
+version: v2beta1
+
+vars:
+  HTTPROUTE_ENABLED:
+    command: |-
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "true"
+      else
+        echo "false"
+      fi
+
+images:
+  executor-claude-agent-sdk:
+    image: executor-claude-agent-sdk
+    dockerfile: Dockerfile
+    context: .
+
+pipelines:
+  deploy: |-
+    build_images --all
+    create_deployments --all
+  dev: |-
+    build_images --all
+    create_deployments --all
+    start_dev --all
+
+deployments:
+  executor-claude-agent-sdk:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart
+      values:
+        app:
+          image:
+            repository: ${runtime.images.executor-claude-agent-sdk.image}
+            tag: ${runtime.images.executor-claude-agent-sdk.tag}
+        httpRoute:
+          enabled: ${HTTPROUTE_ENABLED}
+        executionEngine:
+          enabled: true
+
+dev:
+  executor-claude-agent-sdk:
+    imageSelector: executor-claude-agent-sdk
+    namespace: default
+    logs:
+      lastLines: 50
+
+hooks:
+  - command: |-
+      # Check if Gateway API HTTPRoute CRD exists
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "✓ Gateway API HTTPRoute CRD found - HTTPRoute will be created"
+      else
+        echo "✗ Gateway API HTTPRoute CRD not found - HTTPRoute will be skipped"
+      fi
+    events: ["before:deploy:executor-claude-agent-sdk"]
+  - command: |-
+      echo ""
+      echo "=== Executor Claude Agent SDK Deployed ==="
+      echo ""
+      echo "Service: executor-claude-agent-sdk.default.svc.cluster.local:8000"
+      echo ""
+      echo "Port-forward: kubectl port-forward -n default svc/executor-claude-agent-sdk 8000:8000"
+      echo ""
+      echo "HTTPRoute: http://executor-claude-agent-sdk.default.127.0.0.1.nip.io:8080"
+      echo ""
+      echo "Health check:"
+      echo "  curl http://localhost:8000/health"
+      echo ""
+    events: ["after:deploy:executor-claude-agent-sdk"]

@@ -1,0 +1,139 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-requirements-and-standards
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase I - Customer Profile Initialization - 2b. Requirements and KYC Standards"
+    workflows.argoproj.io/description: "Retrieve KYC requirements and standards for the relevant geography"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  arguments:
+    parameters:
+      - name: output-base-dir
+        value: "source_code_files/1-customer-profile-initialization"
+      - name: geography
+        value: "UK"
+      - name: output-file
+        value: "source_code_files/1-customer-profile-initialization/intermediate/kyc_standards.json"
+
+  templates:
+    - name: main
+      inputs:
+        parameters:
+          - name: output-base-dir
+          - name: geography
+          - name: output-file
+      steps:
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+        - - name: get-kyc-standards
+            template: get-kyc-standards-query
+            arguments:
+              parameters:
+                - name: geography
+                  value: "{{ "{{inputs.parameters.geography}}" }}"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-file}}" }}"
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate" "$BASE/output"; do
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created intermediate and output directories"
+
+    - name: get-kyc-standards-query
+      inputs:
+        parameters:
+          - name: geography
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: kyc-standards-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            serviceAccount: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+            timeout: 15m
+            ttl: 24h
+            input: |
+              You must complete this task yourself and save the output; do not hand off or terminate.
+
+              Produce a JSON document for KYC requirements and standards for the geography: {{ "{{inputs.parameters.geography}}" }}.
+              Use the **LegacyX format** (same as legacyx-demo output). The root must be a single key whose value is an array:
+
+              {
+                "KYC Standards and Requirements": [
+                  {
+                    "subsection": "Required documents",
+                    "content": [
+                      "Certificate of incorporation or equivalent. (global requirement)",
+                      "Memorandum and Articles of Association (or similar governing documents). (global requirement)",
+                      "Business registration number and tax identification number (TIN). (global requirement)",
+                      "Proof of identity for directors and UBOs (e.g., passport, national ID). (global requirement)",
+                      "Proof of address for directors and UBOs (e.g., utility bill, bank statement). (global requirement)",
+                      "Bank statements or financial statements (to verify business activity). (global requirement)",
+                      "Source of funds and wealth documentation (e.g., contracts, invoices). (global requirement)",
+                      "Companies House registration details. (Company number) (UK requirement)",
+                      "VAT registration certificate (if applicable). (UK requirement)",
+                      "Proof of trading activity (e.g., invoices, contracts, or purchase orders). (UK requirement)",
+                      "Business bank statements (to demonstrate financial activity). (UK requirement)"
+                    ]
+                  },
+                  {
+                    "subsection": "Required checks",
+                    "content": [
+                      "Identity Verification: Confirm authenticity of personal and corporate identity documents. (global requirement)",
+                      "Key controllers verification: Verify key controllers and decision-makers within the company. (global requirement)",
+                      "Purpose of relationship: Understand the purpose of the business relationship. (global requirement)",
+                      "Sanctions Screening: Screen company, UBOs, and directors against global sanctions lists (e.g., OFAC, UN). (global requirement)",
+                      "PEP Screening: Identify politically exposed persons (PEPs). (global requirement)",
+                      "Internal blacklist screening: Check against internal blacklist. (global requirement)",
+                      "Ownership structure verification: Verify ownership structure and identify individuals with 25% or more ownership. (global requirement)",
+                      "AML Risk Assessment: Assign risk rating (low, medium, or high) based on geography, industry, and transactions. (global requirement)",
+                      "Companies House Verification: Cross-check company details with UK Companies House database. (UK requirement)",
+                      "EDD for High-Risk Industries: Conduct enhanced due diligence (EDD) for high-risk industries (e.g., gambling, crypto). (UK requirement)",
+                      "UK Sanctions and PEP Screening: Screen against UK-specific sanctions lists (e.g., HM Treasury). (UK requirement)",
+                      "AML UK Compliance Check: Ensure compliance with UK Money Laundering Regulations (MLR). (UK requirement)"
+                    ]
+                  }
+                ]
+              }
+
+              For non-UK geographies, adapt the lists (e.g. replace UK-specific items with local equivalents and annotate with the geography). Use the exact subsection names "Required documents" and "Required checks". Each content item must be a string ending with "(global requirement)" or the appropriate geography (e.g. "(UK requirement)").
+
+              You MUST call mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-file}}" }} and content: your full JSON. Use the exact path; do NOT add /data or /mnt prefix.
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.responses[0].content}'
+{{- end }}

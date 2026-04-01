@@ -7,6 +7,10 @@ Thumbs.db
 .idea/
 *.iml
 
+# Environment files (contains sensitive credentials)
+.env
+.env.local
+
 # Python
 __pycache__/
 *.pyc
@@ -14,3 +18,16 @@ __pycache__/
 *.pyd
 .Python
 *.so
+
+# Just keep some stuff locally
+.local/
+
+# Downloaded workflow outputs (local testing artifacts)
+downloaded-outputs/
+
+# Helm dependency artifacts
+**/chart/charts/
+
+# Claude Code
+CLAUDE.md
+.claude/

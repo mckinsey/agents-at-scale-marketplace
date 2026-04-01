@@ -1,0 +1,45 @@
+{{- if .Values.teams.scoutRagTeam.enabled }}
+# ============================================================
+# SCOUT-RAG TEAM - PDF Section Scanning and Targeted Extraction
+# ============================================================
+# Simplified 2-agent team: scout + RAG pattern for document extraction
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.scoutRagTeam.name }}
+  labels:
+    project: kyc-onboarding
+    function: document-extraction
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Lightweight team for document extraction using scout-then-RAG pattern
+    (alternative to full document-extraction flow).
+    
+    Objective: Same as information_from_document—extract requested information from
+    document and document in structured format. Scout locates relevant sections;
+    RAG performs lookup and extraction.
+    
+    Workflow: Scout scans PDF to find relevant sections → RAG extracts with keywords (top_k 15).
+    
+    Used for: ownership structure, entities/vessels, key controllers when scout→RAG flow is defined.
+  
+  # Sequential strategy: Scout → RAG
+  strategy: {{ .Values.teams.scoutRagTeam.strategy }}
+  
+  # Enable loops with turn limit
+  loops: true
+  maxTurns: {{ .Values.teams.scoutRagTeam.maxTurns }}
+  
+  # Team members in execution order
+  members:
+    - name: {{ .Values.agents.scoutAgent.name }}
+      type: agent
+    
+    - name: {{ .Values.agents.ragAgent.name }}
+      type: agent
+{{- end }}

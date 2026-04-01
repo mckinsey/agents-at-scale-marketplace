@@ -1,0 +1,914 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-retrieve-ownership-structure
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase II - Customer Due Diligence - 1b. Ownership Structure - UBOs"
+    workflows.argoproj.io/description: "Retrieve ownership structure and determine beneficial owners (direct and indirect)"
+    workflows.argoproj.io/version: "v0.0.1"
+    workflows.argoproj.io/migrated-from: "legacyx"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  volumes:
+    - name: mcp-filesystem-volume
+      hostPath:
+        path: /mnt/output
+        type: DirectoryOrCreate
+
+  arguments:
+    parameters:
+      - name: company-name
+        value: "ASSOCIATED BRITISH FOODS PLC"
+      - name: company-number
+        value: "00293262"
+      - name: file-access-mode
+        value: "http"  # Options: http (recommended - stable), mount (requires minikube mount)
+        enum:
+          - http
+          - mount
+      - name: document-file-http
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
+      - name: document-file-mount
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
+      - name: output-base-dir
+        value: "source_code_files/2-customer-due-diligence"
+      - name: execution-mode
+        value: "sequential"  # Options: sequential, parallel, fake (for testing)
+        enum:
+          - sequential
+          - parallel
+          - fake
+
+  templates:
+    # ============================================================
+    # MAIN WORKFLOW
+    # ============================================================
+    - name: main
+      inputs:
+        parameters:
+          - name: company-name
+            value: "{{ "{{workflow.parameters.company-name}}" }}"
+          - name: company-number
+            value: "{{ "{{workflow.parameters.company-number}}" }}"
+          - name: file-access-mode
+            value: "{{ "{{workflow.parameters.file-access-mode}}" }}"
+          - name: document-file-http
+            value: "{{ "{{workflow.parameters.document-file-http}}" }}"
+          - name: document-file-mount
+            value: "{{ "{{workflow.parameters.document-file-mount}}" }}"
+          - name: output-base-dir
+            value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
+          - name: execution-mode
+            value: "{{ "{{workflow.parameters.execution-mode}}" }}"
+      steps:
+        # Step 0: Set document file path based on file-access-mode
+        - - name: set-document-file
+            template: set-document-file-script
+            arguments:
+              parameters:
+                - name: file-access-mode
+                  value: "{{ "{{inputs.parameters.file-access-mode}}" }}"
+                - name: document-file-http
+                  value: "{{ "{{inputs.parameters.document-file-http}}" }}"
+                - name: document-file-mount
+                  value: "{{ "{{inputs.parameters.document-file-mount}}" }}"
+
+        # Step 0b: Ensure output directories exist (profile_sections, output, intermediate/ownership_tree)
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
+        # Step 1: Get ownership prompts from YAML
+        - - name: get-ownership-prompts
+            template: read-prompts-file
+            arguments:
+              parameters:
+                - name: prompts-file-path
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/prompts_ownership_structure.yml"
+
+        # Step 2: Collect information from annual report
+        - - name: collect-info-sequential
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+            template: collect-info-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: document-file
+                  value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
+
+          - name: collect-info-parallel
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
+            template: collect-info-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: document-file
+                  value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
+
+          - name: collect-info-fake
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == fake"
+            template: collect-info-fake
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
+
+        # Step 3: Read JSON files from directory
+        - - name: read-info-json-directory
+            template: readdir-script
+            arguments:
+              parameters:
+                - name: base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
+
+        # Step 4: Combine JSON files into unconsolidated intermediate
+        - - name: append-info-files
+            template: combine-json
+            arguments:
+              parameters:
+                - name: file-paths-json
+                  value: "{{ "{{steps.read-info-json-directory.outputs.parameters.file-paths}}" }}"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/tmp/ownership_structure_unconsolidated.json"
+                - name: wrapper-key
+                  value: "ownership_structure"
+
+        # Step 4b: Consolidate ownership structure into LegacyX format
+        - - name: consolidate-ownership-structure
+            template: consolidate-ownership-query
+            arguments:
+              parameters:
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: input-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/tmp/ownership_structure_unconsolidated.json"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/profile_sections/ownership_structure.json"
+
+        # Step 5: Determine direct beneficial owners
+        - - name: determine-direct-beneficial-owners
+            template: determine-direct-beneficial-owners-query
+            arguments:
+              parameters:
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: company-number
+                  value: "{{ "{{inputs.parameters.company-number}}" }}"
+                - name: input-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/profile_sections/ownership_structure.json"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_tree/direct_owners.json"
+
+        # Step 6: Convert JSON layer to list
+        - - name: json-to-list
+            template: json-layer-to-list
+            arguments:
+              parameters:
+                - name: json-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_tree/direct_owners.json"
+                - name: layer-key
+                  value: "Ownership tree"
+
+        # Step 7: Determine indirect beneficial owners (iterate over direct owners)
+        - - name: determine-indirect-beneficial-owners
+            template: determine-indirect-beneficial-owners-query
+            arguments:
+              parameters:
+                - name: owner-json
+                  value: "{{ "{{item}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_tree/indirect_owners"
+            withParam: "{{ "{{steps.json-to-list.outputs.parameters.owners-list}}" }}"
+
+        # Step 8: Read indirect BO directory
+        - - name: read-indirect-bo-directory
+            template: readdir-script
+            arguments:
+              parameters:
+                - name: base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_tree/indirect_owners"
+
+        # Step 9: Combine indirect BO files
+        - - name: append-indirect-bo-files
+            template: combine-json
+            arguments:
+              parameters:
+                - name: file-paths-json
+                  value: "{{ "{{steps.read-indirect-bo-directory.outputs.parameters.file-paths}}" }}"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_tree/indirect_owners.json"
+
+        # Step 10: Create beneficial owner tree
+        - - name: create-beneficial-owner-tree
+            template: create-beneficial-owner-tree-query
+            arguments:
+              parameters:
+                - name: direct-owners-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_tree/direct_owners.json"
+                - name: indirect-owners-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_tree/indirect_owners.json"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/profile_sections/beneficial_ownership_tree.json"
+
+        # Step 11: Draw beneficial owner tree diagram
+        - - name: draw-beneficial-owner-tree
+            template: draw-diagram-query
+            arguments:
+              parameters:
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: input-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/profile_sections/beneficial_ownership_tree.json"
+                - name: output-file
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/output/beneficial_ownership_tree.puml"
+
+    # ============================================================
+    # UTILITY TEMPLATES
+    # ============================================================
+
+    # Ensure profile_sections, output, and intermediate/ownership_tree exist (for agent writes)
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/profile_sections" "$BASE/output" "$BASE/intermediate/ownership_structure" "$BASE/intermediate/ownership_tree" "$BASE/intermediate/ownership_tree/indirect_owners"; do
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created profile_sections, output, intermediate/ownership_structure, intermediate/ownership_tree"
+
+    # Set document file path based on file-access-mode
+    - name: set-document-file-script
+      inputs:
+        parameters:
+          - name: file-access-mode
+          - name: document-file-http
+          - name: document-file-mount
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          MODE="{{ "{{inputs.parameters.file-access-mode}}" }}"
+
+          if [ "$MODE" = "http" ]; then
+            echo "{{ "{{inputs.parameters.document-file-http}}" }}"
+          else
+            echo "{{ "{{inputs.parameters.document-file-mount}}" }}"
+          fi
+
+    # Read prompts from YAML file
+    - name: read-prompts-file
+      inputs:
+        parameters:
+          - name: prompts-file-path
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          PROMPTS_FILE="$MCP_DATA/{{ "{{inputs.parameters.prompts-file-path}}" }}"
+
+          # Use kubectl exec to read file via mcp-filesystem and convert to array format
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$PROMPTS_FILE" | yq eval -o=json '.' | jq '
+            # Get the first key (e.g., "ownership_structure")
+            to_entries[0].value |
+            # Convert object to array of {section, prompt} objects
+            to_entries | map({
+              section: .key,
+              prompt: .value.objective
+            })
+          ' > /tmp/prompts.json
+
+          cat /tmp/prompts.json
+
+      outputs:
+        parameters:
+          - name: prompts-list
+            valueFrom:
+              path: /tmp/prompts.json
+
+    # Collect information sequentially
+    - name: collect-info-sequential
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: document-file
+          - name: output-dir
+      steps:
+        - - name: process-prompt
+            template: doc-extract-query
+            continueOn:
+              failed: true
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Collect information in parallel
+    - name: collect-info-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: document-file
+          - name: output-dir
+      steps:
+        - - name: process-all-prompts
+            template: doc-extract-query
+            continueOn:
+              failed: true
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Collect information in fake mode (for testing)
+    - name: collect-info-fake
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: output-dir
+        artifacts:
+          - name: prompts-data
+            path: /tmp/prompts-input.json
+            raw:
+              data: "{{ "{{inputs.parameters.prompts-json}}" }}"
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          set -eux
+
+          OUTPUT_DIR='{{ "{{inputs.parameters.output-dir}}" }}'
+          MCP_DATA="/data/aas-files"
+
+          cat /tmp/prompts-input.json | jq -r '.[] | @json' | while IFS= read -r prompt_obj; do
+            PROMPT=$(echo "$prompt_obj" | jq -r '.prompt')
+            SECTION=$(echo "$prompt_obj" | jq -r '.section')
+            HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
+            OUTPUT_FILE="$MCP_DATA/$OUTPUT_DIR/${HASH}.json"
+
+            echo "Creating fake file for section: $SECTION"
+
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- sh -c "mkdir -p $MCP_DATA/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<FAKEOF
+          {"section": "$SECTION", "data": {"test_data": "fake ownership structure data", "shareholders": [{"name": "Test Shareholder 1", "ownership_pct": 35.5, "type": "direct"}, {"name": "Test Shareholder 2", "ownership_pct": 20.0, "type": "direct"}]}, "sources": [{"page": 1, "content": "Fake test data"}]}
+          FAKEOF
+
+            echo "Created: $OUTPUT_FILE"
+          done
+
+          echo "All fake files created"
+
+    # ARK Query: Extract information from document using Scout-RAG team
+    - name: doc-extract-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: prompt
+          - name: section
+          - name: document-file
+          - name: output-dir
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: doc-extract-
+          spec:
+            input: |
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
+
+              Step 1 — Scout: Use pdf-extraction-mcp-scout-pdf-for-ownership to find ownership-relevant pages in the PDF at: {{ "{{inputs.parameters.document-file}}" }}
+              Use search terms: ["owner", "ownership", "beneficial", "shareholder", "stake", "voting rights", "substantial", "major interest", "Wittington", "Garfield Weston", "share capital"]
+
+              Step 2 — Extract: Use pdf-extraction-mcp-analyze-pdf-ownership with the same PDF path and target_company "ASSOCIATED BRITISH FOODS PLC" to extract structured ownership data. The tool now intelligently reads ownership-relevant pages, not just the beginning of the document.
+
+              Step 3 — Answer this question using the extracted data:
+              {{ "{{inputs.parameters.prompt}}" }}
+
+              Step 3 — Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Do NOT add /data or any other prefix to the path.
+
+              The JSON MUST follow this exact LegacyX subsection format:
+              {
+                "subsection": "{{ "{{inputs.parameters.section}}" }}",
+                "content": <extracted_information>,
+                "source": "[abf-annual-report-2024](abf-annual-report-2024.pdf)",
+                "source_reliability_score": "high",
+                "source_reliability_rationale": "<why this source is reliable>"
+              }
+
+              - "content" can be a string (narrative text) or a structured object depending on the section
+              - "source" should reference the document name and relevant page numbers
+              - "source_reliability_score" should be "high", "medium", or "low"
+              - "source_reliability_rationale" should explain why the source is reliable or not
+            target:
+              type: agent
+              name: rag-agent
+            timeout: 15m
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # Read directory and return file paths
+    - name: readdir-script
+      inputs:
+        parameters:
+          - name: base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          BASE_DIR="{{ "{{inputs.parameters.base-dir}}" }}"
+
+          # Use kubectl exec to find files via mcp-filesystem (paths under MCP base)
+          FILES=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- find "$MCP_DATA/$BASE_DIR" -type f -name "*.json" 2>/dev/null || echo "[]")
+
+          if [ "$FILES" = "[]" ] || [ -z "$FILES" ]; then
+            echo "[]" > /tmp/file_paths.json
+          else
+            # Return paths relative to MCP base (so combine-json can cat $MCP_DATA/$file)
+            echo "$FILES" | sed "s|^$MCP_DATA/||g" | jq -R -s -c 'split("\n") | map(select(length > 0))' > /tmp/file_paths.json
+          fi
+
+          cat /tmp/file_paths.json
+      outputs:
+        parameters:
+          - name: file-paths
+            valueFrom:
+              path: /tmp/file_paths.json
+
+    # Combine JSON files
+    - name: combine-json
+      inputs:
+        parameters:
+          - name: file-paths-json
+          - name: output-file
+          - name: wrapper-key
+            default: ""
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          FILE_PATHS='{{ "{{inputs.parameters.file-paths-json}}" }}'
+          OUTFILE="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
+          WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
+
+          # Create output directory
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTFILE)"
+
+          # Combine all JSON files using kubectl exec
+          COMBINED="[]"
+          for file in $(echo "$FILE_PATHS" | jq -r '.[]'); do
+            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
+            COMBINED=$(echo "$COMBINED" | jq ". += [$CONTENT]")
+          done
+
+          # Wrap in key if specified
+          if [ -n "$WRAPPER_KEY" ]; then
+            COMBINED=$(echo "$COMBINED" | jq "{\"$WRAPPER_KEY\": .}")
+          fi
+
+          # Write combined JSON
+          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTFILE" > /dev/null
+
+          echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
+
+    # JSON layer to list
+    - name: json-layer-to-list
+      inputs:
+        parameters:
+          - name: json-file
+          - name: layer-key
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          JSON_FILE="$MCP_DATA/{{ "{{inputs.parameters.json-file}}" }}"
+          LAYER_KEY="{{ "{{inputs.parameters.layer-key}}" }}"
+
+          # Read JSON and extract layer — convert object to array of {key, value} for iteration
+          OWNERS_LIST=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$JSON_FILE" | jq -c ".\"$LAYER_KEY\" // {} | to_entries | map(.value)")
+
+          echo "$OWNERS_LIST" > /tmp/owners_list.json
+          cat /tmp/owners_list.json
+      outputs:
+        parameters:
+          - name: owners-list
+            valueFrom:
+              path: /tmp/owners_list.json
+
+    # ARK Query: Determine direct beneficial owners
+    - name: determine-direct-beneficial-owners-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: company-name
+          - name: company-number
+          - name: input-file
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: direct-bo-
+          spec:
+            input: |
+              Company: {{ "{{inputs.parameters.company-name}}" }}
+              Company Number: {{ "{{inputs.parameters.company-number}}" }}
+
+              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+
+              Read the ownership structure data from: {{ "{{inputs.parameters.input-file}}" }}
+
+              Analyze the ownership structure and determine the DIRECT beneficial owners of the company.
+
+              Save the result to: {{ "{{inputs.parameters.output-file}}" }}
+
+              The JSON MUST follow this exact LegacyX format — an object keyed by "Ownership tree" where each key is an entity name:
+              {
+                "Ownership tree": {
+                  "Entity Name 1": {
+                    "name": "Entity Name 1",
+                    "type": "entity",
+                    "percentage": "56.1%",
+                    "connection": "direct",
+                    "source": "UK Gov Companies House",
+                    "owners": {}
+                  },
+                  "Entity Name 2": {
+                    "name": "Entity Name 2",
+                    "type": "individual",
+                    "percentage": "15.0%",
+                    "connection": "direct",
+                    "source": "Annual Report 2024"
+                  }
+                }
+              }
+
+              Each direct owner must have: name, type (entity/individual), percentage (as string with %), connection ("direct"), and source.
+              If the owner is an entity (not individual), include an empty "owners" object — this will be populated later with indirect owners.
+            target:
+              type: agent
+              name: beneficial-owner-tree-agent
+            timeout: 15m
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # ARK Query: Determine indirect beneficial owners
+    - name: determine-indirect-beneficial-owners-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: owner-json
+          - name: output-dir
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: indirect-bo-
+          spec:
+            input: |
+              Owner information: {{ "{{inputs.parameters.owner-json}}" }}
+
+              **Path convention:** Use the path below exactly as given with mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+
+              **Logic (LegacyX-aligned):** If the owner is an individual (type "individual"), save a minimal JSON with owner_name and empty indirect_owners. If the owner is a company/entity, use perplexity-ask to research beneficial owners, then structure and save the JSON to the path below.
+
+              Research and determine any INDIRECT beneficial owners (owners of this owner).
+
+              Save the result to: {{ "{{inputs.parameters.output-dir}}" }}/[owner_name_hash].json
+              Use MD5 hash of the owner name for the filename.
+
+              The JSON MUST follow this exact LegacyX format:
+              {
+                "owner_name": "Direct Owner Name",
+                "indirect_owners": {
+                  "owner 1": {
+                    "name": "Indirect Owner Name",
+                    "type": "individual",
+                    "percentage": "50.0%",
+                    "connection": "indirect",
+                    "source": "UK Gov Companies House"
+                  },
+                  "owner 2": {
+                    "name": "Another Owner",
+                    "type": "entity",
+                    "percentage": "30.0%",
+                    "connection": "indirect",
+                    "source": "Annual Report"
+                  }
+                }
+              }
+
+              Each indirect owner must have: name, type (entity/individual), percentage (string with %), connection ("indirect"), and source.
+            target:
+              type: agent
+              name: beneficial-owner-tree-agent
+            timeout: 15m
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # ARK Query: Create beneficial owner tree
+    - name: create-beneficial-owner-tree-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: direct-owners-file
+          - name: indirect-owners-file
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: bo-tree-
+          spec:
+            input: |
+              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+
+              STEP 1: Read the direct beneficial owners from: {{ "{{inputs.parameters.direct-owners-file}}" }}
+              STEP 2: Read the indirect beneficial owners from: {{ "{{inputs.parameters.indirect-owners-file}}" }}
+
+              STEP 3: Combine and consolidate the ownership information to create a complete beneficial ownership tree.
+              - For each direct owner that is an entity, merge its indirect owners into its "owners" field.
+              - For Associated British Foods PLC, the key ownership chain includes Wittington Investments Ltd (54.5%) owned by Garfield Weston Foundation, which is connected to the Weston family. Ensure this chain is fully represented.
+
+              CRITICAL REQUIREMENTS:
+              - The tree MUST NOT be empty. At minimum, include ALL direct owners from the direct owners file.
+              - If the direct owners file contains an "Ownership tree" key, use its contents as the base.
+              - If the indirect owners file is empty or has no indirect owners, still produce the tree with direct owners only.
+              - Every direct owner must appear in the output tree.
+
+              STEP 4: Save the complete ownership tree to: {{ "{{inputs.parameters.output-file}}" }}
+
+              The JSON MUST follow this exact LegacyX format:
+              {
+                "ownership_structure": [
+                  {
+                    "subsection": "Ownership tree",
+                    "content": {
+                      "Entity Name 1": {
+                        "name": "Entity Name 1",
+                        "type": "entity",
+                        "percentage": "56.1%",
+                        "connection": "direct",
+                        "source": "UK Gov Companies House",
+                        "owners": {
+                          "owner 1": {
+                            "name": "Indirect Owner Name",
+                            "type": "individual",
+                            "percentage": "50.0%",
+                            "connection": "indirect",
+                            "source": "UK Gov Companies House"
+                          }
+                        }
+                      },
+                      "Individual Name": {
+                        "name": "Individual Name",
+                        "type": "individual",
+                        "percentage": "15.0%",
+                        "connection": "direct",
+                        "source": "Annual Report 2024"
+                      }
+                    }
+                  }
+                ]
+              }
+
+              CRITICAL: The output must have "ownership_structure" as the top-level key containing an array with one entry whose "subsection" is "Ownership tree" and "content" is the nested ownership object. The tree MUST contain at least the direct owners. Never return an empty content object.
+            target:
+              type: agent
+              name: beneficial-owner-tree-agent
+            timeout: 15m
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # ARK Query: Consolidate ownership structure into LegacyX format
+    - name: consolidate-ownership-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: company-name
+          - name: input-file
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: consolidate-ownership-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            timeout: 15m
+            input: |
+              Company: {{ "{{inputs.parameters.company-name}}" }}
+
+              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+
+              Read the unconsolidated ownership data from: {{ "{{inputs.parameters.input-file}}" }}
+
+              Consolidate ALL ownership structure information into the LegacyX format. The data may contain raw extraction results from multiple document sections. You must:
+              1. Extract and organize direct owners with their ownership percentages
+              2. Identify the group/corporate structure
+              3. Extract voting rights distribution information
+              4. Identify any historical ownership changes
+
+              Save the consolidated JSON to: {{ "{{inputs.parameters.output-file}}" }}
+
+              The JSON MUST follow this exact LegacyX format:
+              {
+                "ownership_structure": [
+                  {
+                    "subsection": "direct_owners",
+                    "content": {
+                      "direct_owners": [
+                        {"name": "<owner name>", "ownership_stake": "<X.X%>", "type": "<entity|individual|individuals>"},
+                        {"name": "<owner name>", "ownership_stake": "<X.X% or description>", "type": "<entity|individual|individuals>"}
+                      ],
+                      "combined_voting_rights": "<X.X%>"
+                    },
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
+                  },
+                  {
+                    "subsection": "group_structure",
+                    "content": "<narrative description of corporate group structure>",
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
+                  },
+                  {
+                    "subsection": "voting_rights_distribution",
+                    "content": "<voting rights information>",
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
+                  },
+                  {
+                    "subsection": "historical_changes",
+                    "content": "<any historical ownership changes>",
+                    "source": "[<document-name>](<document-filename>)",
+                    "source_reliability_score": "<high|medium|low>",
+                    "source_reliability_rationale": "<why this source is reliable>"
+                  }
+                ]
+              }
+
+              CRITICAL FORMATTING RULES:
+              - The top-level key MUST be "ownership_structure" containing an array of subsection objects.
+              - Subsection names MUST be snake_case: "direct_owners", "group_structure", "voting_rights_distribution", "historical_changes".
+              - "source", "source_reliability_score", and "source_reliability_rationale" MUST be plain strings, NOT arrays.
+              - In the "direct_owners" subsection, each owner object uses "ownership_stake" (NOT "percentage") and "type" fields only — no "source" inside owner objects.
+              - Include "combined_voting_rights" in the direct_owners content if applicable.
+              - The direct_owners array MUST be populated with actual owners extracted from the data. Never return an empty direct_owners array.
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # ARK Query: Draw diagram
+    - name: draw-diagram-query
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: company-name
+          - name: input-file
+          - name: output-file
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: diagram-
+          spec:
+            input: |
+              Company: {{ "{{inputs.parameters.company-name}}" }}
+
+              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+
+              Read the beneficial ownership tree from: {{ "{{inputs.parameters.input-file}}" }}
+
+              Create a PlantUML diagram showing the ownership structure.
+
+              The diagram should:
+              - Show the company at the center
+              - Show all beneficial owners with ownership percentages
+              - Use appropriate arrows to show ownership relationships
+              - Include a legend
+
+              Save the PlantUML code to: {{ "{{inputs.parameters.output-file}}" }}
+            target:
+              type: agent
+              name: beneficial-owner-tree-agent
+            timeout: 15m
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+{{- end }}

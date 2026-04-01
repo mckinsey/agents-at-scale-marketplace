@@ -1,0 +1,30 @@
+{{- if .Values.teams.identityVerificationTeam.enabled }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.identityVerificationTeam.name }}
+  labels:
+    category: kyc
+    workflow: sequential
+    use-case: identity-verification
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Identity verification team that analyzes and validates customer identity documents.
+
+    This team performs comprehensive document verification including:
+    - Identity documents (passport, driver's license, national ID)
+    - Corporate documents (certificate of incorporation, articles of association)
+    - Financial documents (audited financial statements, bank statements)
+
+    The team extracts key information, verifies authenticity markers, and identifies potential fraud indicators.
+
+    Use this team for the first step of KYC customer onboarding workflows.
+  members:
+    - name: {{ .Values.agents.documentVerifier.name }}
+      type: agent
+  strategy: {{ .Values.teams.identityVerificationTeam.strategy }}
+  maxTurns: {{ .Values.teams.identityVerificationTeam.maxTurns }}
+{{- end }}

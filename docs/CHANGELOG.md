@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.13](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.12...marketplace-docs-v0.1.13) (2026-03-30)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** read model config from Model CRD ([#158](https://github.com/mckinsey/agents-at-scale-marketplace/issues/158)) ([df75acb](https://github.com/mckinsey/agents-at-scale-marketplace/commit/df75acb09ef1b57226b38fc857db0c0d566ca697))
+
+## [0.1.12](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.11...marketplace-docs-v0.1.12) (2026-03-25)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** add MCP server support ([#150](https://github.com/mckinsey/agents-at-scale-marketplace/issues/150)) ([39caf9e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/39caf9e9aa25b67022d53e8d857b23955ff7a603))
+* **executor-claude-agent-sdk:** add native Claude Agent SDK executor ([#146](https://github.com/mckinsey/agents-at-scale-marketplace/issues/146)) ([af4ac81](https://github.com/mckinsey/agents-at-scale-marketplace/commit/af4ac81fb6d78eda5dfafd2461c18c41ac580a8d))
+* **executor-langchain:** conversation history management ([#138](https://github.com/mckinsey/agents-at-scale-marketplace/issues/138)) ([b7b4241](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b7b42417cdeb8fc988dace57952b2c5f49a30c21))
+
+## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.10...marketplace-docs-v0.1.11) (2026-02-26)
+
+
+### Features
+
+* langchain executor service ([#124](https://github.com/mckinsey/agents-at-scale-marketplace/issues/124)) ([8594e7d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8594e7d1b52e8dd83689eb6d8d445e0cea8b6a32))
+
 ## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.9...marketplace-docs-v0.1.10) (2026-01-13)
 
 

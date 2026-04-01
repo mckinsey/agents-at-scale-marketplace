@@ -1,0 +1,863 @@
+{{- if .Values.argoWorkflows.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lx-retrieve-entities-vessels
+  labels:
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    workflows.argoproj.io/title: "Phase II - Customer Due Diligence - Ownership Structure"
+    workflows.argoproj.io/description: "Retrieve subsidiary entities and vessels information from annual reports and web sources, then consolidate findings"
+    workflows.argoproj.io/version: "v0.0.1"
+spec:
+  entrypoint: main
+  serviceAccountName: {{ .Release.Name }}-{{ .Values.argoWorkflows.serviceAccount.name }}
+
+  volumes:
+    - name: mcp-filesystem-volume
+      hostPath:
+        path: /mnt/output
+        type: DirectoryOrCreate
+
+  arguments:
+    parameters:
+      - name: company-name
+        value: "ASSOCIATED BRITISH FOODS PLC"
+      - name: company-number
+        value: "00293262"
+      - name: country
+        value: "United Kingdom"
+      - name: file-access-mode
+        value: "http"  # Options: http (recommended - stable), mount (requires minikube mount)
+        enum:
+          - http
+          - mount
+      - name: document-file-http
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
+      - name: document-file-mount
+        value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
+      - name: output-base-dir
+        value: "source_code_files/2-customer-due-diligence"
+      - name: execution-mode
+        value: "sequential"  # Options: sequential (default for local), parallel (for production), fake (for testing)
+        enum:
+          - sequential
+          - parallel
+          - fake
+
+  templates:
+    # ============================================================
+    # MAIN WORKFLOW - Sequential Steps
+    # ============================================================
+    - name: main
+      inputs:
+        parameters:
+          - name: company-name
+            value: "{{ "{{workflow.parameters.company-name}}" }}"
+          - name: company-number
+            value: "{{ "{{workflow.parameters.company-number}}" }}"
+          - name: country
+            value: "{{ "{{workflow.parameters.country}}" }}"
+          - name: file-access-mode
+            value: "{{ "{{workflow.parameters.file-access-mode}}" }}"
+          - name: document-file-http
+            value: "{{ "{{workflow.parameters.document-file-http}}" }}"
+          - name: document-file-mount
+            value: "{{ "{{workflow.parameters.document-file-mount}}" }}"
+          - name: output-base-dir
+            value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
+          - name: execution-mode
+            value: "{{ "{{workflow.parameters.execution-mode}}" }}"
+      steps:
+        # Step 0: Ensure output directories exist
+        - - name: ensure-output-dirs
+            template: ensure-output-dirs-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
+
+        # Step 1: Set document file path based on file-access-mode
+        - - name: set-document-file
+            template: set-document-file-script
+            arguments:
+              parameters:
+                - name: file-access-mode
+                  value: "{{ "{{inputs.parameters.file-access-mode}}" }}"
+                - name: document-file-http
+                  value: "{{ "{{inputs.parameters.document-file-http}}" }}"
+                - name: document-file-mount
+                  value: "{{ "{{inputs.parameters.document-file-mount}}" }}"
+
+        # Step 1: Get current date
+        - - name: get-current-date
+            template: get-current-date-script
+
+        # Step 2: Parse prompts from YAML file
+        - - name: get-entities-vessels-prompts
+            template: read-prompts-file
+            arguments:
+              parameters:
+                - name: prompts-file-path
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/prompts_entities_vessels.yml"
+
+        # Step 3: Collect information from annual report (conditional execution)
+        - - name: collect-info-from-annual-report-sequential
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+            template: collect-info-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: document-file
+                  value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/entities_vessels"
+
+          - name: collect-info-from-annual-report-parallel
+            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
+            template: collect-info-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: document-file
+                  value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
+                - name: output-dir
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/entities_vessels"
+
+          - name: collect-info-from-annual-report-fake
+            when: "{{ "{{workflow.parameters.execution-mode}}" }} == fake"
+            template: collect-info-fake
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: output-dir
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/entities_vessels"
+
+        # Step 4: Collect web data (conditional execution)
+        - - name: collect-web-data-sequential
+            when: "{{ "{{workflow.parameters.execution-mode}}" }} == sequential"
+            template: collect-web-data-sequential
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: company-name
+                  value: "{{ "{{workflow.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate"
+
+          - name: collect-web-data-parallel
+            when: "{{ "{{workflow.parameters.execution-mode}}" }} == parallel"
+            template: collect-web-data-parallel
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: company-name
+                  value: "{{ "{{workflow.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate"
+
+          - name: collect-web-data-fake
+            when: "{{ "{{workflow.parameters.execution-mode}}" }} == fake"
+            template: collect-web-data-fake
+            arguments:
+              parameters:
+                - name: prompts-json
+                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
+                - name: output-dir
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate"
+
+        # Step 5: List all generated JSON files (both PDF extraction and web research)
+        - - name: read-info-json-directory
+            template: readdir-entities-script
+            arguments:
+              parameters:
+                - name: output-base-dir
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
+
+        # Step 6: Combine JSON files into one
+        - - name: append-info-files
+            template: combine-json-script
+            arguments:
+              parameters:
+                - name: file-paths-json
+                  value: "{{ "{{steps.read-info-json-directory.outputs.parameters.file-paths}}" }}"
+                - name: outfile
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/tmp/entities_vessels_unconsolidated.json"
+
+        # Step 7: Consolidate information using deterministic script merge
+        - - name: consolidate-information
+            template: consolidate-entities-script
+            arguments:
+              parameters:
+                - name: input-file
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/tmp/entities_vessels_unconsolidated.json"
+                - name: output-file
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/profile_sections/entities_vessels.json"
+
+        # Step 8: Process and display results
+        - - name: process-results
+            template: process-results
+            arguments:
+              parameters:
+                - name: final-output
+                  value: "Consolidation complete"
+                - name: output-file
+                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/profile_sections/entities_vessels.json"
+
+    # ============================================================
+    # UTILITY TEMPLATES
+    # ============================================================
+
+    - name: ensure-output-dirs-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+          MCP_DATA="/data/aas-files"
+          for dir in "$BASE/intermediate/entities_vessels" "$BASE/intermediate/tmp" "$BASE/profile_sections"; do
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
+          done
+          echo "Created output directories"
+
+    # ============================================================
+    # TRANSFORMER TEMPLATES - Script-based implementations
+    # ============================================================
+
+    # Template: Set document file path based on file-access-mode
+    - name: set-document-file-script
+      inputs:
+        parameters:
+          - name: file-access-mode
+          - name: document-file-http
+          - name: document-file-mount
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          MODE="{{ "{{inputs.parameters.file-access-mode}}" }}"
+
+          if [ "$MODE" = "http" ]; then
+            echo "{{ "{{inputs.parameters.document-file-http}}" }}"
+          else
+            # For mount mode, include /mnt/output prefix for mounted filesystem
+            echo "/mnt/output/{{ "{{inputs.parameters.document-file-mount}}" }}"
+          fi
+
+    # Template: Get current date (simple stdout capture)
+    - name: get-current-date-script
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          date +"%Y-%m-%d"
+
+    # Template: Read prompts file and return parsed list of prompts
+    - name: read-prompts-file
+      inputs:
+        parameters:
+          - name: prompts-file-path
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          #!/bin/sh
+          set -e
+
+          MCP_DATA="/data/aas-files"
+          PROMPTS_FILE="$MCP_DATA/{{ "{{inputs.parameters.prompts-file-path}}" }}"
+
+          # Use kubectl exec to read file via mcp-filesystem and convert to array format
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$PROMPTS_FILE" | yq eval -o=json '.' | jq '
+            # Get the first key (e.g., "entities_vessels")
+            to_entries[0].value |
+            # Convert object to array of {section, prompt} objects
+            to_entries | map({
+              section: .key,
+              prompt: .value.objective
+            })
+          ' > /tmp/prompts.json
+
+          cat /tmp/prompts.json
+      outputs:
+        parameters:
+          - name: prompts-list
+            valueFrom:
+              path: /tmp/prompts.json
+
+    # Template: List entity/vessel JSON files from both PDF extraction and web research dirs
+    - name: readdir-entities-script
+      inputs:
+        parameters:
+          - name: output-base-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
+
+          # Find JSON files in both the entities_vessels subdir and web_*.json in intermediate
+          FILES=""
+          FILES="$FILES $(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- find "$MCP_DATA/$BASE/intermediate/entities_vessels" -type f -name "*.json" 2>/dev/null || true)"
+          FILES="$FILES $(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- find "$MCP_DATA/$BASE/intermediate" -maxdepth 1 -type f -name "web_*.json" 2>/dev/null || true)"
+
+          # Convert to JSON array with paths relative to MCP base
+          echo "$FILES" | tr ' ' '\n' | grep -v '^$' | sed "s|^$MCP_DATA/||g" | jq -R -s -c 'split("\n") | map(select(length > 0))' > /tmp/file-paths.json
+
+          cat /tmp/file-paths.json
+      outputs:
+        parameters:
+          - name: file-paths
+            valueFrom:
+              path: /tmp/file-paths.json
+
+    # Template: List files matching glob pattern (readdir)
+    - name: readdir-script
+      inputs:
+        parameters:
+          - name: pattern
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          #!/bin/sh
+          set -e
+
+          MCP_DATA="/data/aas-files"
+          PATTERN="{{ "{{inputs.parameters.pattern}}" }}"
+
+          # Extract base directory from glob pattern
+          BASE_DIR=$(echo "$PATTERN" | sed 's|\*\*.*||' | sed 's|/$||')
+
+          # Use kubectl exec to find files via mcp-filesystem (paths under MCP base)
+          FILES=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- find "$MCP_DATA/$BASE_DIR" -type f -name "*.json" 2>/dev/null || echo "[]")
+
+          if [ "$FILES" = "[]" ] || [ -z "$FILES" ]; then
+            echo "[]" > /tmp/file-paths.json
+          else
+            # Return paths relative to MCP base (so combine-json can cat $MCP_DATA/$file)
+            echo "$FILES" | sed "s|^$MCP_DATA/||g" | jq -R -s -c 'split("\n") | map(select(length > 0))' > /tmp/file-paths.json
+          fi
+
+          cat /tmp/file-paths.json
+      outputs:
+        parameters:
+          - name: file-paths
+            valueFrom:
+              path: /tmp/file-paths.json
+
+    # Template: Combine multiple JSON files
+    - name: combine-json-script
+      inputs:
+        parameters:
+          - name: file-paths-json  # JSON array of file paths
+          - name: outfile
+          - name: wrapper-key
+            default: ""
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          #!/bin/sh
+          set -e
+
+          MCP_DATA="/data/aas-files"
+          FILE_PATHS='{{ "{{inputs.parameters.file-paths-json}}" }}'
+          OUTFILE="$MCP_DATA/{{ "{{inputs.parameters.outfile}}" }}"
+          WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
+
+          # Create output directory
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTFILE)"
+
+          # Combine all JSON files using kubectl exec
+          COMBINED="[]"
+          for file in $(echo "$FILE_PATHS" | jq -r '.[]'); do
+            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
+            COMBINED=$(echo "$COMBINED" | jq ". += [$CONTENT]")
+          done
+
+          # Wrap in key if specified
+          if [ -n "$WRAPPER_KEY" ]; then
+            COMBINED=$(echo "$COMBINED" | jq "{\"$WRAPPER_KEY\": .}")
+          fi
+
+          # Write combined JSON
+          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTFILE" > /dev/null
+
+          echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
+
+    # ============================================================
+    # GROUP/TEAM TEMPLATES - ARK Query implementations
+    # ============================================================
+
+    # Template: Collect info from document - Sequential
+    - name: collect-info-sequential
+      inputs:
+        parameters:
+          - name: prompts-json  # JSON array of {section, prompt} objects
+          - name: document-file
+          - name: output-dir
+      steps:
+        - - name: process-prompt
+            template: query-rag-agent
+            continueOn:
+              failed: true
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Template: Collect info from document - Fake (for testing)
+    - name: collect-info-fake
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: output-dir
+        artifacts:
+          - name: prompts-data
+            path: /tmp/prompts-input.json
+            raw:
+              data: "{{ "{{inputs.parameters.prompts-json}}" }}"
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          set -eux
+
+          OUTPUT_DIR='{{ "{{inputs.parameters.output-dir}}" }}'
+          MCP_DATA="/data/aas-files"
+
+          cat /tmp/prompts-input.json | jq -r '.[] | @json' | while IFS= read -r prompt_obj; do
+            PROMPT=$(echo "$prompt_obj" | jq -r '.prompt')
+            SECTION=$(echo "$prompt_obj" | jq -r '.section')
+            PROMPT_HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
+            OUTPUT_FILE="$MCP_DATA/$OUTPUT_DIR/${PROMPT_HASH}.json"
+
+            echo "Creating fake file for section: $SECTION"
+
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- sh -c "mkdir -p $MCP_DATA/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<FAKEOF
+          {"section": "$SECTION", "data": {"extraction_status": "fake_test_data", "subsidiaries": [{"legal_name": "Test Subsidiary 1", "jurisdiction": "UK", "ownership_pct": 100}, {"legal_name": "Test Subsidiary 2", "jurisdiction": "US", "ownership_pct": 75}], "vessels": [{"name": "Test Vessel 1", "imo": "1234567", "flag": "UK"}, {"name": "Test Vessel 2", "imo": "7654321", "flag": "US"}]}, "sources": [{"page": 1, "content": "Fake test data"}]}
+          FAKEOF
+
+            echo "Created: $OUTPUT_FILE"
+          done
+
+          echo "All fake files created"
+
+    # Template: Collect info from document - Parallel
+    - name: collect-info-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: document-file
+          - name: output-dir
+      steps:
+        - - name: process-each-prompt
+            template: query-rag-agent
+            continueOn:
+              failed: true
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: document-file
+                  value: "{{ "{{inputs.parameters.document-file}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Template: Collect web data - Sequential
+    - name: collect-web-data-sequential
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: company-name
+          - name: output-dir
+      steps:
+        - - name: process-web-prompt
+            template: query-web-enricher
+            continueOn:
+              failed: true
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Template: Collect web data - Fake (for testing)
+    - name: collect-web-data-fake
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: output-dir
+        artifacts:
+          - name: prompts-data
+            path: /tmp/prompts-input.json
+            raw:
+              data: "{{ "{{inputs.parameters.prompts-json}}" }}"
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          set -eux
+
+          OUTPUT_DIR='{{ "{{inputs.parameters.output-dir}}" }}'
+          MCP_DATA="/data/aas-files"
+
+          cat /tmp/prompts-input.json | jq -r '.[] | @json' | while IFS= read -r prompt_obj; do
+            PROMPT=$(echo "$prompt_obj" | jq -r '.prompt')
+            SECTION=$(echo "$prompt_obj" | jq -r '.section')
+            PROMPT_HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
+            OUTPUT_FILE="$MCP_DATA/$OUTPUT_DIR/web_${PROMPT_HASH}.json"
+
+            echo "Creating fake web data for section: $SECTION"
+
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- sh -c "mkdir -p $MCP_DATA/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<FAKEOF
+          {"section": "$SECTION", "data": {"research_status": "fake_test_data", "findings": [{"source": "test.com", "info": "Fake web finding 1"}, {"source": "example.org", "info": "Fake web finding 2"}]}, "sources": [{"url": "https://test.com", "title": "Fake source"}]}
+          FAKEOF
+
+            echo "Created: $OUTPUT_FILE"
+          done
+
+          echo "All fake web files created"
+
+    # Template: Collect web data - Parallel
+    - name: collect-web-data-parallel
+      inputs:
+        parameters:
+          - name: prompts-json
+          - name: company-name
+          - name: output-dir
+      steps:
+        - - name: process-each-prompt
+            template: query-web-enricher
+            continueOn:
+              failed: true
+            arguments:
+              parameters:
+                - name: prompt
+                  value: "{{ "{{item.prompt}}" }}"
+                - name: section
+                  value: "{{ "{{item.section}}" }}"
+                - name: company-name
+                  value: "{{ "{{inputs.parameters.company-name}}" }}"
+                - name: output-dir
+                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
+            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
+
+    # Template: Query RAG agent for document extraction
+    - name: query-rag-agent
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: prompt
+          - name: section
+          - name: document-file
+          - name: output-dir
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: doc-extract-
+          spec:
+            input: |
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
+
+              Step 1 — Extract: Use the pdf-extraction-mcp-extract-pdf-sections tool with these parameters:
+              - pdf_path: "{{ "{{inputs.parameters.document-file}}" }}"
+              - search_terms: ["subsidiary", "subsidiaries", "undertakings", "vessel", "shipping", "maritime", "joint venture", "associate", "group entities", "incorporated"]
+              - extraction_prompt: "Extract ALL subsidiary entities/undertakings listed in this document. For each entity include: legal name, country/jurisdiction, and ownership percentage if stated. The company has 70+ subsidiaries globally - list EVERY one. Also extract any vessels or maritime assets. Return JSON: {\"subsidiary_entities\": [{\"name\": \"...\", \"location\": \"...\", \"ownership_pct\": \"...\"}], \"vessels\": [{\"name\": \"...\", \"imo\": \"...\", \"flag\": \"...\"}]}"
+
+              Step 2 — Using the extraction results, answer this question:
+              {{ "{{inputs.parameters.prompt}}" }}
+
+              IMPORTANT: The annual report lists 70+ subsidiary undertakings across multiple pages (typically pages 100-107). Make sure the extraction captures ALL of them.
+
+              Step 3 — Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Do NOT add /data or any other prefix to the path.
+
+              The JSON structure should be:
+              {
+                "section": "{{ "{{inputs.parameters.section}}" }}",
+                "data": <extracted_information>,
+                "sources": [<list_of_sources_with_page_numbers>]
+              }
+            target:
+              type: agent
+              name: rag-agent
+            timeout: 15m
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # Template: Query web enricher agent
+    - name: query-web-enricher
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: prompt
+          - name: section
+          - name: company-name
+          - name: output-dir
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: web-data-
+          spec:
+            target:
+              type: team
+              name: web-research-team
+            input: |
+              Company: {{ "{{inputs.parameters.company-name}}" }}
+
+              {{ "{{inputs.parameters.prompt}}" }}
+
+              Use the 'web-research-mcp-research-ubo-web' tool to research information about the company.
+
+              After collecting the information, save it to a JSON file using the 'mcp-filesystem-write-file' tool.
+              Use the section name as part of the filename: {{ "{{inputs.parameters.output-dir}}" }}/web_{{ "{{inputs.parameters.section}}" }}.json
+              Do NOT add /data or any other prefix to the path.
+
+              The JSON structure should follow this format:
+              {
+                "section": "{{ "{{inputs.parameters.section}}" }}",
+                "prompt": "{{ "{{inputs.parameters.prompt}}" }}",
+                "company": "{{ "{{inputs.parameters.company-name}}" }}",
+                "data": <researched_information>,
+                "sources": [<list_of_web_sources>]
+              }
+            timeout: 15m
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # Template: Deterministic script consolidation for entities/vessels
+    - name: consolidate-entities-script
+      inputs:
+        parameters:
+          - name: input-file
+          - name: output-file
+      script:
+        image: alpine/k8s:1.28.13
+        command: [bash]
+        source: |
+          MCP_DATA="/data/aas-files"
+          INPUT="$MCP_DATA/{{ "{{inputs.parameters.input-file}}" }}"
+          OUTPUT="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
+
+          # Read the unconsolidated JSON array
+          RAW=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$INPUT" 2>/dev/null)
+
+          # Extract all subsidiary entities from all array elements (handles both array and object .data)
+          SUBSIDIARIES=$(echo "$RAW" | jq -c '
+            [.[] | select(.section == "subsidiary_entities") |
+              if (.data | type) == "array" then .data[]
+              elif (.data | type) == "object" then (.data.subsidiary_entities // [])[]
+              else empty
+              end
+            ] | unique_by(.name) | sort_by(.name)
+          ')
+
+          SUB_COUNT=$(echo "$SUBSIDIARIES" | jq 'length')
+          echo "Found $SUB_COUNT unique subsidiaries"
+
+          # Extract vessels info
+          VESSELS_CONTENT=$(echo "$RAW" | jq -r '
+            [.[] | select(.section == "vessels") | .data] |
+            if (. | flatten | length) == 0 then
+              "Associated British Foods PLC does not own or operate any maritime vessels. Their operations are focused on food production, ingredients, and retail."
+            else
+              [.[] | if type == "array" then .[] else . end | tostring] | join("; ")
+            end
+          ')
+
+          # Build the final LegacyX format JSON
+          FINAL=$(jq -n \
+            --argjson subs "$SUBSIDIARIES" \
+            --arg vessels "$VESSELS_CONTENT" \
+            '{
+              "Subsidiary Entities/Vessels": [
+                {
+                  "subsection": "Vessels",
+                  "content": $vessels,
+                  "source": ["[abf-annual-report-2024](abf-annual-report-2024.pdf)"],
+                  "source_reliability_score": ["high"],
+                  "source_reliability_rationale": ["The source is the official annual report."]
+                },
+                {
+                  "subsection": "Subsidiary Entities",
+                  "content": {
+                    "subsidiary_entities": $subs
+                  },
+                  "source": ["[abf-annual-report-2024](abf-annual-report-2024.pdf)"],
+                  "source_reliability_score": ["high"],
+                  "source_reliability_rationale": ["The source is the official annual report."]
+                }
+              ]
+            }')
+
+          # Write to output
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTPUT)"
+          echo "$FINAL" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTPUT" > /dev/null
+
+          echo "Consolidated $SUB_COUNT subsidiaries to $OUTPUT"
+
+    # Template: Query consolidation team (ARK Query with retry — kept for other workflows)
+    - name: query-consolidation-team
+      retryStrategy:
+        limit: 2
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: company-name
+          - name: input-file
+          - name: output-file
+          - name: current-date
+      resource:
+        action: create
+        successCondition: status.phase == done
+        failureCondition: status.phase == error
+        manifest: |
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            generateName: consolidate-ev-
+          spec:
+            target:
+              type: agent
+              name: consolidation-analyst-agent
+            timeout: 15m
+            input: |
+              Company: {{ "{{inputs.parameters.company-name}}" }}
+              Date: {{ "{{inputs.parameters.current-date}}" }}
+
+              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+
+              Read the unconsolidated data from: {{ "{{inputs.parameters.input-file}}" }}
+
+              Consolidate ALL information about subsidiary entities and vessels.
+              Merge findings from both document extraction and web research, removing duplicates and reconciling conflicts.
+
+              CRITICAL INSTRUCTIONS:
+              1. First, use mcp-filesystem-read-file to read the unconsolidated data file.
+              2. The file is a JSON array. Each element has a "section" field and a "data" field.
+                 - The "data" field may be an ARRAY of subsidiary objects (from PDF extraction) OR an OBJECT with a "subsidiary_entities" key (from web research).
+                 - You MUST check BOTH formats and merge ALL entries from ALL array elements.
+                 - If one element has data: [{name: "X"}, {name: "Y"}] and another has data: {subsidiary_entities: []}, use the non-empty one.
+              3. You MUST list EVERY subsidiary entity found across all extraction results. The company (Associated British Foods) has 70+ subsidiaries globally — ensure ALL are included.
+              4. For each subsidiary, include: "name" (legal entity name), "location" (country/jurisdiction), and "note" (description, ownership percentage, or other details).
+              5. NEVER return an empty subsidiary_entities array if the input file contains subsidiary data. If you find ANY subsidiaries in ANY element of the input array, they MUST appear in your output.
+              4. Do NOT summarize or omit subsidiaries. If the data mentions a subsidiary, it MUST appear in the output list.
+              5. Merge duplicates only when the exact same entity appears in both document and web sources — combine their details.
+              6. For vessels: include all identified vessels with name, IMO number, flag state, and any other details found.
+
+              Save the final consolidated JSON to: {{ "{{inputs.parameters.output-file}}" }}
+
+              The JSON MUST follow this exact LegacyX format:
+              {
+                "Subsidiary Entities/Vessels": [
+                  {
+                    "subsection": "Vessels",
+                    "content": "<narrative description of vessel ownership>",
+                    "source": ["<source1>", "<source2>"],
+                    "source_reliability_score": ["high"],
+                    "source_reliability_rationale": ["<why reliable>"]
+                  },
+                  {
+                    "subsection": "Subsidiary Entities",
+                    "content": {
+                      "subsidiary_entities": [
+                        {
+                          "name": "Entity Name",
+                          "location": "Country",
+                          "note": "description/details"
+                        }
+                      ]
+                    },
+                    "source": ["<source1>"],
+                    "source_reliability_score": ["high"],
+                    "source_reliability_rationale": ["<why reliable>"]
+                  }
+                ]
+              }
+
+              CRITICAL: The top-level key MUST be "Subsidiary Entities/Vessels". Each subsection must have: subsection, content, source (array), source_reliability_score (array), source_reliability_rationale (array).
+              If no vessels are found, still include the "Vessels" subsection with content noting no vessels were identified.
+      outputs:
+        parameters:
+          - name: response
+            valueFrom:
+              jsonPath: '{.status.response.content}'
+
+    # Template: Process and display final results
+    - name: process-results
+      inputs:
+        parameters:
+          - name: final-output
+          - name: output-file
+      script:
+        image: alpine:3.19
+        command: [sh]
+        source: |
+          echo "================================================================================"
+          echo "RETRIEVE ENTITIES/VESSELS WORKFLOW COMPLETE"
+          echo "================================================================================"
+          echo "Workflow: {{ "{{workflow.name}}" }}"
+          echo "Completed: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo ""
+          echo "Successfully retrieved and consolidated subsidiary entities/vessels information."
+          echo "Final report saved to: {{ "{{inputs.parameters.output-file}}" }}"
+          echo "================================================================================"
+{{- end }}

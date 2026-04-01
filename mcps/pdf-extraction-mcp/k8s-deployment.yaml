@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pdf-extraction-mcp
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pdf-extraction-mcp
+spec:
+  selector:
+    app: pdf-extraction-mcp
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdf-extraction-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pdf-extraction-mcp
+  template:
+    metadata:
+      labels:
+        app: pdf-extraction-mcp
+    spec:
+      serviceAccountName: pdf-extraction-mcp
+      volumes:
+      - name: mcp-filesystem-volume
+        persistentVolumeClaim:
+          claimName: file-gateway-storage
+      containers:
+      - name: pdf-extraction-mcp
+        image: pdf-extraction-mcp:v2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        volumeMounts:
+        - name: mcp-filesystem-volume
+          mountPath: /data
+          readOnly: true
+        env:
+        - name: LLM_PROVIDER
+          value: "openai"
+        - name: LLM_MODEL
+          value: "gpt-4o"
+        - name: LLM_BASE_URL
+          value: "https://azure.prod.ai-gateway.quantumblack.com/6d3b969b-d376-4948-8e55-aa762149b982/openai/deployments/gpt-4o"
+        - name: LLM_API_VERSION
+          value: "2024-04-01-preview"
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-gateway-azure-openai
+              key: token
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: pdf-extraction-mcp
+spec:
+  description: "Lightweight PDF extraction server for ownership information"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: pdf-extraction-mcp
+        port: http
+        path: /mcp
+  timeout: "120s"

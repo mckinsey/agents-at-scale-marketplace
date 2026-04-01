@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "perplexity-ask-mcp.fullname" . }}
+  labels:
+    {{- include "perplexity-ask-mcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "perplexity-ask-mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "perplexity-ask-mcp.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "perplexity-ask-mcp.fullname" . }}-sa
+      automountServiceAccountToken: false
+      containers:
+        - name: perplexity-ask-mcp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: PERPLEXITY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.perplexity.apiKeySecret.name }}
+                  key: {{ .Values.perplexity.apiKeySecret.key }}
+                  optional: true
+            - name: PERPLEXITY_MODEL
+              value: {{ .Values.perplexity.model | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

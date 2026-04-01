@@ -1,0 +1,296 @@
+{{- if .Values.teams.beneficialOwnersTeam.enabled }}
+# ============================================================
+# BENEFICIAL OWNERS TEAM - Hybrid CH API + Web Research
+# ============================================================
+# Retrieves indirect beneficial owners via Companies House API and web research
+# Consolidated from: beneficial_owners_indirect pattern (6 agents → team)
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teams.beneficialOwnersTeam.name | default "beneficial-owners-team" }}
+  labels:
+    project: kyc-onboarding
+    function: beneficial-ownership-research
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Team that builds beneficial ownership structures from direct and indirect owner data
+    (beneficial_owner_tree, beneficial_owners_direct, beneficial_owners_indirect patterns).
+    
+    Objective (beneficial_owner_tree): Read {{ "{{file_path_direct_owners}}" }} and {{ "{{file_path_indirect_owners}}" }};
+    combine; build ownership tree (nested: name, type, percentage, connection, source, owners);
+    validate (match source files, correct structure, no duplicate owners, individuals have no owners);
+    save to {{ "{{file_path_output}}" }}.
+    
+    Capabilities: Create a beneficial ownership tree of a company based on the provided owner information.
+    
+    Workflow: Planner → CH Expert / Web Researcher → Analyst → Critic → File Manager.
+  
+  # Sequential strategy: Each agent completes before next starts
+  strategy: {{ .Values.teams.beneficialOwnersTeam.strategy | default "sequential" }}
+  
+  # Enable loops with turn limit
+  loops: true
+  maxTurns: {{ .Values.teams.beneficialOwnersTeam.maxTurns | default 30 }}
+  
+  # Team members in execution order
+  members:
+    # Planner: Mission coordination
+    - name: {{ .Values.agents.boPlanner.name | default "bo-planner" }}
+      type: agent
+    
+    # Web Researcher: Online ownership research
+    - name: {{ .Values.agents.boWebResearcher.name | default "bo-web-researcher" }}
+      type: agent
+    
+    # Analyst: Structure ownership tree
+    - name: {{ .Values.agents.boAnalyst.name | default "bo-analyst" }}
+      type: agent
+    
+    # Critic: Validate ownership chain
+    - name: {{ .Values.agents.critic.name | default "critic" }}
+      type: agent
+    
+    # File Manager: Save results
+    - name: {{ .Values.agents.fileManager.name | default "file-manager" }}
+      type: agent
+
+---
+# ============================================================
+# SUPPORTING AGENTS FOR BENEFICIAL OWNERS TEAM
+# ============================================================
+
+# Planner Agent
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.boPlanner.name | default "bo-planner" }}
+  labels:
+    project: kyc-onboarding
+    role: planner
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Mission planner for beneficial ownership research.
+    Coordinates CH API queries and web research.
+  
+  prompt: |
+    You are a planner responsible for creating a mission plan for beneficial ownership research.
+    
+    **Your Responsibilities:**
+    - Review the owner information provided (company or individual)
+    - Define clear, actionable steps for the team
+    - Assign tasks to specific roles (companies_house_expert, web_expert, analyst)
+    - Ensure critic approves output before file_manager saves it
+    
+    **Workflow:**
+    1. Review owner data (owner JSON input from Query)
+    2. Determine if UK entity → assign companies_house_expert
+    3. Plan web research → assign web_expert
+    4. Structure data → assign analyst
+    5. Validate → assign critic
+    6. Save → assign file_manager
+    
+    **Critical**: Do not mark task complete until file_manager confirms file saved.
+    
+    Take a step-by-step approach. Make each step specific to a role.
+  
+  modelRef:
+    name: {{ .Values.agents.boPlanner.model | default "default" }}
+  
+  tools:
+    - type: built-in
+      name: terminate
+
+---
+# Companies House Expert Agent
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.companiesHouseExpert.name | default "companies-house-expert" }}
+  labels:
+    project: kyc-onboarding
+    role: ch-api-expert
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    UK Companies House API expert.
+    Retrieves company numbers and person-in-control data.
+  
+  prompt: |
+    You are a UK Companies House expert responsible for retrieving ownership data from the official UK Gov API.
+    
+    **Your Tools:**
+    1. `get_uk_company_number` - Find UK company number by name
+    2. `get_uk_person_in_control` - Get beneficial owners (PSC) by company number
+    
+    **Workflow:**
+    1. Use `get_uk_company_number` with company name from the owner JSON input
+    2. Find best match from returned list (exact or closest match)
+    3. Extract company number from best match
+    4. Use `get_uk_person_in_control` with that company number
+    5. Return results to analyst
+    
+    **Important:**
+    - Always validate input parameters before calling tools
+    - If no matches found, inform analyst (they'll use web search instead)
+    - If tool returns no PSC data, inform analyst
+    
+    Report findings clearly to the analyst for structuring.
+  
+  modelRef:
+    name: {{ .Values.agents.companiesHouseExpert.model | default "default" }}
+  
+  tools:
+    - type: mcp
+      name: companies-house-get-uk-company-number
+    - type: mcp
+      name: companies-house-get-uk-person-in-control
+    - type: built-in
+      name: terminate
+
+---
+# Web Researcher Agent (Beneficial Owners specific)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.boWebResearcher.name | default "bo-web-researcher" }}
+  labels:
+    project: kyc-onboarding
+    role: web-researcher
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Web expert for online ownership research.
+    Searches for beneficial ownership information when CH API unavailable.
+  
+  prompt: |
+    You are a web research expert responsible for finding beneficial ownership information online.
+    
+    **Your Tool:**
+    - `perplexity-ask` (LegacyX-compatible): pass messages as [{"role":"user","content":"<prompt>"}]
+    
+    **Ownership Research Prompt Template:**
+    ```
+    Who are direct and indirect beneficial owners of <OWNER_NAME>?
+    
+    Please provide a list of companies, foundations, individuals that own the entity,
+    including their ownership percentage and connection to the entity.
+    
+    Definition: Beneficial owners are individuals or entities that ultimately own or
+    control a significant portion of the company (25% or more of equity/voting rights),
+    either directly or indirectly.
+    ```
+    
+    **How You Work:**
+    1. Create appropriate search prompt using owner name from the input
+    2. Use web search tool to find ownership information
+    3. Extract: owner names, types (company/individual), percentages, connections
+    4. Report findings to analyst for structuring
+    
+    **Important:**
+    - Only search if planner directs you to (e.g., CH API returned no results)
+    - Extract factual ownership data only
+    - Note sources (news articles, company websites, registries)
+  
+  modelRef:
+    name: {{ .Values.agents.boWebResearcher.model | default "default" }}
+  
+  tools:
+    - type: mcp
+      name: perplexity-ask
+    - type: built-in
+      name: terminate
+
+---
+# Analyst Agent
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.boAnalyst.name | default "bo-analyst" }}
+  labels:
+    project: kyc-onboarding
+    role: analyst
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Company ownership analyst.
+    Structures CH API and web data into ownership tree JSON.
+  
+  prompt: |
+    You are a company ownership analyst responsible for creating structured ownership trees.
+    
+    **Your Inputs:**
+    - UK Gov Companies House data (from companies_house_expert)
+    - Web search results (from web_expert)
+    
+    **Your Output:**
+    JSON ownership tree with this structure:
+    ```json
+    {
+      "Ownership tree": {
+        "owner 1": {
+          "name": "<owner name>",
+          "type": "<company|foundation|trust|individual>",
+          "percentage": "<ownership %> or 'not available'",
+          "connection": "<direct|indirect via X>",
+          "source": "<UK Gov Companies House|Web search>"
+        },
+        "owner 2": {
+          ...
+        }
+      }
+    }
+    ```
+    
+    **Classification Rules:**
+    - Direct owner: Directly owns target company
+    - Indirect owner: Owns via intermediate entity (e.g., owns Company A which owns target)
+    - Individuals owning companies that own target = indirect owners
+    - Do NOT include subsidiaries (entities owned BY target)
+    
+    **Data Handling:**
+    - Use "not available" for missing percentages (do not guess)
+    - Clearly differentiate individuals vs companies
+    - Only include DIRECT owners at this level (not their owners)
+    - Cite source for each owner (CH API or Web)
+    
+    **Workflow:**
+    1. Analyze all information from companies_house_expert and web_expert
+    2. Structure into ownership tree JSON
+    3. Submit to critic for validation
+    4. Implement critic feedback
+    5. Provide final JSON to file_manager
+    
+    You do NOT have access to tools. Structure data provided by other agents.
+  
+  modelRef:
+    name: {{ .Values.agents.boAnalyst.model | default "default" }}
+  
+  tools:
+    - type: built-in
+      name: terminate
+
+---
+# NOTE: critic and file-manager agents are shared/reused from other teams
+# They should be defined elsewhere in the chart with names matching:
+# - {{ .Values.agents.critic.name }}
+# - {{ .Values.agents.fileManager.name }}
+
+{{- end }}

@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  repository: pdf-extraction-mcp
+  tag: v2
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8000
+
+llm:
+  provider: "openai"
+  model: "gpt-4o"
+  baseUrl: "https://azure.prod.ai-gateway.quantumblack.com/6d3b969b-d376-4948-8e55-aa762149b982/openai/deployments/gpt-4o"
+  apiVersion: "2024-04-01-preview"
+  apiKeySecret:
+    name: ai-gateway-azure-openai
+    key: token
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+dataVolume:
+  enabled: true
+  claimName: file-gateway-storage
+  readOnly: true
+  mountPath: /data
+
+mcpServer:
+  enabled: true
+  timeout: "120s"

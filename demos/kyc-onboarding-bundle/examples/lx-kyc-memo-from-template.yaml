@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lx-kyc-memo-
+  namespace: default
+spec:
+  workflowTemplateRef:
+    name: lx-kyc-memo
+  arguments:
+    parameters:
+      - name: input-profile
+        value: "source_code_files/3-kyc-memo/input/kyc_profile.json"
+      - name: output-memo
+        value: "source_code_files/3-kyc-memo/output/kyc_memo.md"
+      - name: risk-rating
+        value: "4"
