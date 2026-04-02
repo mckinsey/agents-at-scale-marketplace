@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.4...cobol-modernization-bundle-v0.1.5) (2026-04-02)
+
+
+### Bug Fixes
+
+* replace local file:// helm refs with OCI registry and pin ark-sdk ([#182](https://github.com/mckinsey/agents-at-scale-marketplace/issues/182)) ([0b3a907](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0b3a907b6118ce0655be024b1b34474a2334b498))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.3...cobol-modernization-bundle-v0.1.4) (2026-03-30)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.9...noah-v0.1.10) (2026-04-02)
+
+
+### Bug Fixes
+
+* replace local file:// helm refs with OCI registry and pin ark-sdk ([#182](https://github.com/mckinsey/agents-at-scale-marketplace/issues/182)) ([0b3a907](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0b3a907b6118ce0655be024b1b34474a2334b498))
+
 ## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.8...noah-v0.1.9) (2026-02-26)
 
 
