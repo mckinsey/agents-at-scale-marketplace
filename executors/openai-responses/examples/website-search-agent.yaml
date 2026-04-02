@@ -1,0 +1,63 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# How Ark CRs map to the OpenAI Responses API
+#
+#   Ark CR                  Responses API field     Completions API equivalent
+#   ──────────────────────  ──────────────────────  ──────────────────────────
+#   Model (apiKey, name)    model + api_key         model + api_key
+#   Agent.spec.prompt       instructions            messages[{role:"system"}]
+#   Query.spec.message      input                   messages[{role:"user"}]
+#
+# Note: `instructions` maps to the `developer` role (higher priority than
+# `system`) and is re-sent on every call — it does NOT carry over via
+# `previous_response_id`.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# 1. Model CR — provider credentials and model name
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: gpt-5-nano-2025-08-07
+spec:
+  provider: openai
+  config:
+    openai:
+      apiKey: sk-...   # reference a Secret in production
+---
+# 2. Agent CR — static configuration
+#    spec.prompt    → Responses API `instructions`  (≈ system / developer role)
+#    labels         → built-in tools to enable
+#    parameters     → tool configuration (e.g. user_location for web search)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: website-search-agent
+  labels:
+    ark.openai.tools/web-search-preview: "true"
+spec:
+  modelRef:
+    name: gpt-5-nano-2025-08-07
+  executionEngineRef:
+    name: executor-openai-responses
+  prompt: |
+    You are an expert web search agent located in UK.
+    Your role is to find the link to the main website of a given company located in UK.
+    Return only the link and nothing else. Do not write any comments or explanation.
+  parameters:
+    - name: openai.web-search.country
+      value: GB
+    - name: openai.web-search.city
+      value: London
+    - name: openai.web-search.region
+      value: London
+---
+# 3. Query CR — runtime input per request
+#    spec.message   → Responses API `input`  (≈ user role message)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: find-adam-grooming
+spec:
+  agentRef:
+    name: website-search-agent
+  message: "ADAM GROOMING BN LTD"
+  # expected response: https://adamgroomingatelier.com/
