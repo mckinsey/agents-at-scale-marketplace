@@ -63,6 +63,10 @@ Inherited from [Ark core](https://github.com/mckinsey/agents-at-scale-ark/blob/m
 - **CI/CD**: Reusable GitHub Actions workflows for charts, Docker images, docs, and PR title validation
 - **Versioning**: Semantic versioning via Release Please with conventional commits
 
+## Observability
+
+Ark core propagates OpenTelemetry trace context (W3C TraceContext + Baggage) to executors via A2A HTTP headers. The `ExecutorApp` base class from `ark-sdk` handles extraction. Executors can add their own instrumentation (e.g., Claude executor uses `openinference-instrumentation-claude-agent-sdk`). Observability backends in `services/` auto-deploy `otel-environment-variables` secrets to target namespaces.
+
 ## Integration Contracts
 
 ### Executors
