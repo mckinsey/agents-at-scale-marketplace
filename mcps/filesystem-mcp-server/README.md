@@ -21,7 +21,7 @@ make dev
 - **MCP Protocol Compliant**: Full implementation of MCP session lifecycle
 - **Persistent Session Tracking**: Session metadata survives server restarts via file-based storage
 - **LRU Eviction**: Automatically evicts least recently used sessions when limit reached
-- **Annotation-Driven Configuration**: Workspaces configured via ARK query annotations
+- **Annotation-Driven Configuration**: Workspaces configured via Ark query annotations
 - **Shared Base Directory**: All operations under `/data/` with user-specified workspaces
 - **All Filesystem Operations**: Read, write, edit, move, search, list, tree
 
@@ -40,7 +40,7 @@ Helm chart options:
 
 ## Workspace Configuration
 
-Workspaces are configured via ARK query annotations using the `set_base_directory` tool:
+Workspaces are configured via Ark query annotations using the `set_base_directory` tool:
 
 ```yaml
 apiVersion: ark.mckinsey.com/v1alpha1
@@ -63,7 +63,7 @@ spec:
 
 This creates and configures `/data/my-workspace/` as the working directory for all filesystem operations in that query.
 
-## Using with ARK
+## Using with Ark
 
 The MCP server creates an `MCPServer` resource that auto-generates tools with the `mcp-filesystem-` prefix.
 
@@ -117,6 +117,6 @@ For detailed usage examples and session management, see `docs/content/user-guide
 
 ### Key Design Principles
 - **MCP sessions ≠ application state**: Sessions track connections, not configuration
-- **Annotations as source of truth**: Workspace configuration comes from ARK annotations
+- **Annotations as source of truth**: Workspace configuration comes from Ark annotations
 - **Single base directory**: All sessions share `/data/` with user-specified subdirectories
 - **No per-session directories**: Workspaces are explicitly named and persistent

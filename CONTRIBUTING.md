@@ -55,7 +55,7 @@ Use conventional commits and semantic versioning.
 
 ## Adding Marketplace Items
 
-The marketplace is designed to host a variety of items including services, tools, agents, and other resources for the ARK platform. When contributing a new item:
+The marketplace is designed to host a variety of items including services, tools, agents, and other resources for the Ark platform. When contributing a new item:
 
 **Repository Structure**
 
@@ -98,7 +98,7 @@ Before submitting:
 - Test locally using DevSpace or Helm
 - Verify all documentation is accurate
 - Ensure examples work as described
-- Check that your item integrates properly with the ARK platform
+- Check that your item integrates properly with the Ark platform
 
 **Language and Technology Choices**
 
@@ -112,7 +112,7 @@ The key is that your contribution should:
 - Be well-documented
 - Follow Kubernetes best practices (if applicable)
 - Include proper Helm charts for deployment
-- Integrate cleanly with the ARK platform
+- Integrate cleanly with the Ark platform
 
 ## Contributing to Documentation
 

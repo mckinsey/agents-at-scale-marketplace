@@ -1,11 +1,11 @@
 ---
 title: LangChain Executor
-description: LangChain execution engine for ARK agents with RAG support
+description: LangChain execution engine for Ark agents with RAG support
 ---
 
 # LangChain Executor
 
-LangChain-based execution engine for ARK agents with optional Retrieval-Augmented Generation (RAG) support. Communicates using the A2A (Agent-to-Agent) protocol.
+LangChain-based execution engine for Ark agents with optional Retrieval-Augmented Generation (RAG) support. Communicates using the A2A (Agent-to-Agent) protocol.
 
 ## Overview
 
@@ -14,19 +14,19 @@ The LangChain Executor provides:
 - **LangChain Framework Integration** - Execute agents using LangChain with OpenAI and Azure OpenAI models
 - **Conversation History** - Server-side conversation memory keyed by `conversationId`, using LangChain's `ChatMessageHistory`
 - **RAG Support** - Retrieval-Augmented Generation with FAISS vector search for code-aware responses
-- **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless integration with ARK
+- **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless integration with Ark
 - **ExecutionEngine CRD** - Registers as a Kubernetes-native execution engine
 
 ## Install
 
 ```bash
-ark install marketplace/services/executor-langchain
+ark install marketplace/executors/executor-langchain
 ```
 
 Or with DevSpace:
 
 ```bash
-cd services/executor-langchain
+cd executors/langchain
 devspace deploy
 ```
 
@@ -161,7 +161,7 @@ curl http://localhost:8000/health
 
 **Using DevSpace:**
 ```bash
-cd services/executor-langchain
+cd executors/langchain
 devspace purge
 ```
 
@@ -172,6 +172,6 @@ helm uninstall executor-langchain -n default
 
 ## Additional Resources
 
-- [LangChain Executor README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/executor-langchain)
+- [LangChain Executor README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/langchain)
 - [LangChain Documentation](https://python.langchain.com/docs/)
 - [A2A Protocol](https://google.github.io/A2A/)

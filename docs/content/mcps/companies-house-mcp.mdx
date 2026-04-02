@@ -1,0 +1,58 @@
+---
+title: Companies House MCP Server
+description: UK Companies House API for company search and beneficial ownership data
+---
+
+# Companies House MCP Server
+
+UK Companies House API integration for company search and beneficial ownership (PSC) data.
+
+## Install
+
+```bash
+ark install marketplace/mcps/companies-house-mcp
+```
+
+Or with Helm:
+
+```bash
+cd mcps/companies-house-mcp
+helm install companies-house-mcp ./chart -n default --create-namespace
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_uk_company_number` | Search for a UK company by name, returns company numbers, status, and addresses |
+| `get_uk_person_in_control` | Get persons with significant control (PSC / beneficial owners) for a company |
+
+## Configuration
+
+Set via Kubernetes Secret `companies-house-api-key`:
+
+| Variable | Description |
+|----------|-------------|
+| `COMPANIES_HOUSE_API_KEY` | API key from [Companies House Developer Hub](https://developer.company-information.service.gov.uk/) |
+
+Authentication uses HTTP Basic Auth with the API key as username (no password).
+
+## Tool Usage
+
+```yaml
+tools:
+  - type: mcp
+    name: companies-house-get-uk-company-number
+  - type: mcp
+    name: companies-house-get-uk-person-in-control
+```
+
+## Limitations
+
+- Requires a valid Companies House API key (free registration)
+- Rate limited by Companies House API (600 requests per 5 minutes)
+- UK companies only
+
+## Additional Resources
+
+- [Companies House MCP README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/mcps/companies-house-mcp)

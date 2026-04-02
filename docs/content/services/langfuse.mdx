@@ -5,7 +5,7 @@ description: Monitor and trace AI agent interactions with Langfuse integration
 
 # Langfuse Service
 
-[Langfuse](https://langfuse.com) ([docs](https://langfuse.com/docs), [repo](https://github.com/langfuse/langfuse)) provides comprehensive observability for AI applications, offering detailed tracing, monitoring, and analytics for your ARK agents and teams. This guide covers setting up and using Langfuse with ARK.
+[Langfuse](https://langfuse.com) ([docs](https://langfuse.com/docs), [repo](https://github.com/langfuse/langfuse)) provides comprehensive observability for AI applications, offering detailed tracing, monitoring, and analytics for your Ark agents and teams. This guide covers setting up and using Langfuse with Ark.
 
 Langfuse is open source, integrates with popular agent frameworks through OpenTelemetry, offers public APIs for all features, and can be self-hosted.
 
@@ -13,7 +13,7 @@ Langfuse is open source, integrates with popular agent frameworks through OpenTe
 
 ## Overview
 
-Langfuse integration with ARK provides:
+Langfuse integration with Ark provides:
 
 - **LLM Call Tracing** - Track all model interactions and API calls
 - **Cost Monitoring** - Monitor API usage and associated costs
@@ -33,7 +33,7 @@ cd marketplace/services/langfuse
 devspace deploy
 ```
 
-**Note**: DevSpace automatically restarts the ARK controller after deployment to ensure it picks up the new Langfuse configuration.
+**Note**: DevSpace automatically restarts the Ark controller after deployment to ensure it picks up the new Langfuse configuration.
 
 **Using Helm:**
 ```bash
@@ -104,7 +104,7 @@ envFrom:
       optional: true
 ```
 
-**Note**: When using DevSpace, the ARK controller is automatically restarted after Langfuse deployment. For manual deployments, existing deployments must be restarted to pick up new/updated secrets:
+**Note**: When using DevSpace, the Ark controller is automatically restarted after Langfuse deployment. For manual deployments, existing deployments must be restarted to pick up new/updated secrets:
 ```bash
 # Only needed for manual deployments (not DevSpace)
 kubectl rollout restart deployment/ark-controller -n ark-system
@@ -144,7 +144,7 @@ Once logged in, the Langfuse dashboard provides:
 
 **Traces View**
 
-- Complete execution traces for ARK controller operations
+- Complete execution traces for Ark controller operations
 - Model calls and responses
 - Timing and performance metrics
 
@@ -159,9 +159,9 @@ Once logged in, the Langfuse dashboard provides:
 - Cost breakdown by model
 - Performance comparisons
 
-### Viewing ARK Traces
+### Viewing Ark Traces
 
-After installation, you should immediately see a 'startup' trace from the ARK controller. This confirms that telemetry is working correctly.
+After installation, you should immediately see a 'startup' trace from the Ark controller. This confirms that telemetry is working correctly.
 
 Traces include:
 

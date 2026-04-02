@@ -30,8 +30,8 @@ make kyc-demo               # 3. Run KYC workflow
 
 # View results
 kubectl get workflows -n default
-# Access ARK Dashboard → Workflow Templates (template is visible)
-# Access ARK Dashboard → Files section (download report)
+# Access Ark Dashboard → Workflow Templates (template is visible)
+# Access Ark Dashboard → Files section (download report)
 
 # Cleanup
 make uninstall

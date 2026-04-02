@@ -1,6 +1,6 @@
 # Noah Service
 
-ARK Runtime Administration Agent for infrastructure management.
+Ark Runtime Administration Agent for infrastructure management.
 Provides an MCP server with runtime administration tools and a conversational agent interface.
 
 ## Quickstart

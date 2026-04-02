@@ -1,6 +1,6 @@
 # LangChain Executor
 
-LangChain-based execution engine for ARK agents with RAG support.
+LangChain-based execution engine for Ark agents with RAG support.
 
 ## Features
 
@@ -13,7 +13,7 @@ LangChain-based execution engine for ARK agents with RAG support.
 ## Quickstart
 
 ```bash
-# Install with ARK CLI
+# Install with Ark CLI
 ark marketplace install executor-langchain
 ```
 
