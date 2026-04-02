@@ -18,6 +18,9 @@ __pycache__/
 *.pyd
 .Python
 *.so
+.venv/
+uv.lock
+.pytest_cache/
 
 # Just keep some stuff locally
 .local/
