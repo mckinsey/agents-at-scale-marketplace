@@ -26,7 +26,6 @@ Each component follows this pattern:
 ├── devspace.yaml       # Local development config
 ├── Dockerfile          # Container image (if custom)
 ├── README.md           # Terse, developer-focused
-├── pyproject.toml      # Python projects (uv + hatchling)
 └── src/                # Source code
 ```
 
@@ -37,25 +36,7 @@ Other key files:
 
 ## Build Patterns
 
-### Python components (executors, most MCPs, agents, ark-sandbox)
-```bash
-cd <component>/
-uv sync                # Install dependencies
-uv run python -m <module>  # Run locally
-uv run pytest          # Run tests
-```
-
-Build system: `hatchling`. Dependencies in `pyproject.toml`.
-
-### Node.js components (filesystem MCP, docs site)
-```bash
-cd <component>/
-npm install
-npm run build
-npm run dev            # Development with hot-reload
-```
-
-### Helm deployment (all components)
+### Deployment (all components)
 ```bash
 # Using Ark CLI
 ark install marketplace/<type>/<name>
@@ -69,6 +50,8 @@ cd <component>/
 helm install <name> ./chart -n <namespace> --create-namespace
 ```
 
+Check each component's README for language-specific build and test instructions.
+
 ## Conventions
 
 Inherited from [Ark core](https://github.com/mckinsey/agents-at-scale-ark/blob/main/CLAUDE.md):
@@ -76,10 +59,7 @@ Inherited from [Ark core](https://github.com/mckinsey/agents-at-scale-ark/blob/m
 - **Naming**: Always "Ark", never "ARK"
 - **Writing style**: Concise and direct. No filler adjectives. READMEs are terse, focused on developer setup.
 - **Commits**: Conventional commit format required (`feat:`, `fix:`, `docs:`, `chore:`, etc.)
-- **Language choices**:
-  - Python for executors, MCP servers, agents, and higher-order services
-  - TypeScript/Node.js for the filesystem MCP server and the docs site
-  - Helm + DevSpace for all Kubernetes deployments
+- **Deployments**: Helm + DevSpace for all Kubernetes deployments
 - **CI/CD**: Reusable GitHub Actions workflows for charts, Docker images, docs, and PR title validation
 - **Versioning**: Semantic versioning via Release Please with conventional commits
 
