@@ -6,6 +6,8 @@ The Ark Marketplace is the add-on ecosystem for [Ark core](https://github.com/mc
 
 **Dependency direction**: Marketplace items depend on Ark core — never the other way around. Core Ark defines contracts (CRDs, SDK interfaces, A2A protocol) and knows nothing about specific marketplace items. Before building something here, check whether Ark core already provides the capability natively.
 
+**Isolation**: Each marketplace item must be independently deployable with no dependencies on other marketplace items. Avoid introducing cross-item dependencies. When a dependency is unavoidable, it must be declared explicitly in `marketplace.json` — implicit coupling or shared state between items is not allowed.
+
 ## Component Types
 
 | Type | What it extends | Example |
