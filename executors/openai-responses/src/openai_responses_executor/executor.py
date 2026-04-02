@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
 from openai import AsyncOpenAI
@@ -55,14 +55,14 @@ class OpenAIResponsesExecutor(BaseExecutor):
         return None
 
     @staticmethod
-    def _extract_function_calls(response: Any) -> List[Any]:
+    def _extract_function_calls(response: Any) -> list[Any]:
         return [item for item in response.output if getattr(item, "type", None) == "function_call"]
 
     # ------------------------------------------------------------------
     # Main execution
     # ------------------------------------------------------------------
 
-    async def execute_agent(self, request: ExecutionEngineRequest) -> List[Message]:
+    async def execute_agent(self, request: ExecutionEngineRequest) -> list[Message]:
         conversation_id = getattr(request, "conversationId", None) or request.agent.name
 
         model_config = ModelConfig.from_request(request)
@@ -101,50 +101,61 @@ class OpenAIResponsesExecutor(BaseExecutor):
             )
 
         try:
-            for iteration in range(config.max_tool_iterations):
-                response = await client.responses.create(**params.to_api_kwargs())
-                self._save_response_id(conversation_id, response.id)
-
-                function_calls = self._extract_function_calls(response)
-
-                if not function_calls:
-                    text = self._extract_text_output(response) or "No response generated"
-                    return [Message(role="assistant", content=text, name=request.agent.name)]
-
-                logger.info(
-                    f"Iteration {iteration + 1}: executing {len(function_calls)} function call(s) "
-                    f"for agent {request.agent.name}"
-                )
-
-                tool_outputs = [
-                    {
-                        "type": "function_call_output",
-                        "call_id": fc.call_id,
-                        "output": json.dumps(await self._execute_function_call(fc, request)),
-                    }
-                    for fc in function_calls
-                ]
-
-                params = ResponsesCreateParams.continuation(
-                    model_config=model_config,
-                    instructions=instructions,
-                    previous_response_id=response.id,
-                    input=tool_outputs,
-                    tools=tools or None,
-                )
-
-            logger.warning(f"Agent {request.agent.name} reached max tool iterations ({config.max_tool_iterations})")
-            return [
-                Message(
-                    role="assistant",
-                    content=f"Reached maximum tool call iterations ({config.max_tool_iterations}). Please refine your request.",
-                    name=request.agent.name,
-                )
-            ]
-
+            return await self._run_tool_loop(client, params, model_config, instructions, tools, request, conversation_id)
         except Exception as e:
             logger.error(f"Error in OpenAI Responses API processing: {e}", exc_info=True)
             raise
+
+    async def _run_tool_loop(
+        self,
+        client: Any,
+        params: ResponsesCreateParams,
+        model_config: Any,
+        instructions: str,
+        tools: list[Any],
+        request: ExecutionEngineRequest,
+        conversation_id: str,
+    ) -> list[Message]:
+        for iteration in range(config.max_tool_iterations):
+            response = await client.responses.create(**params.to_api_kwargs())
+            self._save_response_id(conversation_id, response.id)
+
+            function_calls = self._extract_function_calls(response)
+
+            if not function_calls:
+                text = self._extract_text_output(response) or "No response generated"
+                return [Message(role="assistant", content=text, name=request.agent.name)]
+
+            logger.info(
+                f"Iteration {iteration + 1}: executing {len(function_calls)} function call(s) "
+                f"for agent {request.agent.name}"
+            )
+
+            tool_outputs = [
+                {
+                    "type": "function_call_output",
+                    "call_id": fc.call_id,
+                    "output": json.dumps(await self._execute_function_call(fc, request)),
+                }
+                for fc in function_calls
+            ]
+
+            params = ResponsesCreateParams.continuation(
+                model_config=model_config,
+                instructions=instructions,
+                previous_response_id=response.id,
+                input=tool_outputs,
+                tools=tools or None,
+            )
+
+        logger.warning(f"Agent {request.agent.name} reached max tool iterations ({config.max_tool_iterations})")
+        return [
+            Message(
+                role="assistant",
+                content=f"Reached maximum tool call iterations ({config.max_tool_iterations}). Please refine your request.",
+                name=request.agent.name,
+            )
+        ]
 
     # ------------------------------------------------------------------
     # Function tool execution

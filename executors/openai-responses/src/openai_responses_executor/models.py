@@ -1,6 +1,6 @@
 """Pydantic models for OpenAI Responses API tool declarations and request building."""
 
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel
 
 from ark_sdk.executor import ExecutionEngineRequest, ToolDefinition
@@ -67,7 +67,7 @@ class WebSearchUserLocation(BaseModel):
 
     @classmethod
     def from_request(cls, request: ExecutionEngineRequest) -> Optional["WebSearchUserLocation"]:
-        params: Dict[str, str] = {
+        params: dict[str, str] = {
             p.name: p.value for p in (getattr(request.agent, "parameters", None) or [])
         }
         country = params.get("openai.web-search.country")
@@ -106,7 +106,7 @@ class FileSearchTool(BaseModel):
     """
 
     type: Literal["file_search"] = "file_search"
-    vector_store_ids: Optional[List[str]] = None
+    vector_store_ids: Optional[list[str]] = None
     max_num_results: Optional[int] = None
     ranking_options: Optional[FileSearchRankingOptions] = None
 
@@ -151,7 +151,7 @@ class FunctionTool(BaseModel):
     type: Literal["function"] = "function"
     name: str
     description: str
-    parameters: Dict[str, Any] = {"type": "object", "properties": {}}
+    parameters: dict[str, Any] = {"type": "object", "properties": {}}
 
     @classmethod
     def from_definition(cls, tool: ToolDefinition) -> "FunctionTool":
@@ -177,9 +177,9 @@ class BuiltInTools(BaseModel):
 
     @classmethod
     def from_request(cls, request: ExecutionEngineRequest) -> "BuiltInTools":
-        labels: Dict[str, str] = getattr(request.agent, "labels", {}) or {}
+        labels: dict[str, str] = getattr(request.agent, "labels", {}) or {}
         # TODO: read from request.tools_config once Query CR supports spec.tools
-        tool_params: Dict[str, Any] = getattr(request, "tools_config", None) or {}
+        tool_params: dict[str, Any] = getattr(request, "tools_config", None) or {}
 
         web_search = None
         if labels.get(_LABEL_WEB_SEARCH) == "true":
@@ -220,7 +220,7 @@ class BuiltInTools(BaseModel):
             computer_use=computer_use,
         )
 
-    def to_list(self) -> List[Dict[str, Any]]:
+    def to_list(self) -> list[dict[str, Any]]:
         return [
             tool.model_dump(exclude_none=True)
             for tool in [self.web_search, self.file_search, self.code_interpreter, self.computer_use]
@@ -238,11 +238,11 @@ class ResponsesCreateParams(BaseModel):
 
     model: str
     instructions: str
-    input: Union[str, List[Dict[str, Any]]]
-    tools: Optional[List[Dict[str, Any]]] = None
+    input: Union[str, list[dict[str, Any]]]
+    tools: Optional[list[dict[str, Any]]] = None
     previous_response_id: Optional[str] = None
 
-    def to_api_kwargs(self) -> Dict[str, Any]:
+    def to_api_kwargs(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
 
     @classmethod
@@ -251,7 +251,7 @@ class ResponsesCreateParams(BaseModel):
         model_config: ModelConfig,
         instructions: str,
         request: ExecutionEngineRequest,
-        tools: Optional[List[Dict[str, Any]]],
+        tools: Optional[list[dict[str, Any]]],
     ) -> "ResponsesCreateParams":
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in request.history
@@ -270,8 +270,8 @@ class ResponsesCreateParams(BaseModel):
         model_config: ModelConfig,
         instructions: str,
         previous_response_id: str,
-        input: Union[str, List[Dict[str, Any]]],
-        tools: Optional[List[Dict[str, Any]]],
+        input: Union[str, list[dict[str, Any]]],
+        tools: Optional[list[dict[str, Any]]],
     ) -> "ResponsesCreateParams":
         return cls(
             model=model_config.model_name,
