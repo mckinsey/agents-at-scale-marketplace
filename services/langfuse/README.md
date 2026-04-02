@@ -42,6 +42,6 @@ kubectl port-forward -n telemetry svc/langfuse-web 3000:3000
 - **Password**: `password123`
 
 ## Notes
-- Pre-configured with ARK organization and project
-- Includes OpenTelemetry integration for ARK controller
+- Pre-configured with Ark organization and project
+- Includes OpenTelemetry integration for Ark controller
 - Default namespace: `telemetry`

@@ -1,0 +1,51 @@
+---
+title: Perplexity Ask MCP Server
+description: Conversational AI with real-time web search via Perplexity API
+---
+
+# Perplexity Ask MCP Server
+
+Conversational AI with real-time web search via the Perplexity API. Exposes a single `perplexity-ask` tool.
+
+## Install
+
+```bash
+ark install marketplace/mcps/perplexity-ask-mcp
+```
+
+Or with Helm:
+
+```bash
+cd mcps/perplexity-ask-mcp
+helm install perplexity-ask-mcp ./chart -n default --create-namespace
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `perplexity-ask` | Conversational AI with real-time web search |
+
+Accepts `messages` in the form `[{"role": "user", "content": "<prompt>"}]` and returns the Perplexity model response.
+
+## Configuration
+
+Set via Kubernetes Secret `web-search-credentials`:
+
+| Variable | Description |
+|----------|-------------|
+| `perplexity-api-key` | Perplexity API key (from [perplexity.ai](https://www.perplexity.ai/)) |
+
+## Local Development
+
+```bash
+export PERPLEXITY_API_KEY=your_key
+pip install -r requirements.txt
+python main.py
+```
+
+Server listens on port 8000; MCP endpoint at `/mcp` (streamable HTTP).
+
+## Additional Resources
+
+- [Perplexity Ask MCP README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/mcps/perplexity-ask-mcp)

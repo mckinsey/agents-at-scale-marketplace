@@ -27,7 +27,7 @@ The MCP server exposes the following tools (prefixed with `mcp-filesystem-`):
 
 ### Installation
 
-**Using ARK CLI (Recommended):**
+**Using Ark CLI (Recommended):**
 
 ```bash
 ark install marketplace/mcps/filesystem-mcp-server
@@ -73,7 +73,7 @@ spec:
 
 ### Configuring Workspaces
 
-Workspaces are configured via ARK query annotations using the `set_base_directory` tool:
+Workspaces are configured via Ark query annotations using the `set_base_directory` tool:
 
 ```yaml
 apiVersion: ark.mckinsey.com/v1alpha1
@@ -181,7 +181,7 @@ The server has a clean separation of concerns:
 
 ### Key Design Principles
 - **MCP sessions ≠ application state**: Sessions track connections, not configuration
-- **Annotations as source of truth**: Workspace configuration comes from ARK annotations
+- **Annotations as source of truth**: Workspace configuration comes from Ark annotations
 - **Single base directory**: All sessions share `/data/` with user-specified subdirectories
 - **No per-session directories**: Workspaces are explicitly named and persistent
 
@@ -195,7 +195,7 @@ The server has a clean separation of concerns:
 
 ## Uninstallation
 
-**Using ARK CLI:**
+**Using Ark CLI:**
 
 ```bash
 ark uninstall marketplace/mcps/filesystem-mcp-server

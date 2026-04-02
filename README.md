@@ -14,7 +14,7 @@
     <a href="#quick-start">Quick Start</a> •
     <a href="https://mckinsey.github.io/agents-at-scale-marketplace/">Documentation</a> •
     <a href="#services">Services</a> •
-    <a href="https://github.com/mckinsey/agents-at-scale-ark"><strong>ARK Platform →</strong></a>
+    <a href="https://github.com/mckinsey/agents-at-scale-ark"><strong>Ark Platform →</strong></a>
   </p>
   <p align="center">
     <a href="https://github.com/mckinsey/agents-at-scale-marketplace/actions/workflows/main-push.yaml"><img src="https://github.com/mckinsey/agents-at-scale-marketplace/actions/workflows/main-push.yaml/badge.svg" alt="CI/CD"></a>
@@ -23,12 +23,21 @@
 
 ---
 
-> **Part of the [Agents at Scale (ARK)](https://github.com/mckinsey/agents-at-scale-ark) Platform**  
+> **Part of the [Agents at Scale (Ark)](https://github.com/mckinsey/agents-at-scale-ark) Platform**
 > A curated collection of services, agents, and tools packaged as Helm charts with DevSpace support for seamless deployment and development.
+
+## Executors
+
+External execution engines that process agent workloads. Implement `BaseExecutor` from `ark-sdk` and communicate via A2A protocol.
+
+| Executor                                                  | Description                                                  | Chart                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------- |
+| [`claude-agent-sdk`](./executors/claude-agent-sdk)        | Native Claude executor with built-in tools and session persistence | [Chart](./executors/claude-agent-sdk/chart) |
+| [`langchain`](./executors/langchain)                      | LangChain executor with RAG support                          | [Chart](./executors/langchain/chart)           |
 
 ## Services
 
-Services are designed to integrate seamlessly with the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark) and can be deployed to any Kubernetes cluster.
+Infrastructure add-ons deployed alongside the [Ark platform](https://github.com/mckinsey/agents-at-scale-ark).
 
 | Service                                       | Description                                                                | Chart                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------ |
@@ -41,28 +50,45 @@ Services are designed to integrate seamlessly with the [ARK platform](https://gi
 
 ## Agents
 
-Pre-built agents that can be deployed to your ARK cluster for various operational tasks.
+Pre-built agents that can be deployed to your Ark cluster.
 
 | Agent                     | Description                                                         | Chart                        |
 | ------------------------- | ------------------------------------------------------------------- | ---------------------------- |
 | [`noah`](./agents/noah)   | Runtime administration agent with cluster privileges and MCP server | [Chart](./agents/noah/chart) |
 
+## MCP Servers
+
+Tool providers registered as `MCPServer` CRDs. Agents reference individual tools in their spec.
+
+| MCP Server                                                       | Description                                                            | Chart                                             |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------- |
+| [`filesystem-mcp-server`](./mcps/filesystem-mcp-server)         | Filesystem operations with session management and workspace config     | [Chart](./mcps/filesystem-mcp-server/chart)       |
+| [`speech-mcp-server`](./mcps/speech-mcp-server)                 | Audio transcription via OpenAI Whisper                                 | [Chart](./mcps/speech-mcp-server/chart)           |
+| [`pdf-extraction-mcp`](./mcps/pdf-extraction-mcp)               | PDF ownership extraction with LLM analysis                             | [Chart](./mcps/pdf-extraction-mcp/chart)          |
+| [`web-research-mcp`](./mcps/web-research-mcp)                   | Web research via Tavily or Perplexity                                  | [Chart](./mcps/web-research-mcp/chart)            |
+| [`perplexity-ask-mcp`](./mcps/perplexity-ask-mcp)               | Conversational AI with real-time web search via Perplexity API         | [Chart](./mcps/perplexity-ask-mcp/chart)          |
+| [`companies-house-mcp`](./mcps/companies-house-mcp)             | UK Companies House API for company search and beneficial ownership     | [Chart](./mcps/companies-house-mcp/chart)         |
+
 ## Quick Start
 
-### Install with ARK CLI (Recommended)
+### Install with Ark CLI (Recommended)
 
-The easiest way to install marketplace services and agents is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
+The easiest way to install marketplace items is using the [Ark CLI](https://mckinsey.github.io/agents-at-scale-ark/):
 
 ```bash
-# Install services
-ark install marketplace/services/a2a-inspector
+# Executors
+ark install marketplace/executors/executor-claude-agent-sdk
+ark install marketplace/executors/executor-langchain
+
+# Services
+ark install marketplace/services/phoenix
+ark install marketplace/services/langfuse
 ark install marketplace/services/ark-sandbox
 ark install marketplace/services/file-gateway
-ark install marketplace/services/langfuse
+ark install marketplace/services/a2a-inspector
 ark install marketplace/services/mcp-inspector
-ark install marketplace/services/phoenix
 
-# Install agents
+# Agents
 ark install marketplace/agents/noah
 ```
 
@@ -116,26 +142,18 @@ Detailed documentation for marketplace services can be found in the [`docs/`](./
 
 ## Contributing
 
-1. Make changes to services in `./services/`
-2. Ensure your service includes:
-   - Helm chart in `chart/` directory
-   - `README.md` with service documentation
-   - `devspace.yaml` for local development
-3. Test locally using DevSpace or Helm
-4. Submit a pull request
+1. Choose the appropriate directory (`executors/`, `services/`, `mcps/`, `agents/`, `demos/`)
+2. Each component needs: Helm chart in `chart/`, `README.md`, `devspace.yaml`
+3. Add an entry to `marketplace.json`
+4. Test locally with DevSpace or Helm
+5. Submit a pull request with a conventional commit title
 
-## Future Plans
-
-This marketplace will include:
-
-- Additional observability services
-- Pre-built agents and agent templates
-- Reusable tools and utilities
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for full guidelines.
 
 ## Related Projects
 
-- **[ARK (Agents at Scale)](https://github.com/mckinsey/agents-at-scale-ark)** - The main platform repository
-- **[ARK Documentation](https://mckinsey.github.io/agents-at-scale-ark/)** - Complete platform documentation
+- **[Ark (Agents at Scale)](https://github.com/mckinsey/agents-at-scale-ark)** — The core platform
+- **[Ark Documentation](https://mckinsey.github.io/agents-at-scale-ark/)** — Platform documentation
 
 ## License
 

@@ -1,7 +1,9 @@
 export default {
   index: 'Introduction',
+  executors: 'Executors',
   services: 'Services',
+  mcps: 'MCP Servers',
   agents: 'Agents',
-  mcps: 'MCPS',
+  demos: 'Demos',
   contributors: 'Contributors',
 }

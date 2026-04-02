@@ -6,7 +6,7 @@ COBOL modernization demo with agents for reverse engineering, pseudocode generat
 
 This bundle deploys **6 AI agents** that mirror the LegacyX Groups:
 
-| ARK Agent | LegacyX Group | Description |
+| Ark Agent | LegacyX Group | Description |
 |-----------|---------------|-------------|
 | `audio-transcriber` | Audio Transcription And Documentation | Transcribes audio files with speaker identification |
 | `cobol-code-documenter` | Cobol Code Documentation | Creates detailed code spec documentation |
@@ -25,8 +25,8 @@ Plus supporting infrastructure:
 
 ## Prerequisites
 
-- **Model for agents:** A Model (e.g. named `default`) must exist in the namespace where you install the bundle. Agents use this Model to run, workflows will fail until it is present. Create the Model (e.g. via ARK Dashboard → Models or `ark models create default`) in the target namespace. 
-- ARK cluster (Azure OpenAI or other provider)
+- **Model for agents:** A Model (e.g. named `default`) must exist in the namespace where you install the bundle. Agents use this Model to run, workflows will fail until it is present. Create the Model (e.g. via Ark Dashboard → Models or `ark models create default`) in the target namespace. 
+- Ark cluster (Azure OpenAI or other provider)
 - Argo Workflows installed
 - **File Gateway** is installed automatically with this bundle (Helm dependency); no separate install step.
 - Docker (to build the speech-mcp-server and data-seeder images)
@@ -81,14 +81,14 @@ Use `NAMESPACE=<ns>` for install/upload/cobol-demo when using a non-default name
 ark install marketplace/demos/cobol-modernization-bundle
 ```
 
-**Upload input data (ARK Dashboard):**
+**Upload input data (Ark Dashboard):**
 
-1. Open **ARK Dashboard → Files**.
+1. Open **Ark Dashboard → Files**.
 2. Create or use the folder `cobol-source/`.
 3. Upload your COBOL files (`.cbl`) and the audio file (e.g. `carddemo-interview.m4a`).
 
 **Run the workflow:**
 
-- From **ARK Dashboard → Argo Workflows**, submit a new workflow that references the `cobol-modernization-template` WorkflowTemplate, or apply the example workflow manifest:
+- From **Ark Dashboard → Argo Workflows**, submit a new workflow that references the `cobol-modernization-template` WorkflowTemplate, or apply the example workflow manifest:
   - [cobol-modernization-from-template.yaml](https://github.com/mckinsey/agents-at-scale-marketplace/blob/main/demos/cobol-modernization-bundle/examples/cobol-modernization-from-template.yaml)
 - Use parameters such as `cobol-source-dir=cobol-source`, `output-dir=output`, and `audio-file=cobol-source/carddemo-interview.m4a` to match your uploaded paths.

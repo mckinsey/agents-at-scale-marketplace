@@ -1,0 +1,52 @@
+---
+title: PDF Extraction MCP Server
+description: PDF ownership extraction with LLM analysis
+---
+
+# PDF Extraction MCP Server
+
+PDF ownership extraction using LLM-based analysis. Extracts beneficial ownership information from PDF documents.
+
+## Install
+
+```bash
+ark install marketplace/mcps/pdf-extraction-mcp
+```
+
+Or with Helm:
+
+```bash
+cd mcps/pdf-extraction-mcp
+helm install pdf-extraction-mcp ./chart -n default --create-namespace
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `analyze_pdf_ownership` | Extract ownership information from PDFs using LLM |
+| `scout_pdf_for_ownership` | Find pages with ownership-related keywords |
+| `get_analysis_results` | Compatibility stub (stateless) |
+
+## Configuration
+
+Set via Kubernetes Secret `ai-gateway-azure-openai`:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LLM_PROVIDER` | LLM provider (openai or anthropic) | `openai` |
+| `LLM_MODEL` | Model name | `gpt-4` |
+| `LLM_BASE_URL` | API base URL | — |
+| `LLM_API_KEY` | API key | Required |
+
+## Tool Usage
+
+```yaml
+tools:
+  - type: mcp
+    name: pdf-extraction-mcp-analyze-pdf-ownership
+```
+
+## Additional Resources
+
+- [PDF Extraction MCP README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/mcps/pdf-extraction-mcp)

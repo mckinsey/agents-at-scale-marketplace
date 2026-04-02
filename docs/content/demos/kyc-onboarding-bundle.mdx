@@ -1,0 +1,69 @@
+---
+title: KYC Onboarding Bundle
+description: End-to-end KYC onboarding with multi-agent document extraction, web research, and compliance screening
+---
+
+# KYC Onboarding Bundle
+
+End-to-end KYC (Know Your Customer) onboarding workflows for customer due diligence, with multi-agent document extraction, web research, and compliance screening.
+
+## What's Included
+
+- **21 agents** organized into **6 teams** covering Phase I-III of customer due diligence
+- **12 Argo WorkflowTemplates** for the full KYC lifecycle
+- **MCP integrations**: PDF extraction, web research, Perplexity, Companies House
+- **File Gateway** (Helm dependency) for document storage
+
+## Teams
+
+| Team | Purpose |
+|------|---------|
+| `scout-rag-team` | Two-stage PDF extraction (scout then RAG) |
+| `doc-extraction-team` | Document analysis and extraction |
+| `web-research-team` | Web research coordination |
+| `companies-house-team` | Companies House data enrichment |
+| `consolidation-team` | Data consolidation across sources |
+| `beneficial-owners-team` | Beneficial ownership analysis |
+
+## Prerequisites
+
+- Ark cluster with Argo Workflows 3.4+
+- A Model named `default` in the target namespace
+- Secrets for Azure OpenAI and web search credentials (see README)
+
+## Quick Start
+
+```bash
+cd demos/kyc-onboarding-bundle
+make uninstall                    # Clean any previous install
+make build-data-seeder            # Build data loader image
+make install-with-argo            # Deploy bundle
+make build                        # Build and deploy MCP images
+make ready                        # Full readiness check
+```
+
+## Running Workflows
+
+```bash
+# Phase I
+make submit-profile-init
+make submit-profile-enrichment
+make submit-requirements
+make submit-initial-risk
+
+# Phase II
+make submit-ownership
+make submit-entities
+make submit-controllers
+make submit-media
+make submit-blacklist
+make submit-purpose
+
+# Profile finalization + Phase III
+make submit-profile-finalization
+make submit-kyc-memo
+```
+
+## Additional Resources
+
+- [KYC Onboarding Bundle README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/demos/kyc-onboarding-bundle)
