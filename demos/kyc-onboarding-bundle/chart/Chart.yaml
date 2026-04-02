@@ -26,5 +26,5 @@ annotations:
 dependencies:
   - name: file-gateway
     version: 0.1.6
-    repository: file://../../../services/file-gateway/chart
+    repository: oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/file-gateway
 
