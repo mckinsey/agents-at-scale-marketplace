@@ -1,0 +1,56 @@
+---
+title: COBOL Modernization Bundle
+description: COBOL modernization with reverse engineering, pseudocode generation, and Python conversion
+---
+
+# COBOL Modernization Bundle
+
+COBOL modernization demo with agents for reverse engineering, pseudocode generation, Python conversion, and documentation.
+
+## What's Included
+
+**6 AI agents:**
+
+| Agent | Description |
+|-------|-------------|
+| `audio-transcriber` | Transcribes audio files with speaker identification |
+| `cobol-code-documenter` | Creates detailed code spec documentation |
+| `cobol-codebase-summarizer` | Generates codebase overview and interconnections |
+| `cobol-pseudocode-documenter` | Converts COBOL to language-agnostic pseudocode |
+| `diagram-creator` | Generates PlantUML C4 architecture diagrams |
+| `pseudo-python-modernizer` | Converts pseudocode to Python/PySpark |
+
+**Supporting infrastructure:**
+- `speech-mcp-server` for local audio transcription via Whisper
+- `file-gateway` (installed as a Helm dependency)
+- Argo WorkflowTemplate for the full modernization pipeline
+- Optional data seeder for sample COBOL files
+
+## Prerequisites
+
+- Ark cluster with a Model named `default` in the target namespace
+- Argo Workflows installed
+- Docker (to build speech-mcp-server and data-seeder images)
+
+## Quick Start
+
+```bash
+cd demos/cobol-modernization-bundle
+make uninstall
+make build-data-seeder
+make build
+make install-with-argo
+make cobol-demo
+```
+
+## Cloud Deployment
+
+```bash
+ark install marketplace/demos/cobol-modernization-bundle
+```
+
+Upload COBOL files and audio via **Ark Dashboard -> Files**, then submit the workflow from Argo UI.
+
+## Additional Resources
+
+- [COBOL Modernization Bundle README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/demos/cobol-modernization-bundle)

@@ -1,4 +1,4 @@
-# ARK Sandbox Tests
+# Ark Sandbox Tests
 
 This directory contains tests for the ark-sandbox service.
 

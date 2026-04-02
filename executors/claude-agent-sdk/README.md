@@ -1,11 +1,11 @@
 # Claude Agent SDK Executor
 
-Native Claude executor for the ARK platform, built on the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview). Provides built-in tool access (Read, Write, Edit, Bash, Grep, Glob) with per-session filesystem isolation and optional OTEL tracing.
+Native Claude executor for the Ark platform, built on the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview). Provides built-in tool access (Read, Write, Edit, Bash, Grep, Glob) with per-session filesystem isolation and optional OTEL tracing.
 
 ## Quick Start
 
 ```bash
-# Using ARK CLI
+# Using Ark CLI
 ark install marketplace/executors/executor-claude-agent-sdk
 
 # Using DevSpace

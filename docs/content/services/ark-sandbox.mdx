@@ -1,15 +1,15 @@
 ---
-title: ARK Sandbox
+title: Ark Sandbox
 description: Isolated container environments for AI agent code execution
 ---
 
-# ARK Sandbox
+# Ark Sandbox
 
 Isolated container environments for AI agent code execution with MCP tool access.
 
 ## Overview
 
-ARK Sandbox provides:
+Ark Sandbox provides:
 - **Sandbox CRDs** - Kubernetes-native sandbox lifecycle management
 - **MCP Server** - Tools for agents to execute commands, upload/download files
 - **Warm Pools** - Pre-created sandboxes for instant availability
@@ -17,7 +17,7 @@ ARK Sandbox provides:
 
 ## Requirements
 
-- **Ark 0.1.50+**: ARK Sandbox requires Ark version 0.1.50 or later due to MCP server path configuration changes
+- **Ark 0.1.50+**: Ark Sandbox requires Ark version 0.1.50 or later due to MCP server path configuration changes
 - For older Ark versions, set `mcpServer.path: ""` in your Helm values
 
 ## Install
@@ -39,7 +39,7 @@ Or with Helm:
 # Install CRDs first
 kubectl apply -f chart/crds/
 
-# Install ARK Sandbox
+# Install Ark Sandbox
 helm install ark-sandbox ./chart -n default
 ```
 
@@ -148,6 +148,6 @@ helm uninstall ark-sandbox -n default
 
 ## Additional Resources
 
-- [ARK Sandbox README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/ark-sandbox)
+- [Ark Sandbox README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/ark-sandbox)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 

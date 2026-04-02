@@ -5,7 +5,7 @@ description: Native Claude executor with built-in tool access and session persis
 
 # Claude Agent SDK Executor
 
-Native Claude executor for ARK agents, built on the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview). Provides built-in tool access (Read, Write, Edit, Bash, Grep, Glob) with per-session filesystem isolation and optional OTEL tracing.
+Native Claude executor for Ark agents, built on the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview). Provides built-in tool access (Read, Write, Edit, Bash, Grep, Glob) with per-session filesystem isolation and optional OTEL tracing.
 
 ## Overview
 
@@ -16,7 +16,7 @@ The Claude Agent SDK Executor provides:
 - **Session Persistence** - Multi-turn conversations via `ClaudeSDKClient` with `continue_conversation`, persisted on a PVC
 - **Filesystem Isolation** - Each `conversationId` gets its own directory at `/data/sessions/<conversationId>/`
 - **OTEL Tracing** - Optional observability via `openinference-instrumentation-claude-agent-sdk`
-- **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless ARK integration
+- **A2A Protocol** - Compliant with the Agent-to-Agent protocol for seamless Ark integration
 - **ExecutionEngine CRD** - Registers as a Kubernetes-native execution engine
 
 ## Install

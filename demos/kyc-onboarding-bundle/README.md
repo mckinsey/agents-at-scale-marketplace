@@ -6,7 +6,7 @@ End-to-end KYC (Know Your Customer) onboarding workflows for customer due dilige
 
 **21 agents** organized into **6 teams** covering Phase I–III of customer due diligence:
 
-| ARK Agent | Description |
+| Ark Agent | Description |
 |-----------|-------------|
 | `scout-agent` | Scans PDFs to locate relevant sections |
 | `rag-agent` | Extracts structured data from documents |
@@ -48,8 +48,8 @@ End-to-end KYC (Know Your Customer) onboarding workflows for customer due dilige
 
 ## Prerequisites
 
-- ARK cluster with Argo Workflows 3.4+
-- A Model named `default` in the target namespace (create via ARK Dashboard → Models)
+- Ark cluster with Argo Workflows 3.4+
+- A Model named `default` in the target namespace (create via Ark Dashboard → Models)
 - `kubectl` and `helm` CLI tools
 
 ## Secrets Setup
@@ -97,21 +97,21 @@ make upload-data
 make ready
 ```
 
-After `make ready`, wait 30–60s and refresh ARK Dashboard for agents/teams to show Available.
+After `make ready`, wait 30–60s and refresh Ark Dashboard for agents/teams to show Available.
 
 ### Troubleshooting: "File Gateway Service Not Configured"
 
-If the ARK Dashboard **Files** page shows **"File Gateway Service Not Configured"** instead of an empty file list, the File Gateway needs to be set up first before seeding data:
+If the Ark Dashboard **Files** page shows **"File Gateway Service Not Configured"** instead of an empty file list, the File Gateway needs to be set up first before seeding data:
 
-1. Follow the [File Gateway Service](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/file-gateway) setup instructions in the ARK Dashboard
+1. Follow the [File Gateway Service](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/services/file-gateway) setup instructions in the Ark Dashboard
 2. Build and run the data seeder:
    ```bash
    make build-data-seeder
    make install-with-argo
    ```
-3. Verify files appear in **ARK Dashboard > Files**
+3. Verify files appear in **Ark Dashboard > Files**
 
-This typically happens on a fresh ARK cluster where the File Gateway has not been configured previously. Once the File Gateway service is registered with the dashboard, subsequent installs will work with either Option A or Option B above.
+This typically happens on a fresh Ark cluster where the File Gateway has not been configured previously. Once the File Gateway service is registered with the dashboard, subsequent installs will work with either Option A or Option B above.
 
 ## Running Workflows
 
@@ -139,7 +139,7 @@ Use `NAMESPACE=<ns>` for a non-default namespace.
 
 ## Validation — Expected Output Files
 
-After each workflow completes, verify the output files in **ARK Dashboard → Files** under `source_code_files/`.
+After each workflow completes, verify the output files in **Ark Dashboard → Files** under `source_code_files/`.
 
 ### Phase I — Customer Profile Initialization
 
@@ -190,4 +190,4 @@ After each workflow completes, verify the output files in **ARK Dashboard → Fi
 ark install marketplace/demos/kyc-onboarding-bundle
 ```
 
-Upload KYC documents via **ARK Dashboard → Files** to `source_code_files/`, then submit workflows from **ARK Dashboard → Argo Workflows** or apply example manifests from [`examples/`](examples/).
+Upload KYC documents via **Ark Dashboard → Files** to `source_code_files/`, then submit workflows from **Ark Dashboard → Argo Workflows** or apply example manifests from [`examples/`](examples/).
