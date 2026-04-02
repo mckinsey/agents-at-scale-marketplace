@@ -1,0 +1,9 @@
+apiVersion: v2
+name: executor-openai-responses
+description: OpenAI Responses API executor with built-in tool support and multi-turn threading
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+annotations:
+  ark.mckinsey.com/service: executor-openai-responses
+  ark.mckinsey.com/resources: service
