@@ -27,7 +27,7 @@ metadata:
   name: claude-sonnet
 spec:
   model:
-    value: claude-sonnet-4-20250514
+    value: claude-sonnet-4-6
   type: anthropic
   config:
     anthropic:
