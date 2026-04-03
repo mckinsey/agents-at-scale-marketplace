@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.27](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.26...v0.1.27) (2026-04-03)
+
+
+### Bug Fixes
+
+* **executors/claude-agent-sdk:** pin dependencies via uv.lock in Docker build ([#190](https://github.com/mckinsey/agents-at-scale-marketplace/issues/190)) ([5e130e0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5e130e0235ea5553a42c973a58d11a9c8795a170))
+
 ## [0.1.26](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.25...v0.1.26) (2026-04-02)
 
 
