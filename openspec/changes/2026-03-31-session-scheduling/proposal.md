@@ -2,13 +2,13 @@
 
 The Claude Code executor runs as a single Deployment — all sessions share the same pod. Claude Agent SDK sessions need filesystem access (git repos, workspace files), and concurrent sessions on a shared pod fight over locks, ports, and workspace state.
 
-Session scheduling lets the executor create a dedicated Deployment per session. Each session gets its own pod with its own PVC, eliminating contention.
+Session scheduling lets the executor create a dedicated sandbox per session using [`kubernetes-sigs/agent-sandbox`](https://github.com/kubernetes-sigs/agent-sandbox). Each session gets its own pod with its own PVC, stable DNS, and network isolation.
 
 ## Design Principle
 
-Follow conventions from common Kubernetes projects, in particular Argo Workflows. Argo solves a similar problem — scheduling workflow pods from a WorkflowTemplate. A session for an agent is analogous to a workflow for a template. Where Argo has an established pattern (conventional ConfigMap names, volumeClaimTemplates, direct pod IP communication), we use it.
+Use `kubernetes-sigs/agent-sandbox` (v0.2.1, SIG Apps) rather than building custom pod lifecycle management. agent-sandbox provides a `Sandbox` CRD purpose-built for isolated, stateful, singleton workloads — exactly our use case. It handles pod lifecycle, persistent storage, stable DNS, network isolation, warm pools, and reconciliation.
 
-The executor remains a service (FastAPI, A2A endpoint), but with session scheduling it also behaves like an operator — it watches a ConfigMap for configuration and schedules child resources (Deployments, PVCs) in response to incoming sessions. Similar to how the Argo workflow-controller is a service that manages workflow pod lifecycles.
+Where agent-sandbox doesn't cover our needs (idle TTL), we layer minimal executor logic on top. Configuration follows the Argo Workflows convention of a conventionally-named ConfigMap.
 
 ## What Changes
 
@@ -16,18 +16,19 @@ The executor remains a service (FastAPI, A2A endpoint), but with session schedul
 
 No CRD changes. Session scheduling is an executor concern, not a platform concern.
 
+### Prerequisites
+
+agent-sandbox must be installed in the cluster:
+
+```bash
+export VERSION="v0.2.1"
+kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${VERSION}/manifest.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${VERSION}/extensions.yaml
+```
+
 ### Executor Configuration
 
-Inspired by Argo Workflows, where the workflow-controller reads a conventionally-named ConfigMap (`workflow-controller-configmap`). Argo allows overriding the name via the `--configmap` CLI flag.
-
-We follow the same pattern:
-
-- **Default ConfigMap name:** `executor-claude-agent-config` (convention, matches the Deployment name)
-- **Override via env var:** `EXECUTOR_CONFIG_MAP` on the executor Deployment
-
-The executor reads this ConfigMap at startup and watches it for changes.
-
-### ConfigMap Schema
+Follows the Argo Workflows pattern — conventionally-named ConfigMap (`executor-claude-agent-config`), overridable via `EXECUTOR_CONFIG_MAP` env var.
 
 ```yaml
 apiVersion: v1
@@ -35,99 +36,40 @@ kind: ConfigMap
 metadata:
   name: executor-claude-agent-config
 data:
-  # Scheduling mode.
-  # "none": single pod, all sessions share it (current behavior).
-  # "session": apply the session template below to create a dedicated
-  #   Deployment per session.
-  scheduling: "session"
+  # "none": single pod (current behavior).
+  # "sandbox": create a Sandbox CR per session via agent-sandbox.
+  scheduling: "sandbox"
 
-  # How long after the last A2A message before the session's Deployment
-  # is deleted. The executor resets this timer on each message.
-  sessionExpiryTTL: "24h"
+  # How long after the last A2A message before shutdown.
+  # The executor rolls forward the Sandbox's spec.shutdownTime on each message.
+  sessionIdleTTL: "24h"
 
-  # When to delete PVCs created from volumeClaimTemplates.
-  # Follows Argo Workflows' volumeClaimGC.strategy convention
-  # (OnWorkflowCompletion / OnWorkflowSuccess). Sessions don't have a
-  # completion event — they expire via TTL — so the strategies are:
-  #   "OnSessionExpiry" (default): delete PVCs when the session TTL
-  #     expires, along with the Deployment.
-  #   "Never": retain PVCs after session cleanup. Useful for debugging
-  #     or resuming sessions against the same workspace.
-  # The executor identifies which PVCs to delete via the
-  # ark.mckinsey.com/session-id label — all session resources
-  # (Deployments, PVCs) share this label.
-  volumeClaimGC: "OnSessionExpiry"
+  # Maps to agent-sandbox shutdownPolicy: "Delete" (default) or "Retain".
+  shutdownPolicy: "Delete"
 
-  # Session template. Applied once per session when scheduling is
-  # "session". Contains a Deployment spec and optional volumeClaimTemplates,
-  # following the Argo Workflows pattern where volumeClaimTemplates sit
-  # alongside the pod template, linked by volume name.
-  #
-  # Template rendering:
-  #   The executor renders Go template variables before applying:
-  #     {{.SessionID}}  — unique session identifier
-  #     {{.EngineName}} — ExecutionEngine resource name
-  #     {{.Namespace}}  — ExecutionEngine namespace
-  #
-  # Labels and ownership:
-  #   The executor adds to every resource it creates:
-  #     label: ark.mckinsey.com/session-id={{.SessionID}}
-  #     label: ark.mckinsey.com/engine={{.EngineName}}
-  #     ownerReferences: pointing to the ExecutionEngine resource
-  #
-  # Validation:
-  #   The executor validates the deployment against the Kubernetes API
-  #   schema before applying.
-  #
-  # Networking:
-  #   No Service is created. The executor finds session pods by label
-  #   and communicates via pod IP + containerPort — same pattern as Argo
-  #   Workflows, which talks to workflow step pods directly without
-  #   creating Services.
-  #
-  # Volume binding:
-  #   When volumeClaimTemplates is present, the executor creates the
-  #   PVC and injects a matching entry into the Deployment's
-  #   spec.template.spec.volumes, linking it to the container's
-  #   volumeMounts by name ("workspace" in the example below).
-  sessionTemplate: |
-    deployment:
-      apiVersion: apps/v1
-      kind: Deployment
+  # Standard agent-sandbox SandboxSpec. The image must run the A2A server.
+  sandboxSpec: |
+    podTemplate:
       metadata:
-        name: session-{{.SessionID}}
+        labels:
+          ark.mckinsey.com/session-id: "{{.SessionID}}"
+          ark.mckinsey.com/engine: "{{.EngineName}}"
       spec:
-        replicas: 1
-        selector:
-          matchLabels:
-            ark.mckinsey.com/session-id: "{{.SessionID}}"
-        template:
-          metadata:
-            labels:
-              ark.mckinsey.com/session-id: "{{.SessionID}}"
-              ark.mckinsey.com/engine: "{{.EngineName}}"
-          spec:
-            containers:
-              - name: claude-agent
-                image: ghcr.io/mckinsey/executor-claude-agent:latest
-                ports:
-                  - containerPort: 8000
-                resources:
-                  requests:
-                    memory: "512Mi"
-                    cpu: "250m"
-                  limits:
-                    memory: "2Gi"
-                    cpu: "1000m"
-                volumeMounts:
-                  - name: workspace
-                    mountPath: /workspace
-
-    # PVC templates created per session, linked to the Deployment by
-    # volume name. The name "workspace" here matches the volumeMounts
-    # name in the container above. The executor creates the PVC, adds
-    # it to the Deployment's volumes, and binds them — same as
-    # StatefulSet and Argo Workflows volumeClaimTemplates.
+        containers:
+          - name: claude-agent
+            image: ghcr.io/mckinsey/executor-claude-agent:latest
+            ports:
+              - containerPort: 8000
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+            volumeMounts:
+              - name: workspace
+                mountPath: /workspace
     volumeClaimTemplates:
       - metadata:
           name: workspace
@@ -137,63 +79,50 @@ data:
           resources:
             requests:
               storage: 10Gi
-
-    # --- Alternative: attach an existing PVC instead of creating one ---
-    #
-    # To use a pre-existing PVC (e.g. a shared dataset or pre-provisioned
-    # volume), omit volumeClaimTemplates and reference the PVC directly
-    # in the Deployment's volumes. The executor will not create or delete
-    # the PVC — volumeClaimGC only applies to PVCs created from
-    # volumeClaimTemplates.
-    #
-    # deployment:
-    #   ...
-    #   spec:
-    #     template:
-    #       spec:
-    #         containers:
-    #           - name: claude-agent
-    #             volumeMounts:
-    #               - name: workspace
-    #                 mountPath: /workspace
-    #         volumes:
-    #           - name: workspace
-    #             persistentVolumeClaim:
-    #               claimName: my-existing-pvc
 ```
 
 ### Executor Behavior
 
-**scheduling: none (default):** Current behavior. Single Deployment, all sessions share it. The executor handles requests directly via `/execute`.
+**scheduling: none (default):** Current behavior. Single pod, all sessions share it.
 
-**scheduling: session:** When the executor receives an A2A conversation:
+**scheduling: sandbox:** When the executor receives an A2A conversation:
 
-1. **Check for existing session.** Label selector: `ark.mckinsey.com/session-id={sessionId}`.
-2. **If none exists**, render `sessionTemplate`, validate against K8s API schema, and apply:
-   - PVCs from `volumeClaimTemplates` (if present), linked to the Deployment by volume name
-   - Deployment from `deployment`, with PVC volume injected
-   - All resources get ownerReferences and session labels
-3. **Find the session pod** by label, get its IP from Pod status, proxy the A2A message to `{podIP}:{containerPort}`.
-4. **Wait for readiness** if the pod is not yet ready — watch `Deployment.status.readyReplicas`.
-5. **Reset the TTL timer** on each message.
-6. **On TTL expiry:**
-   - Delete the Deployment (label selector: `ark.mckinsey.com/session-id`)
-   - If `volumeClaimGC` is `OnSessionExpiry`, also delete PVCs with the same label
-   - If `volumeClaimGC` is `Never`, PVCs are retained
+1. **Check for existing Sandbox.** Label selector: `ark.mckinsey.com/session-id={sessionId}`.
+2. **If none exists**, render `sandboxSpec` and create a `Sandbox` CR with `shutdownTime` set to `now + sessionIdleTTL`.
+3. **Wait for Ready condition** on the Sandbox CR.
+4. **Proxy the A2A message** to `session-{sessionId}.{namespace}.svc.cluster.local:8000` (stable DNS from agent-sandbox).
+5. **Roll forward `shutdownTime`** on each message.
+6. **On expiry**, agent-sandbox controller handles cleanup based on `shutdownPolicy`.
+
+### Warm Pool (optional)
+
+For faster session startup, deploy a `SandboxTemplate` and `SandboxWarmPool`. The executor creates a `SandboxClaim` instead of a `Sandbox`, claiming a pre-warmed pod from the pool.
 
 ### RBAC
 
-The executor needs permissions to create/delete Deployments, read Pods (for IP and status), and create/delete PVCs. Document in the Helm chart with comments explaining why.
+The executor needs Sandbox/SandboxClaim CRUD permissions. Pod and PVC management is handled by the agent-sandbox controller.
+
+## What We Get from agent-sandbox
+
+| Concern | agent-sandbox |
+|---|---|
+| Pod lifecycle | Sandbox controller |
+| Crash recovery | Controller reconciliation |
+| Persistent storage | `volumeClaimTemplates` |
+| Stable networking | Service + DNS per Sandbox |
+| Warm pools | `SandboxWarmPool` + `SandboxClaim` |
+| Network isolation | Managed NetworkPolicy |
+| Pause/resume | `replicas: 0/1` |
+| Shutdown | `shutdownTime` + `shutdownPolicy` |
 
 ## Impact
 
-- `services/executor-claude-agent/src/` — session scheduling logic, ConfigMap watcher, template renderer
-- `services/executor-claude-agent/chart/` — RBAC roles, ConfigMap template, env var for config override
+- `services/executor-claude-agent/src/` — sandbox creation, ConfigMap watcher, A2A proxy logic
+- `services/executor-claude-agent/chart/` — RBAC for Sandbox CRs, ConfigMap template, agent-sandbox dependency
 - No changes to the Ark core repo or ExecutionEngine CRD
 
 ## Non-goals
 
 - Lifecycle hooks via init containers (follow-on story)
-- Network policies
-- Integration test port collisions (separate bug)
+- Custom SandboxTemplate + NetworkPolicy configuration (follow-on)
 - Implementation roadmap / phasing
