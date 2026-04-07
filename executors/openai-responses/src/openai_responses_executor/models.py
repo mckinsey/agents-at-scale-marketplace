@@ -86,6 +86,13 @@ class WebSearchTool(BaseModel):
     user_location: Optional[WebSearchUserLocation] = None
     search_context_size: Optional[Literal["low", "medium", "high"]] = None
 
+    @classmethod
+    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "WebSearchTool":
+        return cls(
+            user_location=WebSearchUserLocation.from_request(request),
+            search_context_size=params.get("search_context_size"),
+        )
+
 
 # ---------------------------------------------------------------------------
 # File search
@@ -110,6 +117,14 @@ class FileSearchTool(BaseModel):
     max_num_results: Optional[int] = None
     ranking_options: Optional[FileSearchRankingOptions] = None
 
+    @classmethod
+    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "FileSearchTool":
+        return cls(
+            vector_store_ids=params.get("vector_store_ids"),
+            max_num_results=params.get("max_num_results"),
+            ranking_options=FileSearchRankingOptions(**params["ranking_options"]) if "ranking_options" in params else None,
+        )
+
 
 # ---------------------------------------------------------------------------
 # Code interpreter
@@ -126,6 +141,10 @@ class CodeInterpreterTool(BaseModel):
     type: Literal["code_interpreter"] = "code_interpreter"
     container: Optional[CodeInterpreterContainer] = None
 
+    @classmethod
+    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "CodeInterpreterTool":
+        return cls(container=CodeInterpreterContainer() if params.get("container") else None)
+
 
 # ---------------------------------------------------------------------------
 # Computer use
@@ -138,6 +157,10 @@ class ComputerUseTool(BaseModel):
     type: Literal["computer_use_preview"] = "computer_use_preview"
     display_width: Optional[int] = None
     display_height: Optional[int] = None
+
+    @classmethod
+    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "ComputerUseTool":
+        return cls(display_width=params.get("display_width"), display_height=params.get("display_height"))
 
 
 # ---------------------------------------------------------------------------
@@ -163,6 +186,19 @@ class FunctionTool(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Built-in tools registry
+# ---------------------------------------------------------------------------
+
+# (label, tools_config key, BuiltInTools field name, tool class)
+_TOOL_REGISTRY: list[tuple[str, str, str, type]] = [
+    (_LABEL_WEB_SEARCH,      "web_search",      "web_search",      WebSearchTool),
+    (_LABEL_FILE_SEARCH,     "file_search",      "file_search",     FileSearchTool),
+    (_LABEL_CODE_INTERPRETER,"code_interpreter", "code_interpreter",CodeInterpreterTool),
+    (_LABEL_COMPUTER_USE,    "computer_use",     "computer_use",    ComputerUseTool),
+]
+
+
+# ---------------------------------------------------------------------------
 # Built-in tools collection
 # ---------------------------------------------------------------------------
 
@@ -181,44 +217,12 @@ class BuiltInTools(BaseModel):
         # TODO: read from request.tools_config once Query CR supports spec.tools
         tool_params: dict[str, Any] = getattr(request, "tools_config", None) or {}
 
-        web_search = None
-        if labels.get(_LABEL_WEB_SEARCH) == "true":
-            ws = tool_params.get("web_search", {})
-            web_search = WebSearchTool(
-                user_location=WebSearchUserLocation.from_request(request),
-                search_context_size=ws.get("search_context_size"),
-            )
+        tools: dict[str, Any] = {}
+        for label, param_key, field_name, tool_cls in _TOOL_REGISTRY:
+            if labels.get(label) == "true":
+                tools[field_name] = tool_cls.from_params(tool_params.get(param_key, {}), request)
 
-        file_search = None
-        if labels.get(_LABEL_FILE_SEARCH) == "true":
-            fs = tool_params.get("file_search", {})
-            file_search = FileSearchTool(
-                vector_store_ids=fs.get("vector_store_ids"),
-                max_num_results=fs.get("max_num_results"),
-                ranking_options=FileSearchRankingOptions(**fs["ranking_options"]) if "ranking_options" in fs else None,
-            )
-
-        code_interpreter = None
-        if labels.get(_LABEL_CODE_INTERPRETER) == "true":
-            ci = tool_params.get("code_interpreter", {})
-            code_interpreter = CodeInterpreterTool(
-                container=CodeInterpreterContainer() if ci.get("container") else None,
-            )
-
-        computer_use = None
-        if labels.get(_LABEL_COMPUTER_USE) == "true":
-            cu = tool_params.get("computer_use", {})
-            computer_use = ComputerUseTool(
-                display_width=cu.get("display_width"),
-                display_height=cu.get("display_height"),
-            )
-
-        return cls(
-            web_search=web_search,
-            file_search=file_search,
-            code_interpreter=code_interpreter,
-            computer_use=computer_use,
-        )
+        return cls(**tools)
 
     def to_list(self) -> list[dict[str, Any]]:
         return [
