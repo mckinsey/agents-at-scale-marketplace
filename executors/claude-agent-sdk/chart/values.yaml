@@ -11,7 +11,7 @@ app:
   image:
     repository: ghcr.io/mckinsey/agents-at-scale-marketplace/executor-claude-agent-sdk
     pullPolicy: IfNotPresent
-    # tag: defaults to appVersion
+    tag: "latest"
 
   env:
     - name: HOST

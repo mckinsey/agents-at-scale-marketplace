@@ -93,14 +93,6 @@
       "release-type": "simple",
       "package-name": "cobol-demo-data-seeder"
     },
-    "mcps/speech-mcp-server": {
-      "changelog-path": "CHANGELOG.md",
-      "release-type": "helm",
-      "package-name": "speech-mcp-server",
-      "extra-files": [
-        "chart/Chart.yaml"
-      ]
-    },
     "executors/langchain": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",

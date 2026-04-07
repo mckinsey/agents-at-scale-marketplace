@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.4...executor-claude-agent-sdk-v0.1.5) (2026-04-03)
+
+
+### Bug Fixes
+
+* **executors/claude-agent-sdk:** pin dependencies via uv.lock in Docker build ([#190](https://github.com/mckinsey/agents-at-scale-marketplace/issues/190)) ([5e130e0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5e130e0235ea5553a42c973a58d11a9c8795a170))
+
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.3...executor-claude-agent-sdk-v0.1.4) (2026-04-02)
+
+
+### Bug Fixes
+
+* **executors/claude-agent-sdk:** update model reference to claude-sonnet-4-6 ([#188](https://github.com/mckinsey/agents-at-scale-marketplace/issues/188)) ([b17021b](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b17021bd4379a01baafe0e20b90a5b8b5b09d66e))
+
+## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.2...executor-claude-agent-sdk-v0.1.3) (2026-04-02)
+
+
+### Bug Fixes
+
+* replace local file:// helm refs with OCI registry and pin ark-sdk ([#182](https://github.com/mckinsey/agents-at-scale-marketplace/issues/182)) ([0b3a907](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0b3a907b6118ce0655be024b1b34474a2334b498))
+
 ## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.1...executor-claude-agent-sdk-v0.1.2) (2026-03-30)
 
 

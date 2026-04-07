@@ -28,7 +28,6 @@ jobs:
           - { name: ark-sandbox, path: services/ark-sandbox }
           - { name: file-api, path: services/file-gateway/services/file-api }
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server }
-          - { name: speech-mcp-server, path: mcps/speech-mcp-server }
           - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
           - { name: executor-langchain, path: executors/langchain }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
@@ -154,7 +153,6 @@ jobs:
           - { name: ark-sandbox, path: services/ark-sandbox }
           - { name: file-api, path: services/file-gateway/services/file-api }
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server }
-          - { name: speech-mcp-server, path: mcps/speech-mcp-server }
           - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
           - { name: executor-langchain, path: executors/langchain }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }

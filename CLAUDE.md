@@ -6,6 +6,8 @@ The Ark Marketplace is the add-on ecosystem for [Ark core](https://github.com/mc
 
 **Dependency direction**: Marketplace items depend on Ark core — never the other way around. Core Ark defines contracts (CRDs, SDK interfaces, A2A protocol) and knows nothing about specific marketplace items. Before building something here, check whether Ark core already provides the capability natively.
 
+**Isolation**: Each marketplace item must be independently deployable with no dependencies on other marketplace items. Avoid introducing cross-item dependencies. When a dependency is unavoidable, it must be declared explicitly in `marketplace.json` — implicit coupling or shared state between items is not allowed.
+
 ## Component Types
 
 | Type | What it extends | Example |
@@ -62,6 +64,10 @@ Inherited from [Ark core](https://github.com/mckinsey/agents-at-scale-ark/blob/m
 - **Deployments**: Helm + DevSpace for all Kubernetes deployments
 - **CI/CD**: Reusable GitHub Actions workflows for charts, Docker images, docs, and PR title validation
 - **Versioning**: Semantic versioning via Release Please with conventional commits
+
+## Observability
+
+Ark core propagates OpenTelemetry trace context (W3C TraceContext + Baggage) to executors via A2A HTTP headers. The `ExecutorApp` base class from `ark-sdk` handles extraction. Executors can add their own instrumentation (e.g., Claude executor uses `openinference-instrumentation-claude-agent-sdk`). Observability backends in `services/` auto-deploy `otel-environment-variables` secrets to target namespaces.
 
 ## Integration Contracts
 
