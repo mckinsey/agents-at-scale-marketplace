@@ -1,0 +1,204 @@
+---
+title: Marketplace Setup Guide
+description: Configure your Helm charts for Ark marketplace integration
+---
+
+# Marketplace Setup Guide
+
+This guide explains how to configure your marketplace items for proper installation detection and UI integration in the Ark dashboard.
+
+## Chart Annotations
+
+All marketplace items must include the `ark.mckinsey.com/marketplace-item-name` annotation in `Chart.yaml` for proper installation detection:
+
+```yaml
+# Chart.yaml
+apiVersion: v2
+name: your-service-name
+version: 0.1.0
+annotations:
+  ark.mckinsey.com/marketplace-item-name: "<category>/<name>"
+```
+
+### Category Prefixes
+
+- `service/` - Platform services (e.g., `service/phoenix`)
+- `agent/` - Agents (e.g., `agent/noah`)
+- `mcp/` - MCP servers (e.g., `mcp/speech-mcp-server`)
+- `demo/` - Demo bundles (e.g., `demo/kyc-demo-bundle`)
+
+This annotation enables the Ark dashboard to detect when your item is installed via Helm, regardless of the release name chosen by the user.
+
+**Important:** Marketplace items are detected only when installed in the same namespace as `ark-api`. Ensure your item is deployed to the correct namespace for proper detection.
+
+## UI URL Configuration
+
+For services with web UIs, enable the Ark dashboard to display "Open" buttons by adding UI URL annotations to your Service resource.
+
+### Method 1: Direct Service Template
+
+Use this method for charts that create their own Service resources.
+
+#### Service Template
+
+Add to your `templates/service.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "your-chart.fullname" . }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    {{- if .Values.uiUrl }}
+    ark.mckinsey.com/marketplace-item-ui-url: {{ .Values.uiUrl | quote }}
+    {{- end }}
+    {{- if .Values.uiLabel }}
+    ark.mckinsey.com/marketplace-item-ui-label: {{ .Values.uiLabel | quote }}
+    {{- end }}
+spec:
+  # ... service spec
+```
+
+#### Values Configuration
+
+Add to your `values.yaml`:
+
+```yaml
+# Set uiUrl and uiLabel when installing to make the UI accessible from the dashboard
+# Example: --set uiUrl=https://your-service.example.com --set uiLabel="Dashboard"
+uiUrl: ""
+uiLabel: ""
+```
+
+#### Installation Example
+
+```bash
+helm install my-service ./chart \
+  --set uiUrl=https://my-service.example.com \
+  --set uiLabel="Service Dashboard"
+```
+
+### Method 2: Wrapper Chart Pattern
+
+Use this method for charts wrapping external Helm dependencies (e.g., phoenix wraps phoenix-helm, langfuse wraps langfuse).
+
+#### Values Configuration
+
+Add to your `values.yaml`:
+
+```yaml
+# UI configuration
+# Set these when installing to make the UI accessible from the dashboard
+# For wrapper charts, annotations must be passed to the dependency's service:
+# --set your-dependency.service.annotations.ark\\.mckinsey\\.com/marketplace-item-ui-url=https://example.com
+# --set your-dependency.service.annotations.ark\\.mckinsey\\.com/marketplace-item-ui-label="Dashboard"
+uiUrl: ""
+uiLabel: ""
+
+# Dependency chart values (passed to dependency)
+your-dependency-name:
+  service:
+    labels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+    annotations: {}
+```
+
+#### Installation Example
+
+```bash
+helm install my-service ./chart \
+  --set 'dependency-name.service.annotations.ark\.mckinsey\.com/marketplace-item-ui-url'=https://my-service.example.com \
+  --set 'dependency-name.service.annotations.ark\.mckinsey\.com/marketplace-item-ui-label'="Service Dashboard"
+```
+
+**Note:** The exact path to the service annotations depends on your dependency chart's structure. For example:
+- Phoenix: `phoenix-helm.service.annotations.*`
+- Langfuse: `langfuse.langfuse.web.service.annotations.*`
+
+Consult your dependency chart's values.yaml to determine the correct path.
+
+## Important Notes
+
+- **Namespace Label**: The `app.kubernetes.io/instance` label is automatically set by Helm and is used by the Ark dashboard to query Services
+- **Optional UI Label**: The UI label is optional; if omitted, the dashboard displays "Open" as the button text
+- **Multiple UIs**: Multiple Services can have UI annotations for items with multiple web interfaces (e.g., separate admin and user dashboards)
+- **URL Configuration**: The URL should be the externally-reachable URL configured in your Ingress, Gateway API route, or LoadBalancer service
+
+## Examples
+
+### Direct Service Pattern: A2A Inspector
+
+```yaml
+# Chart.yaml
+apiVersion: v2
+name: a2a-inspector
+version: 0.1.1
+annotations:
+  ark.mckinsey.com/marketplace-item-name: "service/a2a-inspector"
+```
+
+```yaml
+# templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "a2a-inspector.fullname" . }}
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    {{- if .Values.uiUrl }}
+    ark.mckinsey.com/marketplace-item-ui-url: {{ .Values.uiUrl | quote }}
+    {{- end }}
+    {{- if .Values.uiLabel }}
+    ark.mckinsey.com/marketplace-item-ui-label: {{ .Values.uiLabel | quote }}
+    {{- end }}
+```
+
+```yaml
+# values.yaml
+uiUrl: ""
+uiLabel: ""
+```
+
+```bash
+# Installation
+helm install a2a-inspector ./chart \
+  --set uiUrl=https://a2a-inspector.example.com \
+  --set uiLabel="A2A Inspector"
+```
+
+### Wrapper Chart Pattern: Phoenix
+
+```yaml
+# Chart.yaml
+apiVersion: v2
+name: phoenix
+version: 0.1.7
+annotations:
+  ark.mckinsey.com/marketplace-item-name: "service/phoenix"
+dependencies:
+  - name: phoenix-helm
+    version: 4.0.5
+    repository: oci://registry-1.docker.io/arizephoenix
+```
+
+```yaml
+# values.yaml
+uiUrl: ""
+uiLabel: ""
+
+phoenix-helm:
+  service:
+    labels:
+      app.kubernetes.io/instance: phoenix
+    annotations: {}
+```
+
+```bash
+# Installation
+helm install phoenix ./chart \
+  --set 'phoenix-helm.service.annotations.ark\.mckinsey\.com/marketplace-item-ui-url'=https://phoenix.example.com \
+  --set 'phoenix-helm.service.annotations.ark\.mckinsey\.com/marketplace-item-ui-label'="Phoenix Dashboard"
+```
