@@ -11,6 +11,12 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
+  # Disable the default restrictive NetworkPolicy from agent-sandbox.
+  # Sandbox executor pods need cluster-internal access for:
+  # - K8s API (CRD resolution: Agent, Model, Tool, MCPServer, Secret)
+  # - OTEL collector (trace export)
+  # - MCP servers (tool execution)
+  networkPolicyManagement: Unmanaged
   podTemplate:
     spec:
       serviceAccountName: {{ .Values.app.name }}-sandbox-sa
