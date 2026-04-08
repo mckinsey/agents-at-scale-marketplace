@@ -5,12 +5,21 @@ import logging
 from typing import Any, Optional
 
 from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
+from ark_sdk.executor_app import is_otel_enabled
 from openai import AsyncOpenAI
 
 from .config import config
 from .models import BuiltInTools, FunctionTool, ModelConfig, ResponsesCreateParams
 
 logger = logging.getLogger(__name__)
+
+if is_otel_enabled():
+    try:
+        from openinference.instrumentation.openai import OpenAIInstrumentor
+        OpenAIInstrumentor().instrument()
+        logger.info("OpenAI OTEL instrumentation enabled")
+    except Exception:
+        logger.exception("Failed to instrument OpenAI")
 
 
 class OpenAIResponsesExecutor(BaseExecutor):

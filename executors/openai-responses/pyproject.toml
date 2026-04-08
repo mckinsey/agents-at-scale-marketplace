@@ -15,6 +15,7 @@ dependencies = [
     "openai>=1.60.0", # OpenAI Python SDK with Responses API support
     "pydantic-settings>=2.0.0", # environment variable config
     "ark-sdk",
+    "openinference-instrumentation-openai",
     "urllib3>=2.6.0",
     "a2a-sdk[http-server]>=0.3.0",
 ]
