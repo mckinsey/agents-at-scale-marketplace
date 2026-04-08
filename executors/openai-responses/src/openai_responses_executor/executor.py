@@ -20,6 +20,7 @@ if is_otel_enabled():
         logger.info("OpenAI OTEL instrumentation enabled")
     except Exception:
         logger.exception("Failed to instrument OpenAI")
+        raise
 
 
 class OpenAIResponsesExecutor(BaseExecutor):
