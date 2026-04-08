@@ -286,6 +286,18 @@ class SandboxManager:
         if info:
             info.last_activity = time.monotonic()
 
+    def add_alias(self, alias_id: str, original_id: str) -> None:
+        """Register an alias so a different context_id routes to the same sandbox.
+
+        This handles the case where the first query has no conversationId,
+        so the scheduler generates a routing key, but the executor's response
+        contains a contextId that the controller writes to subsequent queries.
+        """
+        info = self._routing_table.get(original_id)
+        if info and alias_id not in self._routing_table:
+            self._routing_table[alias_id] = info
+            logger.info("Registered alias: %s -> sandbox %s (original key: %s)", alias_id, info.sandbox_name, original_id)
+
     async def remove_sandbox(self, conversation_id: str) -> None:
         """Remove a sandbox mapping and optionally delete the claim."""
         info = self._routing_table.pop(conversation_id, None)

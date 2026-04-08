@@ -21,24 +21,43 @@ PROXY_TIMEOUT = 600.0  # 10 minutes — agent execution can be long-running
 
 
 def extract_context_id(body: bytes) -> tuple[str, bytes]:
-    """Extract context_id from A2A JSON-RPC body and return (id, possibly-patched body).
+    """Extract contextId from A2A JSON-RPC body and return (id, possibly-patched body).
 
-    A2A messages use JSON-RPC 2.0: the context_id lives at params.message.context_id.
-    If missing, we generate a UUID and inject it so the downstream executor sees it too.
+    A2A uses JSON-RPC 2.0 with camelCase fields.
+    The contextId lives at params.message.contextId.
+    If missing, we generate one and inject it so the downstream executor uses it.
     """
     try:
         data = json.loads(body)
         message = data.get("params", {}).get("message", {})
-        context_id = message.get("context_id") or ""
+        context_id = message.get("contextId") or ""
         if isinstance(context_id, str) and context_id.strip():
             return context_id.strip(), body
-        # context_id missing or empty — generate and inject
+        # contextId missing or empty — generate and inject
         generated = str(uuid.uuid4())
-        if "params" in data and "message" in data["params"]:
-            data["params"]["message"]["context_id"] = generated
+        if isinstance(data.get("params", {}).get("message"), dict):
+            data["params"]["message"]["contextId"] = generated
         return generated, json.dumps(data).encode()
     except (json.JSONDecodeError, AttributeError, TypeError):
         return str(uuid.uuid4()), body
+
+
+def extract_response_context_id(body: bytes) -> str:
+    """Extract contextId from an A2A JSON-RPC response.
+
+    The executor's response is a JSON-RPC result containing a Task object
+    with a top-level contextId field.
+    """
+    try:
+        data = json.loads(body)
+        result = data.get("result", {})
+        if isinstance(result, dict):
+            ctx = result.get("contextId", "")
+            if isinstance(ctx, str) and ctx.strip():
+                return ctx.strip()
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        pass
+    return ""
 
 
 def create_proxy_app(
@@ -92,6 +111,13 @@ def create_proxy_app(
                 target_url = f"http://{info.service_fqdn}:8000/{path}"
                 try:
                     response = await _proxy_request(http_client, request, body, target_url)
+
+                    # Register response contextId as alias so follow-up queries
+                    # using the executor-chosen ID route to the same sandbox
+                    resp_ctx = extract_response_context_id(response.body)
+                    if resp_ctx and resp_ctx != conversation_id:
+                        sandbox_manager.add_alias(resp_ctx, conversation_id)
+
                     return response
                 except httpx.ConnectError as e:
                     # Sandbox unreachable — attempt recovery
@@ -142,9 +168,12 @@ async def _proxy_request(
         "scheduler.proxy.forward",
         attributes={"http.url": target_url},
     ) as proxy_span:
-        # Build forwarded headers, excluding Host
+        # Build forwarded headers — drop hop-by-hop and length headers
+        # httpx recalculates Content-Length from the body we pass
         headers = dict(request.headers)
         headers.pop("host", None)
+        headers.pop("content-length", None)
+        headers.pop("transfer-encoding", None)
 
         # Inject OTEL trace context into outgoing headers
         inject(carrier=headers)
