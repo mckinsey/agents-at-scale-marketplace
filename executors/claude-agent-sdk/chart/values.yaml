@@ -93,3 +93,36 @@ persistence:
   accessModes:
     - ReadWriteOnce
   size: 10Gi
+
+# Scheduler configuration — sandbox-based session isolation
+scheduler:
+  enabled: false
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/executor-claude-agent-sdk
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  config:
+    sessionIdleTTL: 1800       # 30 minutes in seconds
+    shutdownPolicy: Delete     # Delete or Retain
+    sandboxReadyTimeout: 60    # seconds
+    sandboxTemplate: claude-agent-sdk
+    namespace: ""              # defaults to release namespace
+  sandboxTemplate:
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    runtimeClassName: ""
+  warmPool:
+    enabled: false
+    replicas: 2

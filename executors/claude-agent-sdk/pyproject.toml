@@ -21,6 +21,10 @@ dependencies = [
     "ark-sdk>=0.1.56",
     "urllib3>=2.6.0",
     "a2a-sdk[http-server]>=0.3.0",
+    # Scheduler dependencies
+    "kubernetes_asyncio>=31.0.0",
+    "httpx>=0.27.0",
+    "pyyaml>=6.0",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -48,9 +52,10 @@ allow-direct-references = true
 
 [project.scripts]
 executor-claude-agent-sdk = "claude_agent_executor.__main__:main"
+executor-claude-agent-scheduler = "claude_agent_scheduler.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/claude_agent_executor"]
+packages = ["src/claude_agent_executor", "src/claude_agent_scheduler"]
 
 # Black configuration - follow AI developer guide for 120 char line length
 [tool.black]

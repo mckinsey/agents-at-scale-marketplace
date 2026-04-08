@@ -36,6 +36,15 @@ deployments:
           image:
             repository: ${runtime.images.executor-claude-agent-sdk.image}
             tag: ${runtime.images.executor-claude-agent-sdk.tag}
+        scheduler:
+          enabled: true
+          image:
+            repository: ${runtime.images.executor-claude-agent-sdk.image}
+            tag: ${runtime.images.executor-claude-agent-sdk.tag}
+          config:
+            namespace: default
+          warmPool:
+            enabled: false
         httpRoute:
           enabled: ${HTTPROUTE_ENABLED}
         executionEngine:
@@ -45,29 +54,110 @@ dev:
   executor-claude-agent-sdk:
     imageSelector: executor-claude-agent-sdk
     namespace: default
+    container: scheduler
     logs:
       lastLines: 50
 
 hooks:
   - command: |-
-      # Check if Gateway API HTTPRoute CRD exists
-      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
-        echo "✓ Gateway API HTTPRoute CRD found - HTTPRoute will be created"
-      else
-        echo "✗ Gateway API HTTPRoute CRD not found - HTTPRoute will be skipped"
+      # Verify agent-sandbox core + extensions are installed
+      MISSING=""
+      if ! kubectl get crd sandboxes.agents.x-k8s.io >/dev/null 2>&1; then
+        MISSING="core (manifest.yaml)"
       fi
+      if ! kubectl get crd sandboxclaims.extensions.agents.x-k8s.io >/dev/null 2>&1; then
+        if [ -n "$MISSING" ]; then
+          MISSING="$MISSING + extensions (extensions.yaml)"
+        else
+          MISSING="extensions (extensions.yaml)"
+        fi
+      fi
+      if [ -n "$MISSING" ]; then
+        echo ""
+        echo "✗ ERROR: agent-sandbox CRDs not found: $MISSING"
+        echo ""
+        echo "  The scheduler requires both core and extension components."
+        echo "  Install them:"
+        echo ""
+        echo "    VERSION=v0.2.1"
+        echo "    kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/\${VERSION}/manifest.yaml"
+        echo "    kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/\${VERSION}/extensions.yaml"
+        echo ""
+        echo "  Docs: https://agent-sandbox.sigs.k8s.io/docs/getting_started/"
+        echo ""
+        exit 1
+      fi
+      echo "✓ agent-sandbox core + extensions CRDs found"
     events: ["before:deploy:executor-claude-agent-sdk"]
   - command: |-
       echo ""
-      echo "=== Executor Claude Agent SDK Deployed ==="
+      echo "=== Executor Claude Agent SDK (Scheduler Mode) ==="
       echo ""
-      echo "Service: executor-claude-agent-sdk.default.svc.cluster.local:8000"
+      echo "Scheduler: executor-claude-agent-sdk-scheduler.default.svc.cluster.local:8000"
       echo ""
-      echo "Port-forward: kubectl port-forward -n default svc/executor-claude-agent-sdk 8000:8000"
-      echo ""
-      echo "HTTPRoute: http://executor-claude-agent-sdk.default.127.0.0.1.nip.io:8080"
+      echo "Port-forward: kubectl port-forward -n default svc/executor-claude-agent-sdk-scheduler 8000:8000"
       echo ""
       echo "Health check:"
       echo "  curl http://localhost:8000/health"
       echo ""
+      echo "Each conversation gets its own sandbox pod."
+      echo "Config: kubectl edit configmap executor-claude-agent-sdk-scheduler-config -n default"
+      echo ""
     events: ["after:deploy:executor-claude-agent-sdk"]
+
+# Profiles
+profiles:
+  # Standalone mode (no scheduler, no sandboxes) — activate with: devspace deploy -p standalone
+  - name: standalone
+    patches:
+      - op: replace
+        path: deployments.executor-claude-agent-sdk.helm.values
+        value:
+          app:
+            image:
+              repository: ${runtime.images.executor-claude-agent-sdk.image}
+              tag: ${runtime.images.executor-claude-agent-sdk.tag}
+          httpRoute:
+            enabled: ${HTTPROUTE_ENABLED}
+          executionEngine:
+            enabled: true
+      - op: replace
+        path: dev.executor-claude-agent-sdk
+        value:
+          imageSelector: executor-claude-agent-sdk
+          namespace: default
+          logs:
+            lastLines: 50
+    merge:
+      hooks:
+        - command: |-
+            # Check if Gateway API HTTPRoute CRD exists
+            if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+              echo "✓ Gateway API HTTPRoute CRD found - HTTPRoute will be created"
+            else
+              echo "✗ Gateway API HTTPRoute CRD not found - HTTPRoute will be skipped"
+            fi
+          events: ["before:deploy:executor-claude-agent-sdk"]
+        - command: |-
+            echo ""
+            echo "=== Executor Claude Agent SDK (Standalone Mode) ==="
+            echo ""
+            echo "Service: executor-claude-agent-sdk.default.svc.cluster.local:8000"
+            echo ""
+            echo "Port-forward: kubectl port-forward -n default svc/executor-claude-agent-sdk 8000:8000"
+            echo ""
+            echo "HTTPRoute: http://executor-claude-agent-sdk.default.127.0.0.1.nip.io:8080"
+            echo ""
+            echo "Health check:"
+            echo "  curl http://localhost:8000/health"
+            echo ""
+          events: ["after:deploy:executor-claude-agent-sdk"]
+
+  # Warm pool — activate with: devspace deploy -p warm-pool
+  - name: warm-pool
+    patches:
+      - op: replace
+        path: deployments.executor-claude-agent-sdk.helm.values.scheduler.warmPool
+        value:
+          enabled: true
+          replicas: 2

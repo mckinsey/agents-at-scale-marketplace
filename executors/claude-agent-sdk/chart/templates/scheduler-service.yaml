@@ -1,22 +1,22 @@
-{{- if not .Values.scheduler.enabled }}
+{{- if .Values.scheduler.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.service.name }}
+  name: {{ .Values.app.name }}-scheduler
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ .Values.app.name }}
+    app: {{ .Values.app.name }}-scheduler
   annotations:
     {{- with .Values.global.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort }}
+    - port: 8000
+      targetPort: 8000
       protocol: TCP
       name: http
   selector:
-    app: {{ .Values.app.name }}
+    app: {{ .Values.app.name }}-scheduler
 {{- end }}
