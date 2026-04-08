@@ -20,16 +20,25 @@ tracer = trace.get_tracer("claude-agent-scheduler")
 PROXY_TIMEOUT = 600.0  # 10 minutes — agent execution can be long-running
 
 
-def extract_context_id(body: bytes) -> str:
-    """Extract context_id from A2A JSON body. Generate one if missing."""
+def extract_context_id(body: bytes) -> tuple[str, bytes]:
+    """Extract context_id from A2A JSON-RPC body and return (id, possibly-patched body).
+
+    A2A messages use JSON-RPC 2.0: the context_id lives at params.message.context_id.
+    If missing, we generate a UUID and inject it so the downstream executor sees it too.
+    """
     try:
         data = json.loads(body)
-        context_id = data.get("context_id") or ""
+        message = data.get("params", {}).get("message", {})
+        context_id = message.get("context_id") or ""
         if isinstance(context_id, str) and context_id.strip():
-            return context_id.strip()
-    except (json.JSONDecodeError, AttributeError):
-        pass
-    return str(uuid.uuid4())
+            return context_id.strip(), body
+        # context_id missing or empty — generate and inject
+        generated = str(uuid.uuid4())
+        if "params" in data and "message" in data["params"]:
+            data["params"]["message"]["context_id"] = generated
+        return generated, json.dumps(data).encode()
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return str(uuid.uuid4()), body
 
 
 def create_proxy_app(
@@ -48,8 +57,8 @@ def create_proxy_app(
     @app.post("/")
     @app.post("/{path:path}")
     async def proxy_a2a(request: Request, path: str = "") -> Response:
-        body = await request.body()
-        conversation_id = extract_context_id(body)
+        raw_body = await request.body()
+        conversation_id, body = extract_context_id(raw_body)
 
         # Extract incoming trace context
         ctx = extract(carrier=dict(request.headers))
