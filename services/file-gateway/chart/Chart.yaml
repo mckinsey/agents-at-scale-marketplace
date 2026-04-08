@@ -12,3 +12,5 @@ keywords:
   - mcp
   - filesystem
   - storage
+annotations:
+  ark.mckinsey.com/marketplace-item-name: "service/file-gateway"
