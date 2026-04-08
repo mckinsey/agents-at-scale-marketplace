@@ -4,6 +4,7 @@ import logging
 import os
 
 from opentelemetry import trace
+from opentelemetry.baggage.propagation import W3CBaggagePropagator
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.sdk.resources import Resource
@@ -34,8 +35,9 @@ def setup_otel() -> None:
         provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)
 
-        # Set up W3C TraceContext propagation
-        propagator = CompositePropagator([TraceContextTextMapPropagator()])
+        # Set up W3C TraceContext + Baggage propagation
+        # Baggage carries ark.session.id from the controller through the scheduler to sandboxes
+        propagator = CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()])
         set_global_textmap(propagator)
 
         logger.info("OTEL tracing configured: endpoint=%s", endpoint)
