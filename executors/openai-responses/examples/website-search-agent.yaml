@@ -1,63 +1,80 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # How Ark CRs map to the OpenAI Responses API
 #
-#   Ark CR                  Responses API field     Completions API equivalent
-#   ──────────────────────  ──────────────────────  ──────────────────────────
-#   Model (apiKey, name)    model + api_key         model + api_key
-#   Agent.spec.prompt       instructions            messages[{role:"system"}]
-#   Query.spec.message      input                   messages[{role:"user"}]
+#   Ark CR                                    Responses API field
+#   ────────────────────────────────────────  ──────────────────────────────
+#   Model.spec.model.value                    model
+#   Model.spec.config.openai.apiKey           api_key
+#   Agent.spec.prompt                         instructions  (developer role,
+#                                             re-sent every turn)
+#   Query.spec.input                          input
 #
-# Note: `instructions` maps to the `developer` role (higher priority than
-# `system`) and is re-sent on every call — it does NOT carry over via
-# `previous_response_id`.
+# Tool configuration (annotation key: executor-openai-responses.ark.mckinsey.com/tools)
+#   Value: JSON array following the OpenAI Responses API tool schema.
+#   Cascade order (lowest → highest priority): ExecutionEngine → Agent → Query
+#   Merge semantics: spread by "type" key — each layer adds new tool types or
+#   replaces existing ones of the same type.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# 1. Model CR — provider credentials and model name
+# 1. Model CR — provider credentials and model identifier
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Model
 metadata:
-  name: gpt-5-nano-2025-08-07
+  name: openai-gpt-4.1-nano
 spec:
   provider: openai
+  type: completions
+  model:
+    value: gpt-4.1-nano
   config:
     openai:
-      apiKey: sk-...   # reference a Secret in production
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: api-key
 ---
 # 2. Agent CR — static configuration
-#    spec.prompt    → Responses API `instructions`  (≈ system / developer role)
-#    labels         → built-in tools to enable
-#    parameters     → tool configuration (e.g. user_location for web search)
+#    spec.prompt    → Responses API `instructions`  (developer role)
+#    annotations    → built-in tool config, merged on top of ExecutionEngine defaults
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: website-search-agent
-  labels:
-    ark.openai.tools/web-search-preview: "true"
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/tools: |
+      [
+        {
+          "type": "web_search_preview",
+          "user_location": {
+            "type": "approximate",
+            "country": "GB",
+            "city": "London",
+            "region": "London"
+          }
+        }
+      ]
 spec:
   modelRef:
-    name: gpt-5-nano-2025-08-07
-  executionEngineRef:
+    name: openai-gpt-4.1-nano
+  executionEngine:
     name: executor-openai-responses
   prompt: |
     You are an expert web search agent located in UK.
     Your role is to find the link to the main website of a given company located in UK.
     Return only the link and nothing else. Do not write any comments or explanation.
-  parameters:
-    - name: openai.web-search.country
-      value: GB
-    - name: openai.web-search.city
-      value: London
-    - name: openai.web-search.region
-      value: London
 ---
 # 3. Query CR — runtime input per request
-#    spec.message   → Responses API `input`  (≈ user role message)
+#    spec.input     → Responses API `input`  (user turn message)
+#    No tool annotation needed here; agent-level config is sufficient.
+#    Add an annotation to override tools for this specific query (e.g. different location).
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Query
 metadata:
   name: find-adam-grooming
 spec:
-  agentRef:
-    name: website-search-agent
-  message: "ADAM GROOMING BN LTD"
+  targets:
+    - type: agent
+      name: website-search-agent
+  input: "ADAM GROOMING BN LTD"
   # expected response: https://adamgroomingatelier.com/

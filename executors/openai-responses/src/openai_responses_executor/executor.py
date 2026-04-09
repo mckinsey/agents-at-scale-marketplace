@@ -9,7 +9,7 @@ from ark_sdk.executor_app import is_otel_enabled
 from openai import AsyncOpenAI
 
 from .config import config
-from .models import BuiltInTools, FunctionTool, ModelConfig, ResponsesCreateParams
+from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
         instructions = self._resolve_prompt(request.agent)
         tools = (
             [FunctionTool.from_definition(t).model_dump() for t in request.tools]
-            + BuiltInTools.from_request(request).to_list()
+            + resolve_built_in_tools(request)
         )
         previous_response_id = self._get_previous_response_id(conversation_id)
 

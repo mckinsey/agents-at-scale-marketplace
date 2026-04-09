@@ -1,19 +1,16 @@
 """Pydantic models for OpenAI Responses API tool declarations and request building."""
 
+import json
+import logging
 from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel
 
 from ark_sdk.executor import ExecutionEngineRequest, ToolDefinition
 
+logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Label keys for built-in tool enablement on Agent CR
-# ---------------------------------------------------------------------------
-
-_LABEL_WEB_SEARCH = "ark.openai.tools/web-search-preview"
-_LABEL_FILE_SEARCH = "ark.openai.tools/file-search"
-_LABEL_CODE_INTERPRETER = "ark.openai.tools/code-interpreter"
-_LABEL_COMPUTER_USE = "ark.openai.tools/computer-use-preview"
+# Annotation key for tool configuration on Agent, Query, and ExecutionEngine CRs
+ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
 
 
 # ---------------------------------------------------------------------------
@@ -53,114 +50,57 @@ class ModelConfig(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Web search
+# Built-in tool resolution via annotations
 # ---------------------------------------------------------------------------
 
 
-class WebSearchUserLocation(BaseModel):
-    """Approximate location hint passed to the web_search_preview tool."""
-
-    type: Literal["approximate"] = "approximate"
-    country: Optional[str] = None
-    city: Optional[str] = None
-    region: Optional[str] = None
-
-    @classmethod
-    def from_request(cls, request: ExecutionEngineRequest) -> Optional["WebSearchUserLocation"]:
-        params: dict[str, str] = {
-            p.name: p.value for p in (getattr(request.agent, "parameters", None) or [])
-        }
-        country = params.get("openai.web-search.country")
-        city = params.get("openai.web-search.city")
-        region = params.get("openai.web-search.region")
-
-        if not any([country, city, region]):
-            return None
-        return cls(country=country, city=city, region=region)
+def _parse_tools_annotation(value: str) -> list[dict[str, Any]]:
+    """Parse a JSON tool array from an annotation value. Returns [] on failure."""
+    if not value:
+        return []
+    try:
+        tools = json.loads(value)
+        if not isinstance(tools, list):
+            logger.warning("Tools annotation must be a JSON array, got %s", type(tools).__name__)
+            return []
+        return tools
+    except json.JSONDecodeError as exc:
+        logger.warning("Failed to parse tools annotation: %s", exc)
+        return []
 
 
-class WebSearchTool(BaseModel):
-    """OpenAI built-in web search tool."""
-
-    type: Literal["web_search_preview"] = "web_search_preview"
-    user_location: Optional[WebSearchUserLocation] = None
-    search_context_size: Optional[Literal["low", "medium", "high"]] = None
-
-    @classmethod
-    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "WebSearchTool":
-        return cls(
-            user_location=WebSearchUserLocation.from_request(request),
-            search_context_size=params.get("search_context_size"),
-        )
+def _merge_tools(base: list[dict[str, Any]], override: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Merge two tool arrays, replacing entries with matching 'type' keys."""
+    merged: dict[str, dict[str, Any]] = {t["type"]: t for t in base if "type" in t}
+    for tool in override:
+        if "type" in tool:
+            merged[tool["type"]] = tool
+        else:
+            logger.warning("Skipping tool without 'type' key: %s", tool)
+    return list(merged.values())
 
 
-# ---------------------------------------------------------------------------
-# File search
-# ---------------------------------------------------------------------------
+def resolve_built_in_tools(request: ExecutionEngineRequest) -> list[dict[str, Any]]:
+    """Resolve built-in tools using the annotation cascade.
 
+    Cascade order (lowest → highest priority):
+        ExecutionEngine annotations → Agent annotations → Query annotations
 
-class FileSearchRankingOptions(BaseModel):
-    ranker: Optional[Literal["auto", "default_2024_08_21"]] = None
-    score_threshold: Optional[float] = None
-
-
-class FileSearchTool(BaseModel):
-    """OpenAI built-in file search tool.
-
-    ``vector_store_ids`` are runtime parameters — they should come from the
-    Query CR (spec.tools.file_search.vector_store_ids) rather than being
-    hardcoded on the Agent CR.
+    Each layer merges by 'type' key: same type replaces, new type is added.
     """
+    engine_tools = _parse_tools_annotation(
+        request.execution_engine_annotations.get(ANNOTATION_KEY, "")
+    )
+    agent_tools = _parse_tools_annotation(
+        (getattr(request.agent, "annotations", None) or {}).get(ANNOTATION_KEY, "")
+    )
+    query_tools = _parse_tools_annotation(
+        request.query_annotations.get(ANNOTATION_KEY, "")
+    )
 
-    type: Literal["file_search"] = "file_search"
-    vector_store_ids: Optional[list[str]] = None
-    max_num_results: Optional[int] = None
-    ranking_options: Optional[FileSearchRankingOptions] = None
-
-    @classmethod
-    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "FileSearchTool":
-        return cls(
-            vector_store_ids=params.get("vector_store_ids"),
-            max_num_results=params.get("max_num_results"),
-            ranking_options=FileSearchRankingOptions(**params["ranking_options"]) if "ranking_options" in params else None,
-        )
-
-
-# ---------------------------------------------------------------------------
-# Code interpreter
-# ---------------------------------------------------------------------------
-
-
-class CodeInterpreterContainer(BaseModel):
-    type: Literal["auto"] = "auto"
-
-
-class CodeInterpreterTool(BaseModel):
-    """OpenAI built-in code interpreter tool."""
-
-    type: Literal["code_interpreter"] = "code_interpreter"
-    container: Optional[CodeInterpreterContainer] = None
-
-    @classmethod
-    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "CodeInterpreterTool":
-        return cls(container=CodeInterpreterContainer() if params.get("container") else None)
-
-
-# ---------------------------------------------------------------------------
-# Computer use
-# ---------------------------------------------------------------------------
-
-
-class ComputerUseTool(BaseModel):
-    """OpenAI built-in computer use tool."""
-
-    type: Literal["computer_use_preview"] = "computer_use_preview"
-    display_width: Optional[int] = None
-    display_height: Optional[int] = None
-
-    @classmethod
-    def from_params(cls, params: dict[str, Any], request: ExecutionEngineRequest) -> "ComputerUseTool":
-        return cls(display_width=params.get("display_width"), display_height=params.get("display_height"))
+    tools = _merge_tools(engine_tools, agent_tools)
+    tools = _merge_tools(tools, query_tools)
+    return tools
 
 
 # ---------------------------------------------------------------------------
@@ -183,53 +123,6 @@ class FunctionTool(BaseModel):
             description=tool.description,
             parameters=tool.parameters or {"type": "object", "properties": {}},
         )
-
-
-# ---------------------------------------------------------------------------
-# Built-in tools registry
-# ---------------------------------------------------------------------------
-
-# (label, tools_config key, BuiltInTools field name, tool class)
-_TOOL_REGISTRY: list[tuple[str, str, str, type]] = [
-    (_LABEL_WEB_SEARCH,      "web_search",      "web_search",      WebSearchTool),
-    (_LABEL_FILE_SEARCH,     "file_search",      "file_search",     FileSearchTool),
-    (_LABEL_CODE_INTERPRETER,"code_interpreter", "code_interpreter",CodeInterpreterTool),
-    (_LABEL_COMPUTER_USE,    "computer_use",     "computer_use",    ComputerUseTool),
-]
-
-
-# ---------------------------------------------------------------------------
-# Built-in tools collection
-# ---------------------------------------------------------------------------
-
-
-class BuiltInTools(BaseModel):
-    """All OpenAI built-in tools enabled for an agent, built from the Ark request."""
-
-    web_search: Optional[WebSearchTool] = None
-    file_search: Optional[FileSearchTool] = None
-    code_interpreter: Optional[CodeInterpreterTool] = None
-    computer_use: Optional[ComputerUseTool] = None
-
-    @classmethod
-    def from_request(cls, request: ExecutionEngineRequest) -> "BuiltInTools":
-        labels: dict[str, str] = getattr(request.agent, "labels", {}) or {}
-        # TODO: read from request.tools_config once Query CR supports spec.tools
-        tool_params: dict[str, Any] = getattr(request, "tools_config", None) or {}
-
-        tools: dict[str, Any] = {}
-        for label, param_key, field_name, tool_cls in _TOOL_REGISTRY:
-            if labels.get(label) == "true":
-                tools[field_name] = tool_cls.from_params(tool_params.get(param_key, {}), request)
-
-        return cls(**tools)
-
-    def to_list(self) -> list[dict[str, Any]]:
-        return [
-            tool.model_dump(exclude_none=True)
-            for tool in [self.web_search, self.file_search, self.code_interpreter, self.computer_use]
-            if tool is not None
-        ]
 
 
 # ---------------------------------------------------------------------------
