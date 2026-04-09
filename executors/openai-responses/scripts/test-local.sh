@@ -8,7 +8,14 @@
 
 set -euo pipefail
 
-API_KEY="${OPENAI_API_KEY:?Set OPENAI_API_KEY}"
+# Load .env from executor root if present
+SCRIPT_DIR_EARLY="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "$SCRIPT_DIR_EARLY/.env" ]; then
+  set -a; source "$SCRIPT_DIR_EARLY/.env"; set +a
+fi
+
+API_KEY="${OPENAI_API_KEY:?Set OPENAI_API_KEY or add it to .env}"
+BASE_URL="${OPENAI_BASE_URL:-}"
 MODELS="${MODELS:-gpt-4o-mini gpt-4.1-nano gpt-5}"
 HOST="${HOST:-localhost}"
 PORT="${PORT:-8000}"
@@ -53,7 +60,7 @@ run_test() {
     "model": {
       "name": "$model",
       "type": "openai",
-      "config": {"openai": {"apiKey": "$API_KEY"}}
+      "config": {"openai": {"apiKey": "$API_KEY"${BASE_URL:+, \"baseUrl\": \"$BASE_URL\"}}}
     },
     "annotations": {
       "executor-openai-responses.ark.mckinsey.com/tools": $(echo "$TOOLS" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))")
