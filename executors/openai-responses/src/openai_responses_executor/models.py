@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Annotation key for tool configuration on Agent, Query, and ExecutionEngine CRs
 ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
 REASONING_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/reasoning"
+OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/output-schema"
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +121,23 @@ def resolve_reasoning(request: ExecutionEngineRequest) -> Optional[dict[str, Any
     return None
 
 
+def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str, Any]]:
+    """Resolve JSON output schema from annotations. Returns text.format dict or None."""
+    for source in [
+        request.execution_engine_annotations,
+        (getattr(request.agent, "annotations", None) or {}),
+        request.query_annotations,
+    ]:
+        raw = source.get(OUTPUT_SCHEMA_ANNOTATION_KEY, "")
+        if raw:
+            try:
+                schema = json.loads(raw)
+                return {"format": {"type": "json_schema", "schema": schema}}
+            except json.JSONDecodeError as exc:
+                logger.warning("Failed to parse output-schema annotation: %s", exc)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Function tool
 # ---------------------------------------------------------------------------
@@ -156,6 +174,7 @@ class ResponsesCreateParams(BaseModel):
     tools: Optional[list[dict[str, Any]]] = None
     previous_response_id: Optional[str] = None
     reasoning: Optional[dict[str, Any]] = None
+    text: Optional[dict[str, Any]] = None
 
     def to_api_kwargs(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
@@ -168,6 +187,7 @@ class ResponsesCreateParams(BaseModel):
         request: ExecutionEngineRequest,
         tools: Optional[list[dict[str, Any]]],
         reasoning: Optional[dict[str, Any]] = None,
+        text: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
@@ -179,6 +199,7 @@ class ResponsesCreateParams(BaseModel):
             input=input_messages,
             tools=tools or None,
             reasoning=reasoning,
+            text=text,
         )
 
     @classmethod
@@ -190,6 +211,7 @@ class ResponsesCreateParams(BaseModel):
         input: Union[str, list[dict[str, Any]]],
         tools: Optional[list[dict[str, Any]]],
         reasoning: Optional[dict[str, Any]] = None,
+        text: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
         return cls(
             model=model_config.model_name,
@@ -198,4 +220,5 @@ class ResponsesCreateParams(BaseModel):
             tools=tools or None,
             previous_response_id=previous_response_id,
             reasoning=reasoning,
+            text=text,
         )
