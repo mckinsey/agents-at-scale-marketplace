@@ -7,11 +7,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from ark_sdk.executor import Message, ToolDefinition
 from openai_responses_executor.executor import OpenAIResponsesExecutor
 from openai_responses_executor.models import (
-    BuiltInTools,
     FunctionTool,
     ModelConfig,
     ResponsesCreateParams,
-    WebSearchUserLocation,
+    resolve_built_in_tools,
+    ANNOTATION_KEY,
 )
 
 
@@ -38,34 +38,28 @@ def _tool(name="search", description="Search the web", parameters=None):
     )
 
 
-def _param(name, value):
-    p = MagicMock()
-    p.name = name
-    p.value = value
-    return p
-
-
 def _request(
     agent_name="test-agent",
     model=None,
-    labels=None,
+    agent_annotations=None,
+    query_annotations=None,
+    execution_engine_annotations=None,
     tools=None,
     history=None,
     conversation_id="conv-123",
     user_content="hello",
-    parameters=None,
 ):
     req = MagicMock()
     req.agent.name = agent_name
     req.agent.model = model or _model_config()
-    req.agent.labels = labels or {}
     req.agent.prompt = "You are a helpful assistant."
-    req.agent.parameters = parameters or []
+    req.agent.annotations = agent_annotations or {}
+    req.query_annotations = query_annotations or {}
+    req.execution_engine_annotations = execution_engine_annotations or {}
     req.tools = tools or []
     req.history = history or []
     req.userInput.content = user_content
     req.conversationId = conversation_id
-    req.tools_config = None
     return req
 
 
@@ -130,81 +124,86 @@ class TestFunctionTool:
 
 
 # ---------------------------------------------------------------------------
-# WebSearchUserLocation
+# resolve_built_in_tools (annotation cascade)
 # ---------------------------------------------------------------------------
 
 
-class TestWebSearchUserLocation:
-    def test_full_location(self):
-        req = _request(parameters=[
-            _param("openai.web-search.country", "GB"),
-            _param("openai.web-search.city", "London"),
-            _param("openai.web-search.region", "London"),
-        ])
-        result = WebSearchUserLocation.from_request(req)
+class TestResolveBuiltInTools:
+    def _web_search_tool(self, **extra):
+        return {"type": "web_search_preview", **extra}
 
-        assert isinstance(result, WebSearchUserLocation)
-        assert result.country == "GB"
-        assert result.city == "London"
-        assert result.region == "London"
+    def test_agent_annotation_included(self):
+        tools_json = json.dumps([self._web_search_tool()])
+        req = _request(agent_annotations={ANNOTATION_KEY: tools_json})
+        result = resolve_built_in_tools(req)
+        assert result == [self._web_search_tool()]
 
-    def test_country_only(self):
-        req = _request(parameters=[_param("openai.web-search.country", "US")])
-        result = WebSearchUserLocation.from_request(req)
+    def test_engine_annotation_is_base(self):
+        tools_json = json.dumps([self._web_search_tool()])
+        req = _request(execution_engine_annotations={ANNOTATION_KEY: tools_json})
+        result = resolve_built_in_tools(req)
+        assert result == [self._web_search_tool()]
 
-        assert result.country == "US"
-        assert result.city is None
-
-    def test_no_params_returns_none(self):
-        result = WebSearchUserLocation.from_request(_request())
-        assert result is None
-
-
-# ---------------------------------------------------------------------------
-# BuiltInTools
-# ---------------------------------------------------------------------------
-
-
-class TestBuiltInTools:
-    def test_web_search_enabled(self):
-        req = _request(labels={"ark.openai.tools/web-search-preview": "true"})
-        result = BuiltInTools.from_request(req).to_list()
-        assert {"type": "web_search_preview"} in result
-
-    def test_web_search_with_user_location(self):
+    def test_agent_overrides_engine_same_type(self):
+        engine_tool = {"type": "web_search_preview"}
+        agent_tool = {"type": "web_search_preview", "user_location": {"type": "approximate", "country": "GB"}}
         req = _request(
-            labels={"ark.openai.tools/web-search-preview": "true"},
-            parameters=[_param("openai.web-search.country", "GB")],
+            execution_engine_annotations={ANNOTATION_KEY: json.dumps([engine_tool])},
+            agent_annotations={ANNOTATION_KEY: json.dumps([agent_tool])},
         )
-        result = BuiltInTools.from_request(req).to_list()
+        result = resolve_built_in_tools(req)
+        assert len(result) == 1
+        assert result[0] == agent_tool
 
-        assert result[0]["type"] == "web_search_preview"
-        assert result[0]["user_location"] == {"type": "approximate", "country": "GB"}
+    def test_query_overrides_agent_same_type(self):
+        agent_tool = {"type": "web_search_preview", "user_location": {"type": "approximate", "country": "GB"}}
+        query_tool = {"type": "web_search_preview", "user_location": {"type": "approximate", "country": "US"}}
+        req = _request(
+            agent_annotations={ANNOTATION_KEY: json.dumps([agent_tool])},
+            query_annotations={ANNOTATION_KEY: json.dumps([query_tool])},
+        )
+        result = resolve_built_in_tools(req)
+        assert len(result) == 1
+        assert result[0]["user_location"]["country"] == "US"
 
-    def test_multiple_tools(self):
-        req = _request(labels={
-            "ark.openai.tools/web-search-preview": "true",
-            "ark.openai.tools/code-interpreter": "true",
-        })
-        types = [t["type"] for t in BuiltInTools.from_request(req).to_list()]
+    def test_cascade_adds_new_types(self):
+        agent_tool = {"type": "web_search_preview"}
+        query_tool = {"type": "file_search"}
+        req = _request(
+            agent_annotations={ANNOTATION_KEY: json.dumps([agent_tool])},
+            query_annotations={ANNOTATION_KEY: json.dumps([query_tool])},
+        )
+        types = [t["type"] for t in resolve_built_in_tools(req)]
         assert "web_search_preview" in types
-        assert "code_interpreter" in types
-
-    def test_no_labels_returns_empty(self):
-        assert BuiltInTools.from_request(_request()).to_list() == []
-
-    def test_label_false_not_included(self):
-        req = _request(labels={"ark.openai.tools/web-search-preview": "false"})
-        assert BuiltInTools.from_request(req).to_list() == []
-
-    def test_file_search_and_computer_use(self):
-        req = _request(labels={
-            "ark.openai.tools/file-search": "true",
-            "ark.openai.tools/computer-use-preview": "true",
-        })
-        types = [t["type"] for t in BuiltInTools.from_request(req).to_list()]
         assert "file_search" in types
-        assert "computer_use_preview" in types
+
+    def test_no_annotations_returns_empty(self):
+        assert resolve_built_in_tools(_request()) == []
+
+    def test_invalid_json_returns_empty_with_no_raise(self):
+        req = _request(agent_annotations={ANNOTATION_KEY: "not-json"})
+        result = resolve_built_in_tools(req)
+        assert result == []
+
+    def test_json_not_array_returns_empty(self):
+        req = _request(agent_annotations={ANNOTATION_KEY: json.dumps({"type": "web_search_preview"})})
+        result = resolve_built_in_tools(req)
+        assert result == []
+
+    def test_tool_without_type_key_is_skipped(self):
+        tools_json = json.dumps([{"name": "broken"}])
+        req = _request(agent_annotations={ANNOTATION_KEY: tools_json})
+        result = resolve_built_in_tools(req)
+        assert result == []
+
+    def test_user_location_passthrough(self):
+        tool = {
+            "type": "web_search_preview",
+            "user_location": {"type": "approximate", "country": "GB", "city": "London", "region": "London"},
+        }
+        req = _request(agent_annotations={ANNOTATION_KEY: json.dumps([tool])})
+        result = resolve_built_in_tools(req)
+        assert result[0]["user_location"]["country"] == "GB"
 
 
 # ---------------------------------------------------------------------------
@@ -382,9 +381,10 @@ class TestExecuteAgent:
         assert messages[0].content == "Python is a programming language."
 
     @pytest.mark.asyncio
-    async def test_includes_built_in_tools_in_request(self, tmp_path):
+    async def test_includes_built_in_tools_from_annotation(self, tmp_path):
         executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
-        req = _request(labels={"ark.openai.tools/web-search-preview": "true"})
+        tool = {"type": "web_search_preview"}
+        req = _request(agent_annotations={ANNOTATION_KEY: json.dumps([tool])})
         captured = {}
 
         async def mock_create(**kwargs):

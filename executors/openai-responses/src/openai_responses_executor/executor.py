@@ -2,10 +2,10 @@
 
 import json
 import logging
+import os
 from typing import Any, Optional
 
 from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
-from ark_sdk.executor_app import is_otel_enabled
 from openai import AsyncOpenAI
 
 from .config import config
@@ -13,7 +13,7 @@ from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_bu
 
 logger = logging.getLogger(__name__)
 
-if is_otel_enabled():
+if os.getenv("OTEL_INSTRUMENTATION_ENABLED", "false").lower() == "true":
     try:
         from openinference.instrumentation.openai import OpenAIInstrumentor
         OpenAIInstrumentor().instrument()
