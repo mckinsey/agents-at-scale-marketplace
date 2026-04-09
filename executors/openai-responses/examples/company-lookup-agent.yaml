@@ -1,16 +1,26 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# Company Lookup Agent using GPT-5 with web_search_preview and structured output.
+# Company Lookup Agent — structured output example.
 #
-# Given a company name, the agent searches the web and returns a structured
-# JSON response containing:
-#   - company_name        — official registered name
-#   - website_url         — primary website
-#   - companies_house_number — UK Companies House registration number (if available)
-#   - registered_address  — official registered address
-#   - company_status      — e.g. "Active", "Dissolved"
+# Extends the website-search-agent pattern with JSON schema enforcement via
+# the output-schema annotation. The model is constrained to return a valid
+# JSON object (no prose, no markdown) — enforced at token level by the API.
 #
-# Structured output is enforced via the output-schema annotation, which constrains
-# the model response to a JSON object matching the schema — no prompt engineering needed.
+#   Ark CR                                         Responses API field
+#   ─────────────────────────────────────────────  ──────────────────────────────
+#   Model.spec.model.value                         model
+#   Model.spec.config.openai.apiKey                api_key
+#   Agent.spec.prompt                              instructions
+#   Query.spec.input                               input
+#   annotation: .../tools                          tools  (web_search_preview)
+#   annotation: .../reasoning                      reasoning
+#   annotation: .../output-schema                  text.format (json_schema)
+#
+# Output schema fields:
+#   company_name            — official registered name
+#   website_url             — primary website
+#   companies_house_number  — UK Companies House number (null if not UK)
+#   registered_address      — official registered address
+#   company_status          — e.g. "Active", "Dissolved", "Registered"
 # ──────────────────────────────────────────────────────────────────────────────
 
 # 1. Model CR (shared with other gpt-5 examples — skip if already applied)
@@ -36,7 +46,10 @@ spec:
             name: openai-credentials
             key: base-url
 ---
-# 2. Agent CR
+# 2. Agent CR — static configuration
+#    spec.prompt         → Responses API `instructions`
+#    annotation: tools   → web_search_preview with UK location context
+#    annotation: schema  → constrains response to a JSON object (no prose)
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
@@ -44,7 +57,17 @@ metadata:
   annotations:
     executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
     executor-openai-responses.ark.mckinsey.com/tools: |
-      [{"type": "web_search_preview"}]
+      [
+        {
+          "type": "web_search_preview",
+          "user_location": {
+            "type": "approximate",
+            "country": "GB",
+            "city": "London",
+            "region": "London"
+          }
+        }
+      ]
     executor-openai-responses.ark.mckinsey.com/output-schema: |
       {
         "type": "object",
@@ -79,20 +102,19 @@ spec:
   executionEngine:
     name: executor-openai-responses
   prompt: |
-    You are a company research assistant. Given a company name, search the web to
-    find accurate, up-to-date information about the company and return it as structured data.
-
-    Always search for:
+    You are a company research assistant located in the UK.
+    Given a company name, search the web to find accurate, up-to-date information
+    and return it as structured data. Always search for:
     1. The official registered company name
     2. The primary website URL
     3. The UK Companies House registration number (if it is a UK-registered company)
     4. The official registered address
     5. The current company status (Active, Dissolved, etc.)
-
-    If any field cannot be found, return null for that field. Always use web search
-    to verify the information rather than relying on training data alone.
+    If any field cannot be found, set it to null. Always verify via web search.
 ---
-# 3. Query CR
+# 3. Query CR — runtime input per request
+#    spec.input → company name to look up
+#    Add an output-schema annotation here to override the schema for a specific query.
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Query
 metadata:
@@ -101,4 +123,5 @@ spec:
   target:
     type: agent
     name: company-lookup-agent
-  input: "Look up McKinsey & Company"
+  input: "ADAM GROOMING BN LTD"
+  # expected: {"company_name": "Adam Grooming BN Ltd", "website_url": "https://adamgroomingatelier.com/", ...}

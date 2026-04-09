@@ -132,7 +132,7 @@ def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str,
         if raw:
             try:
                 schema = json.loads(raw)
-                return {"format": {"type": "json_schema", "schema": schema}}
+                return {"format": {"type": "json_schema", "name": "output", "schema": schema}}
             except json.JSONDecodeError as exc:
                 logger.warning("Failed to parse output-schema annotation: %s", exc)
     return None
