@@ -66,6 +66,27 @@ Merge semantics: each layer replaces entries with matching `type` keys and adds 
 
 ---
 
+### Requirement: Built-in tools run in OpenAI's runtime, not the executor's
+Built-in tools (`web_search_preview`, `file_search`, `code_interpreter`, `computer_use_preview`)
+are executed entirely within OpenAI's server-side runtime. The executor's only responsibility is to
+declare them in the `tools` array. OpenAI never returns a `function_call` output item for them —
+it returns a final `message` output directly, after running the tool internally.
+
+This is the fundamental difference from the Completions API: in Completions, the model signals
+a tool call and the client must execute it and reply. In the Responses API, built-in tools are
+a closed loop on OpenAI's side; the executor is not in the loop.
+
+#### Scenario: Web search runs without executor involvement
+- **WHEN** `web_search_preview` is declared in `tools` and the model decides to search
+- **THEN** OpenAI SHALL execute the search internally and return a `message` output item with the
+  result; the executor SHALL NOT receive a `function_call` item for this tool
+
+#### Scenario: No client-side execution for built-in tools
+- **WHEN** the Responses API response contains no `function_call` output items
+- **THEN** the executor SHALL NOT attempt any tool execution and SHALL return the text output directly
+
+---
+
 ### Requirement: Custom function tools from request.tools
 The executor SHALL convert each `ToolDefinition` in `request.tools` into an OpenAI `function` tool
 and include them alongside built-in tools in every Responses API call.
@@ -78,8 +99,9 @@ and include them alongside built-in tools in every Responses API call.
 ---
 
 ### Requirement: Function call tool loop
-When the Responses API returns a `function_call` output item, the executor SHALL execute the
-function and send the result back in a continuation call, up to `MAX_TOOL_ITERATIONS` times.
+Unlike built-in tools, `function` type tools require client-side execution. When the Responses API
+returns a `function_call` output item, the executor SHALL execute the function and send the result
+back in a continuation call, up to `MAX_TOOL_ITERATIONS` times.
 
 #### Scenario: Function call executed and result sent
 - **WHEN** the Responses API returns a `function_call` item
