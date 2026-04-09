@@ -78,7 +78,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
         model_config = ModelConfig.from_request(request)
         instructions = self._resolve_prompt(request.agent)
         tools = (
-            [FunctionTool.from_definition(t).model_dump() for t in request.tools]
+            [FunctionTool.from_definition(t).model_dump() for t in getattr(request, "tools", [])]
             + resolve_built_in_tools(request)
         )
         previous_response_id = self._get_previous_response_id(conversation_id)
@@ -178,7 +178,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
         except json.JSONDecodeError:
             arguments = {"raw": function_call.arguments}
 
-        if not any(t.name == tool_name for t in request.tools):
+        if not any(getattr(t, "name", t) == tool_name for t in getattr(request, "tools", [])):
             logger.warning(f"Function tool '{tool_name}' not found in agent tool definitions")
             return {"error": f"Tool '{tool_name}' is not available for this agent"}
 

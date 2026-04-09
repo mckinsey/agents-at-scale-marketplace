@@ -5,7 +5,7 @@ import logging
 from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel
 
-from ark_sdk.executor import ExecutionEngineRequest, ToolDefinition
+from ark_sdk.executor import ExecutionEngineRequest
 
 logger = logging.getLogger(__name__)
 
@@ -117,11 +117,11 @@ class FunctionTool(BaseModel):
     parameters: dict[str, Any] = {"type": "object", "properties": {}}
 
     @classmethod
-    def from_definition(cls, tool: ToolDefinition) -> "FunctionTool":
+    def from_definition(cls, tool: Any) -> "FunctionTool":
         return cls(
             name=tool.name,
-            description=tool.description,
-            parameters=tool.parameters or {"type": "object", "properties": {}},
+            description=getattr(tool, "description", ""),
+            parameters=getattr(tool, "parameters", None) or {"type": "object", "properties": {}},
         )
 
 
@@ -151,7 +151,7 @@ class ResponsesCreateParams(BaseModel):
         tools: Optional[list[dict[str, Any]]],
     ) -> "ResponsesCreateParams":
         input_messages = [
-            {"role": msg.role, "content": msg.content} for msg in request.history
+            {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
         ] + [{"role": "user", "content": request.userInput.content}]
 
         return cls(
