@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Annotation key for tool configuration on Agent, Query, and ExecutionEngine CRs
 ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
+REASONING_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/reasoning"
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +104,22 @@ def resolve_built_in_tools(request: ExecutionEngineRequest) -> list[dict[str, An
     return tools
 
 
+def resolve_reasoning(request: ExecutionEngineRequest) -> Optional[dict[str, Any]]:
+    """Resolve reasoning config from annotations (Agent overrides ExecutionEngine, Query overrides Agent)."""
+    for source in [
+        request.execution_engine_annotations,
+        (getattr(request.agent, "annotations", None) or {}),
+        request.query_annotations,
+    ]:
+        raw = source.get(REASONING_ANNOTATION_KEY, "")
+        if raw:
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError as exc:
+                logger.warning("Failed to parse reasoning annotation: %s", exc)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Function tool
 # ---------------------------------------------------------------------------
@@ -138,6 +155,7 @@ class ResponsesCreateParams(BaseModel):
     input: Union[str, list[dict[str, Any]]]
     tools: Optional[list[dict[str, Any]]] = None
     previous_response_id: Optional[str] = None
+    reasoning: Optional[dict[str, Any]] = None
 
     def to_api_kwargs(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
@@ -149,6 +167,7 @@ class ResponsesCreateParams(BaseModel):
         instructions: str,
         request: ExecutionEngineRequest,
         tools: Optional[list[dict[str, Any]]],
+        reasoning: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
@@ -159,6 +178,7 @@ class ResponsesCreateParams(BaseModel):
             instructions=instructions,
             input=input_messages,
             tools=tools or None,
+            reasoning=reasoning,
         )
 
     @classmethod
@@ -169,6 +189,7 @@ class ResponsesCreateParams(BaseModel):
         previous_response_id: str,
         input: Union[str, list[dict[str, Any]]],
         tools: Optional[list[dict[str, Any]]],
+        reasoning: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
         return cls(
             model=model_config.model_name,
@@ -176,4 +197,5 @@ class ResponsesCreateParams(BaseModel):
             input=input,
             tools=tools or None,
             previous_response_id=previous_response_id,
+            reasoning=reasoning,
         )

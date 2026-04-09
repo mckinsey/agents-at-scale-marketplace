@@ -1,3 +1,4 @@
+vendor/
 .venv/
 uv.lock
 .pytest_cache/

@@ -9,7 +9,7 @@ from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
 from openai import AsyncOpenAI
 
 from .config import config
-from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools
+from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,8 @@ class OpenAIResponsesExecutor(BaseExecutor):
             [FunctionTool.from_definition(t).model_dump() for t in getattr(request, "tools", [])]
             + resolve_built_in_tools(request)
         )
+        # reasoning only supported on gpt-5+; temperature not supported on gpt-5+
+        reasoning = resolve_reasoning(request) if model_config.model_name.startswith("gpt-5") else None
         previous_response_id = self._get_previous_response_id(conversation_id)
 
         logger.info(
@@ -101,6 +103,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 previous_response_id=previous_response_id,
                 input=request.userInput.content,
                 tools=tools or None,
+                reasoning=reasoning,
             )
         else:
             params = ResponsesCreateParams.first_turn(
@@ -108,6 +111,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 instructions=instructions,
                 request=request,
                 tools=tools or None,
+                reasoning=reasoning,
             )
 
         try:

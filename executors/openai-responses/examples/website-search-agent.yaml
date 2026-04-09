@@ -20,12 +20,12 @@
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Model
 metadata:
-  name: openai-gpt-4.1-nano
+  name: openai-gpt-5-nano
 spec:
   provider: openai
   type: completions
   model:
-    value: gpt-4.1-nano
+    value: gpt-5-nano-2025-08-07
   config:
     openai:
       apiKey:
@@ -47,6 +47,7 @@ kind: Agent
 metadata:
   name: website-search-agent
   annotations:
+    executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
     executor-openai-responses.ark.mckinsey.com/tools: |
       [
         {
@@ -61,7 +62,7 @@ metadata:
       ]
 spec:
   modelRef:
-    name: openai-gpt-4.1-nano
+    name: openai-gpt-5-nano
   executionEngine:
     name: executor-openai-responses
   prompt: |
