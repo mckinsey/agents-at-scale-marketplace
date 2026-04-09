@@ -33,6 +33,11 @@ spec:
           secretKeyRef:
             name: openai-credentials
             key: api-key
+      baseUrl:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: base-url
 ---
 # 2. Agent CR — static configuration
 #    spec.prompt    → Responses API `instructions`  (developer role)
@@ -73,8 +78,8 @@ kind: Query
 metadata:
   name: find-adam-grooming
 spec:
-  targets:
-    - type: agent
-      name: website-search-agent
+  target:
+    type: agent
+    name: website-search-agent
   input: "ADAM GROOMING BN LTD"
   # expected response: https://adamgroomingatelier.com/
