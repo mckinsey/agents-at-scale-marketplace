@@ -16,6 +16,7 @@ dependencies = [
     "pydantic-settings>=2.0.0", # environment variable config
     "ark-sdk",
     "openinference-instrumentation-openai",
+    "opentelemetry-exporter-otlp-proto-http",
     "urllib3>=2.6.0",
     "a2a-sdk[http-server]>=0.3.0",
 ]

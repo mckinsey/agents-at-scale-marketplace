@@ -45,13 +45,15 @@ spec:
 EOF
 
 echo "Waiting for result..."
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
   PHASE=$(kubectl --context "$CONTEXT" get query "$QUERY_NAME" -n default -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
   if [[ "$PHASE" == "done" || "$PHASE" == "error" ]]; then
     break
   fi
+  printf "."
   sleep 2
 done
+echo ""
 
 CONTENT=$(kubectl --context "$CONTEXT" get query "$QUERY_NAME" -n default -o jsonpath='{.status.response.content}')
 PHASE=$(kubectl --context "$CONTEXT" get query "$QUERY_NAME" -n default -o jsonpath='{.status.phase}')
