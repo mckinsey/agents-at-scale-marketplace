@@ -62,6 +62,9 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 for part in getattr(item, "content", []):
                     if getattr(part, "type", None) == "output_text":
                         return part.text
+            # CFG custom tool calls return constrained output in `input` field
+            if getattr(item, "type", None) == "custom_tool_call":
+                return getattr(item, "input", None)
         return None
 
     @staticmethod
