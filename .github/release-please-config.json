@@ -108,6 +108,14 @@
       "extra-files": [
         "chart/Chart.yaml"
       ]
+    },
+    "executors/openai-responses": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "executor-openai-responses",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
     }
   }
 }
