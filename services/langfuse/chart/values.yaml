@@ -48,6 +48,14 @@ service:
 # Namespace configuration
 namespace: telemetry
 
+# UI URL configuration
+# Set these when installing to make the UI accessible from the dashboard
+# For wrapper charts, annotations must be passed to the dependency's web service:
+# --set langfuse.langfuse.web.service.annotations.ark\\.mckinsey\\.com/marketplace-item-ui-url=https://langfuse.example.com
+# --set langfuse.langfuse.web.service.annotations.ark\\.mckinsey\\.com/marketplace-item-ui-label="Langfuse Dashboard"
+uiUrl: ""
+uiLabel: ""
+
 # Demo configuration
 demo:
   user:
@@ -77,6 +85,12 @@ otelEnvironmentVariableSecrets:
 
 # Langfuse helm chart values (passed to dependency)
 langfuse:
+  service:
+    # Labels required for marketplace detection
+    # The app.kubernetes.io/instance label must match the Helm release name
+    labels:
+      app.kubernetes.io/instance: langfuse
+    annotations: {}
   langfuse:
     nextauth:
       secret:

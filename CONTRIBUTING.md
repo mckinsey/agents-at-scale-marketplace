@@ -80,11 +80,12 @@ Each marketplace item should include:
    - Usage examples
    - Troubleshooting
 
-3. **Helm Chart** (for services): 
+3. **Helm Chart** (for services):
    - Place in `chart/` subdirectory
-   - Include `Chart.yaml` with proper metadata
+   - Include `Chart.yaml` with proper metadata (see [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup))
    - Provide `values.yaml` with sensible defaults
    - Include necessary templates
+   - For services with web UIs, configure UI URL annotations (see [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup#ui-url-configuration))
 
 4. **DevSpace Configuration** (recommended):
    - `devspace.yaml` for local development
@@ -99,6 +100,8 @@ Before submitting:
 - Verify all documentation is accurate
 - Ensure examples work as described
 - Check that your item integrates properly with the Ark platform
+
+For detailed information on configuring chart annotations and UI URLs, see the [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup).
 
 **Language and Technology Choices**
 

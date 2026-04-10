@@ -20,6 +20,12 @@ service:
   clientPort: 6274
   proxyPort: 6277
 
+# UI URL configuration
+# Set uiUrl and uiLabel when installing to make the UI accessible from the dashboard
+# Example: --set uiUrl=https://mcp-inspector.example.com --set uiLabel="MCP Inspector"
+uiUrl: ""
+uiLabel: ""
+
 # Namespace configuration
 namespace: default
 

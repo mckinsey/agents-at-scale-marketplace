@@ -5,6 +5,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "mcp-inspector.labels" . | nindent 4 }}
+  {{- if .Values.uiUrl }}
+  annotations:
+    ark.mckinsey.com/marketplace-item-ui-url: {{ .Values.uiUrl | quote }}
+    {{- if .Values.uiLabel }}
+    ark.mckinsey.com/marketplace-item-ui-label: {{ .Values.uiLabel | quote }}
+    {{- end }}
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   ports:
