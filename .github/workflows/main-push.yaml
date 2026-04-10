@@ -31,6 +31,7 @@ jobs:
           - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
           - { name: executor-langchain, path: executors/langchain }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
+          - { name: executor-openai-responses, path: executors/openai-responses }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -66,6 +67,8 @@ jobs:
           - { name: executor-langchain, path: executors/langchain, namespace: default, run-deployment-test: false }
           # disable executor-claude-agent-sdk deployment tests for PRs to avoid hitting 5m limit
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk, namespace: default, run-deployment-test: false }
+          # disable executor-openai-responses deployment tests for PRs to avoid hitting 5m limit
+          - { name: executor-openai-responses, path: executors/openai-responses, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -156,6 +159,7 @@ jobs:
           - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
           - { name: executor-langchain, path: executors/langchain }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
+          - { name: executor-openai-responses, path: executors/openai-responses }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -182,6 +186,7 @@ jobs:
           - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default }
           - { name: executor-langchain, path: executors/langchain, namespace: default }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk, namespace: default }
+          - { name: executor-openai-responses, path: executors/openai-responses, namespace: default }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
