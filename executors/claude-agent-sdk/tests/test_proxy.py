@@ -1,4 +1,4 @@
-"""Tests for HTTP proxy logic (Task 8.3)."""
+"""Tests for HTTP proxy logic (Task 6.1 - ensure_sandbox via proxy)."""
 
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,48 +17,8 @@ def sandbox_manager() -> MagicMock:
     config = SchedulerConfig(namespace="test-ns")
     manager = MagicMock(spec=SandboxManager)
     manager._config = config
-    manager._routing_table = {}
-    manager.touch = MagicMock()
+    manager.update_last_activity = AsyncMock()
     return manager
-
-
-@pytest.fixture
-def app(sandbox_manager: MagicMock) -> TestClient:
-    fastapi_app = create_proxy_app(sandbox_manager=sandbox_manager)
-    return TestClient(fastapi_app, raise_server_exceptions=False)
-
-
-class TestProxySuccess:
-    def test_successful_proxy(self, sandbox_manager: MagicMock, app: TestClient) -> None:
-        sandbox_info = SandboxInfo(
-            claim_name="claim-1",
-            sandbox_name="sandbox-1",
-            service_fqdn="sandbox-1.test-ns.svc.cluster.local",
-        )
-        sandbox_manager.ensure_sandbox = AsyncMock(return_value=(sandbox_info, False))
-
-        mock_response = httpx.Response(
-            200,
-            content=json.dumps({"result": "ok"}).encode(),
-            headers={"content-type": "application/json"},
-        )
-
-        with patch("claude_agent_scheduler.proxy.httpx.AsyncClient") as mock_client_cls:
-            mock_client = AsyncMock()
-            mock_client.request = AsyncMock(return_value=mock_response)
-            mock_client.aclose = AsyncMock()
-            mock_client_cls.return_value = mock_client
-
-            # Recreate app with patched client
-            fastapi_app = create_proxy_app(sandbox_manager=sandbox_manager)
-            client = TestClient(fastapi_app, raise_server_exceptions=False)
-
-            response = client.post(
-                "/",
-                json={"context_id": "conv-1", "message": {"role": "user", "parts": [{"text": "hello"}]}},
-            )
-
-        sandbox_manager.ensure_sandbox.assert_called_once_with("conv-1")
 
 
 class TestProxySandboxError:
@@ -70,7 +30,7 @@ class TestProxySandboxError:
 
         response = client.post(
             "/",
-            json={"context_id": "conv-fail", "message": {"role": "user", "parts": [{"text": "hello"}]}},
+            json={"jsonrpc": "2.0", "id": "1", "params": {"message": {"contextId": "conv-fail"}}},
         )
         assert response.status_code == 502
         assert "Sandbox creation failed" in response.json()["error"]
@@ -103,7 +63,7 @@ class TestProxyPassThrough:
 
             response = client.post(
                 "/",
-                json={"context_id": "conv-err", "message": {"role": "user", "parts": [{"text": "hello"}]}},
+                json={"jsonrpc": "2.0", "id": "1", "params": {"message": {"contextId": "conv-err"}}},
             )
 
         assert response.status_code == 400

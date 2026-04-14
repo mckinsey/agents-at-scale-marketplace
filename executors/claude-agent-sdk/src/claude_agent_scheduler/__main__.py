@@ -37,7 +37,7 @@ async def run_scheduler() -> None:
     @asynccontextmanager
     async def lifespan(app: FastAPI):  # type: ignore[type-arg]
         await config_watcher.start()
-        await sandbox_manager.rebuild_map()
+        await sandbox_manager.warm_cache()
         reaper_task = asyncio.create_task(sandbox_manager.run_reaper())
         yield
         shutdown_event.set()

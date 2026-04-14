@@ -1,11 +1,11 @@
-"""Tests for contextId extraction from A2A JSON-RPC messages."""
+"""Tests for contextId extraction from A2A JSON-RPC messages (Task 6.6)."""
 
 import json
 import uuid
 
 import pytest
 
-from claude_agent_scheduler.proxy import extract_context_id, extract_response_context_id
+from claude_agent_scheduler.proxy import extract_context_id
 
 
 def _a2a_message(context_id: str | None = "conv-abc-123", include_field: bool = True) -> bytes:
@@ -58,19 +58,3 @@ class TestExtractContextId:
         original = _a2a_message("conv-existing")
         cid, body = extract_context_id(original)
         assert body is original
-
-
-class TestExtractResponseContextId:
-    def test_present_in_result(self) -> None:
-        body = json.dumps({
-            "jsonrpc": "2.0", "id": "1",
-            "result": {"contextId": "8d9afd52-1234", "status": {"state": "completed"}},
-        }).encode()
-        assert extract_response_context_id(body) == "8d9afd52-1234"
-
-    def test_missing(self) -> None:
-        body = json.dumps({"jsonrpc": "2.0", "id": "1", "result": {}}).encode()
-        assert extract_response_context_id(body) == ""
-
-    def test_invalid_json(self) -> None:
-        assert extract_response_context_id(b"not json") == ""

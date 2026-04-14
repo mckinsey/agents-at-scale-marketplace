@@ -1,4 +1,4 @@
-"""A2A reverse proxy: extract context_id, route to sandbox, forward request."""
+"""A2A reverse proxy: extract contextId, route to sandbox, forward request."""
 
 import json
 import logging
@@ -40,24 +40,6 @@ def extract_context_id(body: bytes) -> tuple[str, bytes]:
         return generated, json.dumps(data).encode()
     except (json.JSONDecodeError, AttributeError, TypeError):
         return str(uuid.uuid4()), body
-
-
-def extract_response_context_id(body: bytes) -> str:
-    """Extract contextId from an A2A JSON-RPC response.
-
-    The executor's response is a JSON-RPC result containing a Task object
-    with a top-level contextId field.
-    """
-    try:
-        data = json.loads(body)
-        result = data.get("result", {})
-        if isinstance(result, dict):
-            ctx = result.get("contextId", "")
-            if isinstance(ctx, str) and ctx.strip():
-                return ctx.strip()
-    except (json.JSONDecodeError, AttributeError, TypeError):
-        pass
-    return ""
 
 
 def create_proxy_app(
@@ -104,19 +86,16 @@ def create_proxy_app(
                 route_span.set_attribute("sandbox.name", info.sandbox_name)
                 route_span.set_attribute("sandbox.is_new", is_new)
 
-                # Update activity timestamp
-                sandbox_manager.touch(conversation_id)
-
                 # Forward request to sandbox
                 target_url = f"http://{info.service_fqdn}:8000/{path}"
                 try:
                     response = await _proxy_request(http_client, request, body, target_url)
 
-                    # Register response contextId as alias so follow-up queries
-                    # using the executor-chosen ID route to the same sandbox
-                    resp_ctx = extract_response_context_id(response.body)
-                    if resp_ctx and resp_ctx != conversation_id:
-                        sandbox_manager.add_alias(resp_ctx, conversation_id)
+                    # Update last-activity annotation
+                    try:
+                        await sandbox_manager.update_last_activity(conversation_id)
+                    except Exception:
+                        logger.warning("Failed to update last-activity for conversation=%s", conversation_id, exc_info=True)
 
                     return response
                 except httpx.ConnectError as e:

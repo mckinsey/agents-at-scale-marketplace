@@ -1,4 +1,4 @@
-"""Tests for SchedulerConfig parsing and defaults (Task 8.1)."""
+"""Tests for SchedulerConfig parsing and defaults."""
 
 import pytest
 
