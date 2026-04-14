@@ -2,12 +2,12 @@ apiVersion: v2
 name: phoenix
 description: Phoenix observability with OTEL configuration
 type: application
-version: 0.1.7
+version: 0.1.8
 appVersion: 4.0.5
 annotations:
   ark.mckinsey.com/service: phoenix
   ark.mckinsey.com/resources: service
-  ark.mckinsey.com/marketplace-item-name: "service/phoenix"
+  ark.mckinsey.com/marketplace-item-name: service/phoenix
 dependencies:
   - name: phoenix-helm
     version: 4.0.5
