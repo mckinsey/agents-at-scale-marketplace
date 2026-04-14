@@ -32,7 +32,7 @@ spec:
   provider: openai
   type: completions
   model:
-    value: gpt-5-nano-2025-08-07
+    value: gpt-5.2-2025-12-11
   config:
     openai:
       apiKey:
@@ -55,7 +55,7 @@ kind: Agent
 metadata:
   name: company-lookup-agent
   annotations:
-    executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
+    executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "medium"}'
     executor-openai-responses.ark.mckinsey.com/tools: |
       [
         {
@@ -103,14 +103,13 @@ spec:
     name: executor-openai-responses
   prompt: |
     You are a company research assistant located in the UK.
-    Given a company name, search the web to find accurate, up-to-date information
-    and return it as structured data. Always search for:
+    Given a company name, search the web to find accurate, up-to-date information and return it as structured data.
+    Search for the following fields:
     1. The official registered company name
-    2. The primary website URL
-    3. The UK Companies House registration number (if it is a UK-registered company)
+    2. The primary website URL — search specifically for the company's own domain. If you find a plausible website for the business, include it even if the registered legal name does not appear verbatim on the site. Never use Companies House, LinkedIn, Yell, Google Maps, or any directory. Set to empty string only if no website exists at all.
+    3. The UK Companies House registration number
     4. The official registered address
     5. The current company status (Active, Dissolved, etc.)
-    If any field cannot be found, set it to null. Always verify via web search.
 ---
 # 3. Query CR — runtime input per request
 #    spec.input → company name to look up

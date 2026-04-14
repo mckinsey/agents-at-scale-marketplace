@@ -115,7 +115,9 @@ annotations:
   executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
 ```
 
-Effort values: `"low"`, `"medium"`, `"high"`. Note: `"minimal"` is not supported when using web search tools.
+Effort values: `"low"`, `"medium"`, `"high"`. Omitting the annotation defaults to `"medium"`.
+
+Use `"low"` for focused single-task agents (e.g. find one URL). Use `"medium"` or higher for agents that must gather multiple pieces of information (e.g. structured lookup with web search across several fields) — lower effort may not perform enough searches to find all required data.
 
 ### Structured Output
 
@@ -137,7 +139,27 @@ annotations:
 
 ## Examples
 
-See [`examples/`](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/openai-responses/examples) for ready-to-use YAML manifests:
+See [`examples/`](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/openai-responses/examples) for ready-to-use YAML manifests and demo scripts.
+
+### Running the demo
+
+Against a live cluster:
+
+```bash
+# Apply all CRDs and run each example, printing prompt, input and response
+examples/demo.sh
+```
+
+Locally without Kubernetes:
+
+```bash
+export OPENAI_API_KEY=sk-...
+export OPENAI_BASE_URL=https://your-endpoint  # optional
+export MODEL_NAME=gpt-5.2-2025-12-11         # optional
+python3 examples/demo_local.py
+```
+
+### Example manifests
 
 | Example | What it shows |
 |---------|--------------|

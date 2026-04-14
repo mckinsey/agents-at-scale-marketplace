@@ -137,8 +137,11 @@ class OpenAIResponsesExecutor(BaseExecutor):
         conversation_id: str,
     ) -> list[Message]:
         for iteration in range(config.max_tool_iterations):
-            response = await client.responses.create(**params.to_api_kwargs())
+            api_kwargs = params.to_api_kwargs()
+            logger.info(f"Request tools: {api_kwargs.get('tools')}")
+            response = await client.responses.create(**api_kwargs)
             self._save_response_id(conversation_id, response.id)
+            logger.info(f"Response output types: {[getattr(item, 'type', None) for item in response.output]}")
 
             function_calls = self._extract_function_calls(response)
 
