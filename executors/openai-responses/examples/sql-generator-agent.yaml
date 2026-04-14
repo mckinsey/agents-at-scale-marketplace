@@ -8,7 +8,7 @@
 # Requires:
 #   - executor-openai-responses deployed
 #   - Secret openai-credentials with api-key and base-url
-#   - Model gpt-5-nano-2025-08-07 or newer (CFG is a gpt-5 feature)
+#   - Model gpt-5.2-2025-12-11 or newer (CFG is a gpt-5 feature)
 # ──────────────────────────────────────────────────────────────────────────────
 
 # 1. Model CR
@@ -20,7 +20,7 @@ spec:
   provider: openai
   type: completions
   model:
-    value: gpt-5-nano-2025-08-07
+    value: gpt-5.2-2025-12-11
   config:
     openai:
       apiKey:
