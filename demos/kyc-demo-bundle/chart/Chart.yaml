@@ -20,6 +20,7 @@ annotations:
   ark.mckinsey.com/type: bundle
   ark.mckinsey.com/use-case: kyc
   ark.mckinsey.com/components: agents,teams
+  ark.mckinsey.com/marketplace-item-name: "demo/kyc-demo-bundle"
 dependencies:
   - name: file-gateway
     version: 0.1.6

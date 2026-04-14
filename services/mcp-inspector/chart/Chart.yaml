@@ -7,3 +7,4 @@ appVersion: 0.16.5
 annotations:
   ark.mckinsey.com/service: mcp-inspector
   ark.mckinsey.com/resources: service
+  ark.mckinsey.com/marketplace-item-name: "service/mcp-inspector"

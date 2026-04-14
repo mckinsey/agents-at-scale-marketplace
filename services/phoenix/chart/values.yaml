@@ -25,6 +25,14 @@ service:
   name: phoenix-svc
   port: 6006
 
+# UI URL configuration
+# Set uiUrl and uiLabel when installing to make the UI accessible from the dashboard
+# For wrapper charts, annotations must be passed to the dependency's web service:
+# --set phoenix-helm.service.annotations.ark\\.mckinsey\\.com/marketplace-item-ui-url=https://phoenix.example.com
+# --set phoenix-helm.service.annotations.ark\\.mckinsey\\.com/marketplace-item-ui-label="Phoenix Dashboard"
+uiUrl: ""
+uiLabel: ""
+
 # Namespace configuration
 namespace: phoenix
 
@@ -47,6 +55,11 @@ otelEnvironmentVariableSecrets:
 phoenix-helm:
   service:
     type: ClusterIP
+    # Labels required for marketplace detection
+    # The app.kubernetes.io/instance label must match the Helm release name
+    labels:
+      app.kubernetes.io/instance: phoenix
+    annotations: {}
   auth:
     enableAuth: false
   ingress:

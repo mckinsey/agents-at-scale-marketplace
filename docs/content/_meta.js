@@ -1,5 +1,6 @@
 export default {
   index: 'Introduction',
+  'marketplace-setup': 'Marketplace Setup',
   executors: 'Executors',
   services: 'Services',
   mcps: 'MCP Servers',
