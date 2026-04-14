@@ -30,6 +30,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.companiesHouse.apiKeySecret.name }}
                   key: {{ .Values.companiesHouse.apiKeySecret.key }}
-                  optional: true
+                  optional: false
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

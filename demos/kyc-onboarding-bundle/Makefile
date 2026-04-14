@@ -36,6 +36,7 @@ help:
 	@echo "  make build-pdf-mcp          PDF extraction MCP only"
 	@echo "  make build-web-mcp          Web research MCP only"
 	@echo "  make build-perplexity-mcp   Perplexity Ask MCP only"
+	@echo "  make build-companies-house-mcp  Companies House MCP only"
 	@echo ""
 	@echo "Workflows:"
 	@echo "  Phase I:  submit-profile-init, submit-profile-enrichment, submit-requirements, submit-initial-risk"
