@@ -1,12 +1,12 @@
 apiVersion: v2
 name: langfuse
 description: Langfuse with Gateway API HTTPRoute integration
-version: 0.1.5
+version: 0.1.6
 appVersion: 1.5.7
 annotations:
   ark.mckinsey.com/service: langfuse
   ark.mckinsey.com/resources: service
-  ark.mckinsey.com/marketplace-item-name: "service/langfuse"
+  ark.mckinsey.com/marketplace-item-name: service/langfuse
 dependencies:
   - name: langfuse
     version: 1.5.7

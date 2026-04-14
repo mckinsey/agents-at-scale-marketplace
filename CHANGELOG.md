@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.28](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.27...v0.1.28) (2026-04-14)
+
+
+### Features
+
+* marketplace install detection and url discovery ([#196](https://github.com/mckinsey/agents-at-scale-marketplace/issues/196)) ([b016ccf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b016ccf3203d5895ff7e70b40d349a66bf512bdf))
+* OpenAI responses executor ([#179](https://github.com/mckinsey/agents-at-scale-marketplace/issues/179)) ([cb852e1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cb852e11420a5228993e76e4e0c95e45b0a24e5a))
+* **openai-responses:** improve example agents and docs ([#211](https://github.com/mckinsey/agents-at-scale-marketplace/issues/211)) ([8826200](https://github.com/mckinsey/agents-at-scale-marketplace/commit/88262007dbe3e231a613c5e8de96af25d535c065))
+
+
+### Bug Fixes
+
+* use CPU-only PyTorch in speech-mcp-server to reduce build time ([#168](https://github.com/mckinsey/agents-at-scale-marketplace/issues/168)) ([18c30af](https://github.com/mckinsey/agents-at-scale-marketplace/commit/18c30afae7ccbe28ff34891da67729d62bdf0d78))
+
 ## [0.1.27](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.26...v0.1.27) (2026-04-03)
 
 

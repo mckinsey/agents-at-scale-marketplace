@@ -2,9 +2,9 @@ apiVersion: v2
 name: mcp-inspector
 description: MCP Inspector - Developer tool for testing and debugging MCP servers
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: 0.16.5
 annotations:
   ark.mckinsey.com/service: mcp-inspector
   ark.mckinsey.com/resources: service
-  ark.mckinsey.com/marketplace-item-name: "service/mcp-inspector"
+  ark.mckinsey.com/marketplace-item-name: service/mcp-inspector

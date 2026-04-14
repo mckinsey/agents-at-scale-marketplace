@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.14](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.13...marketplace-docs-v0.1.14) (2026-04-14)
+
+
+### Features
+
+* marketplace install detection and url discovery ([#196](https://github.com/mckinsey/agents-at-scale-marketplace/issues/196)) ([b016ccf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b016ccf3203d5895ff7e70b40d349a66bf512bdf))
+* OpenAI responses executor ([#179](https://github.com/mckinsey/agents-at-scale-marketplace/issues/179)) ([cb852e1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cb852e11420a5228993e76e4e0c95e45b0a24e5a))
+* **openai-responses:** improve example agents and docs ([#211](https://github.com/mckinsey/agents-at-scale-marketplace/issues/211)) ([8826200](https://github.com/mckinsey/agents-at-scale-marketplace/commit/88262007dbe3e231a613c5e8de96af25d535c065))
+
 ## [0.1.13](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.12...marketplace-docs-v0.1.13) (2026-03-30)
 
 
