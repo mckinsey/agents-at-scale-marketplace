@@ -1,7 +1,7 @@
 {
   "projectName": "agents-at-scale-marketplace",
   "projectOwner": "mckinsey",
-  "contributorsPerLine": 6,
+  "contributorsPerLine": 7,
   "skipCi": true,
   "repoType": "github",
   "repoHost": "https://github.com",
@@ -419,13 +419,19 @@
         "bug",
         "ideas"
       ]
+    },
+    {
+      "login": "adam-mck",
+      "name": "adam-mck",
+      "avatar_url": "https://avatars.githubusercontent.com/u/174901006?v=4",
+      "profile": "https://github.com/adam-mck",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
-  "contributorsPerLine": 7,
-  "skipCi": true,
-  "repoType": "github",
-  "repoHost": "https://github.com",
-  "projectName": "agents-at-scale-ark",
-  "projectOwner": "mckinsey",
-  "badgeTemplate": "<a href=\"https://github.com/mckinsey/agents-at-scale/blob/main/docs/content/contributors.mdx\"><img src=\"https://img.shields.io/github/all-contributors/mckinsey/agents-at-scale?color=ee8449&style=flat-square\" alt=\"All Contributors\" /></a>"
+  "badgeTemplate": "<a href=\"https://github.com/mckinsey/agents-at-scale/blob/main/docs/content/contributors.mdx\"><img src=\"https://img.shields.io/github/all-contributors/mckinsey/agents-at-scale?color=ee8449&style=flat-square\" alt=\"All Contributors\" /></a>",
+  "commitType": "docs",
+  "commitConvention": "angular"
 }
