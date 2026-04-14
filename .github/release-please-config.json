@@ -93,14 +93,6 @@
       "release-type": "simple",
       "package-name": "cobol-demo-data-seeder"
     },
-    "mcps/speech-mcp-server": {
-      "changelog-path": "CHANGELOG.md",
-      "release-type": "helm",
-      "package-name": "speech-mcp-server",
-      "extra-files": [
-        "chart/Chart.yaml"
-      ]
-    },
     "executors/langchain": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
@@ -113,6 +105,14 @@
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
       "package-name": "executor-claude-agent-sdk",
+      "extra-files": [
+        "chart/Chart.yaml"
+      ]
+    },
+    "executors/openai-responses": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "executor-openai-responses",
       "extra-files": [
         "chart/Chart.yaml"
       ]

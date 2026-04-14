@@ -17,7 +17,7 @@
     "express": "^4.19.2",
     "zod": "^3.25.76",
     "zod-to-json-schema": "3.23.5",
-    "minimatch": "^10.0.1",
+    "minimatch": "^10.2.3",
     "diff": "^7.0.0"
   },
   "devDependencies": {

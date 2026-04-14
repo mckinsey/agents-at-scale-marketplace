@@ -12,63 +12,57 @@ title: Marketplace Documentation
   marginBottom: '32px',
   color: 'white'
 }}>
-  <h3 style={{ margin: 0, marginBottom: '8px', color: 'white' }}>Part of the ARK Platform</h3>
+  <h3 style={{ margin: 0, marginBottom: '8px', color: 'white' }}>Part of the Ark Platform</h3>
   <div style={{ margin: 0, opacity: 0.9 }}>
-    This marketplace is an integral component of the <a href="https://github.com/mckinsey/agents-at-scale-ark" style={{ color: 'white', textDecoration: 'underline' }}><strong>Agents at Scale (ARK)</strong></a> platform, providing services and tools for agentic systems.
+    This marketplace is an integral component of the <a href="https://github.com/mckinsey/agents-at-scale-ark" style={{ color: 'white', textDecoration: 'underline' }}><strong>Agents at Scale (Ark)</strong></a> platform, providing add-on capabilities for agentic systems.
   </div>
 </div>
 
-Welcome to the Agents at Scale Marketplace documentation. This marketplace provides a collection of services, agents, and tools for the [ARK platform](https://github.com/mckinsey/agents-at-scale-ark).
+Welcome to the Agents at Scale Marketplace documentation. The marketplace extends [Ark](https://github.com/mckinsey/agents-at-scale-ark) with executors, services, MCP servers, agents, and demo bundles.
 
-## What is the Marketplace?
+## Executors
 
-The marketplace is a curated collection of:
+External execution engines that process agent workloads via A2A protocol.
 
-- **Services**: Production-ready observability, storage, and infrastructure services
-- **Agents**: Pre-built agents and agent templates
-- **Tools**: Reusable tools and utilities for agent development
-- **Projects**: Complete solution accelerators and reference implementations
+- **[Claude Agent SDK Executor](./executors/claude-agent-sdk)** — Native Claude executor with built-in tools and session persistence
+- **[LangChain Executor](./executors/langchain)** — LangChain executor with RAG support
 
-## Available Services
+## Services
 
-Currently available services:
+Infrastructure add-ons deployed alongside Ark.
 
-- **[A2A Inspector](./services/a2a-inspector)** - Developer tool for testing and debugging A2A protocol agents
-- **[ARK Sandbox](./services/ark-sandbox)** - Isolated container environments for AI agent code execution with MCP tool access
-- **[Langfuse](./services/langfuse)** - Open Source LLM Application/Agent observability, evaluation, and prompt management
-- **[MCP Inspector](./services/mcp-inspector)** - Developer tool for testing and debugging MCP servers
-- **[Phoenix](./services/phoenix)** - AI/ML observability and evaluation platform with OpenTelemetry integration
+- **[A2A Inspector](./services/a2a-inspector)** — Developer tool for testing and debugging A2A protocol agents
+- **[Ark Sandbox](./services/ark-sandbox)** — Isolated container environments for AI agent code execution with MCP tools
+- **[File Gateway](./services/file-gateway)** — S3-compatible file storage gateway with REST API
+- **[Langfuse](./services/langfuse)** — LLM observability and analytics platform with session tracking
+- **[MCP Inspector](./services/mcp-inspector)** — Developer tool for testing and debugging MCP servers
+- **[Phoenix](./services/phoenix)** — AI/ML observability and evaluation platform with OpenTelemetry integration
 
-## Available Agents
+## MCP Servers
 
-Currently available agents:
+Tool providers registered as `MCPServer` CRDs.
 
-- **[Noah](./agents/noah)** - Runtime administration agent with cluster privileges and MCP server
+- **[Filesystem MCP Server](./mcps/filesystem-mcp-server)** — Filesystem operations with session management and workspace config
+
+## Agents
+
+Pre-built agents deployed to your Ark cluster.
+
+- **[Noah](./agents/noah)** — Runtime administration agent with cluster privileges and MCP server
 
 ## Quick Start
 
-### Install with ARK CLI (Recommended)
-
-The easiest way to install marketplace services and agents is using the [ARK CLI](https://mckinsey.github.io/agents-at-scale-ark/):
+### Install with Ark CLI (Recommended)
 
 ```bash
-# Install services
-ark install marketplace/services/a2a-inspector
-ark install marketplace/services/ark-sandbox
-ark install marketplace/services/langfuse
-ark install marketplace/services/mcp-inspector
+ark install marketplace/executors/executor-claude-agent-sdk
 ark install marketplace/services/phoenix
-
-# Install agents
 ark install marketplace/agents/noah
 ```
 
-### Deploy with Helm 
-
-For production deployments or advanced customization:
+### Deploy with Helm
 
 ```bash
-# Deploy using Helm from local chart
 cd services/phoenix
 helm dependency update chart/
 helm install phoenix ./chart -n phoenix --create-namespace
@@ -76,41 +70,21 @@ helm install phoenix ./chart -n phoenix --create-namespace
 
 ### Development Mode with DevSpace
 
-For local development with hot-reload and debugging:
-
 ```bash
-# Use DevSpace for local development
 cd services/phoenix
 devspace dev
 ```
 
-## Future Plans
-
-This marketplace will include:
-- Additional observability services
-- Pre-built agents and agent templates
-- Reusable tools and utilities
-- Complete projects and solution accelerators
-
 ## Related Resources
 
-- **[ARK Platform Repository](https://github.com/mckinsey/agents-at-scale-ark)** - The main Agents at Scale platform
-- **[ARK Documentation](https://mckinsey.github.io/agents-at-scale-ark/)** - Complete platform documentation and guides
+- **[Ark Platform Repository](https://github.com/mckinsey/agents-at-scale-ark)** — The core platform
+- **[Ark Documentation](https://mckinsey.github.io/agents-at-scale-ark/)** — Platform documentation
 
 ## Contributing
 
-When adding new services to the marketplace:
-
-1. Create service directory: `services/<service-name>/`
-2. Add Helm chart: `services/<service-name>/chart/`
-3. Add DevSpace config: `services/<service-name>/devspace.yaml`
-4. Add documentation: `docs/content/services/<service-name>.mdx`
-5. Update the services index
-
-When adding new agents to the marketplace:
-
-1. Create agent directory: `agents/<agent-name>/`
-2. Add Helm chart: `agents/<agent-name>/chart/`
-3. Add DevSpace config: `agents/<agent-name>/devspace.yaml`
-4. Add documentation: `docs/content/agents/<agent-name>.mdx`
-5. Update the agents index and marketplace.json with `type: "agent"`
+1. Choose the appropriate directory (`executors/`, `services/`, `mcps/`, `agents/`, `demos/`)
+2. Each component needs: Helm chart in `chart/`, `README.md`, `devspace.yaml`
+3. Add an entry to `marketplace.json`
+4. Add documentation: `docs/content/<type>/<name>.mdx`
+5. Test locally with DevSpace or Helm
+6. Submit a pull request with a conventional commit title

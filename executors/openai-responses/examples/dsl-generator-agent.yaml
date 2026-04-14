@@ -1,0 +1,92 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Generic DSL Generator using GPT-5 CFG (Context-Free Grammar) with Lark syntax.
+#
+# The DSL is a small functional pipeline language:
+#
+#   <source> | <op> | <op> | ...
+#
+#   Operations:
+#     filter(<field> <op> <value>)       — keep rows matching condition
+#     select(<field>, ...)               — project fields
+#     map(<field> = <expr>, ...)         — derive new fields
+#     sort(<field>, asc|desc)            — order rows
+#     limit(<n>)                         — cap row count
+#     group(<field>)                     — group by field
+#     count()                            — count rows
+#
+#   Example output:
+#     orders | filter(total_amount > 500) | select(id, name, total_amount) | sort(order_date, desc) | limit(10)
+#
+# The CFG tool constrains the model to only produce syntactically valid
+# pipeline expressions — enforced at token level, not by prompt.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# 1. Model CR (shared with other gpt-5 examples — skip if already applied)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: openai-gpt-5-nano
+spec:
+  provider: openai
+  type: completions
+  model:
+    value: gpt-5.2-2025-12-11
+  config:
+    openai:
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: api-key
+      baseUrl:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: base-url
+---
+# 2. Agent CR
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: dsl-generator-agent
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
+    executor-openai-responses.ark.mckinsey.com/tools: |
+      [
+        {
+          "type": "custom",
+          "name": "generate_pipeline",
+          "description": "Generate a valid functional pipeline DSL expression constrained by grammar",
+          "format": {
+            "type": "grammar",
+            "syntax": "lark",
+            "definition": "PIPE: \" | \"\nCOMMA: \", \"\nLP: \"(\"\nRP: \")\"\nEQ: \" = \"\n\nstart: source (PIPE operation)+\n\nsource: IDENTIFIER\n\noperation: filter_op | select_op | map_op | sort_op | limit_op | group_op | count_op\n\nfilter_op: \"filter\" LP condition RP\ncondition: IDENTIFIER SP cmp_op SP value\ncmp_op: \">\" | \"<\" | \">=\" | \"<=\" | \"==\" | \"!=\"\nvalue: NUMBER | QUOTED_STRING | IDENTIFIER\n\nselect_op: \"select\" LP IDENTIFIER (COMMA IDENTIFIER)* RP\n\nmap_op: \"map\" LP mapping (COMMA mapping)* RP\nmapping: IDENTIFIER EQ expr\nexpr: IDENTIFIER | NUMBER | IDENTIFIER SP arith SP (IDENTIFIER | NUMBER)\narith: \"+\" | \"-\" | \"*\" | \"/\"\n\nsort_op: \"sort\" LP IDENTIFIER COMMA order RP\norder: \"asc\" | \"desc\"\n\nlimit_op: \"limit\" LP NUMBER RP\n\ngroup_op: \"group\" LP IDENTIFIER RP\n\ncount_op: \"count\" LP RP\n\nSP: \" \"\nIDENTIFIER: /[a-z_][a-z0-9_]*/\nNUMBER: /[0-9]+/\nQUOTED_STRING: /\\'[^']*\\'/\n"
+          }
+        }
+      ]
+spec:
+  modelRef:
+    name: openai-gpt-5-nano
+  executionEngine:
+    name: executor-openai-responses
+  prompt: |
+    You are a DSL pipeline generator. Given a natural language data transformation
+    request, generate a valid pipeline expression using the generate_pipeline tool.
+
+    The pipeline DSL works as follows:
+    - Start with a source table name
+    - Chain operations with |
+    - Available operations: filter, select, map, sort, limit, group, count
+
+    Always use the generate_pipeline tool to return your expression.
+---
+# 3. Query CR
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: dsl-query-request
+spec:
+  target:
+    type: agent
+    name: dsl-generator-agent
+  input: "From the users table, keep only active users, show their id and email, sorted by created_at descending, top 20"

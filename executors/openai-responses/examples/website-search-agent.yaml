@@ -1,0 +1,87 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# How Ark CRs map to the OpenAI Responses API
+#
+#   Ark CR                                    Responses API field
+#   ────────────────────────────────────────  ──────────────────────────────
+#   Model.spec.model.value                    model
+#   Model.spec.config.openai.apiKey           api_key
+#   Agent.spec.prompt                         instructions  (developer role,
+#                                             re-sent every turn)
+#   Query.spec.input                          input
+#
+# Tool configuration (annotation key: executor-openai-responses.ark.mckinsey.com/tools)
+#   Value: JSON array following the OpenAI Responses API tool schema.
+#   Cascade order (lowest → highest priority): ExecutionEngine → Agent → Query
+#   Merge semantics: spread by "type" key — each layer adds new tool types or
+#   replaces existing ones of the same type.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# 1. Model CR — provider credentials and model identifier
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: openai-gpt-5-nano
+spec:
+  provider: openai
+  type: completions
+  model:
+    value: gpt-5.2-2025-12-11
+  config:
+    openai:
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: api-key
+      baseUrl:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: base-url
+---
+# 2. Agent CR — static configuration
+#    spec.prompt    → Responses API `instructions`  (developer role)
+#    annotations    → built-in tool config, merged on top of ExecutionEngine defaults
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: website-search-agent
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
+    executor-openai-responses.ark.mckinsey.com/tools: |
+      [
+        {
+          "type": "web_search_preview",
+          "user_location": {
+            "type": "approximate",
+            "country": "GB",
+            "city": "London",
+            "region": "London"
+          }
+        }
+      ]
+spec:
+  modelRef:
+    name: openai-gpt-5-nano
+  executionEngine:
+    name: executor-openai-responses
+  prompt: |
+    You are an expert web search agent located in UK.
+    Your role is to find the official business website of a given UK company.
+    Search the web and return only the company's own domain — never return URLs from Companies House, LinkedIn, Yell, Google Maps, or any directory or government service.
+    Return only the URL, nothing else.
+---
+# 3. Query CR — runtime input per request
+#    spec.input     → Responses API `input`  (user turn message)
+#    No tool annotation needed here; agent-level config is sufficient.
+#    Add an annotation to override tools for this specific query (e.g. different location).
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: find-adam-grooming
+spec:
+  target:
+    type: agent
+    name: website-search-agent
+  input: "ADAM GROOMING BN LTD"
+  # expected response: https://adamgroomingatelier.com/

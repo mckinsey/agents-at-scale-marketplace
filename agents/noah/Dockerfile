@@ -22,9 +22,10 @@ RUN KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
 # Install helm (auto-detects architecture)
 RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-# Install argo CLI (architecture-aware)
+# Install argo CLI (architecture-aware, pinned to avoid broken /latest releases)
+ARG ARGO_VERSION=v4.0.3
 RUN ARGO_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "amd64") && \
-    curl -sLO "https://github.com/argoproj/argo-workflows/releases/latest/download/argo-linux-${ARGO_ARCH}.gz" \
+    curl -sfLO "https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/argo-linux-${ARGO_ARCH}.gz" \
     && gunzip "argo-linux-${ARGO_ARCH}.gz" \
     && chmod +x "argo-linux-${ARGO_ARCH}" \
     && mv "argo-linux-${ARGO_ARCH}" /usr/local/bin/argo

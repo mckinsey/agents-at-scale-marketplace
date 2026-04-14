@@ -11,15 +11,13 @@ app:
   image:
     repository: ghcr.io/mckinsey/agents-at-scale-marketplace/executor-claude-agent-sdk
     pullPolicy: IfNotPresent
-    # tag: defaults to appVersion
+    tag: "latest"
 
   env:
     - name: HOST
       value: "0.0.0.0"
     - name: PORT
       value: "8000"
-    - name: ANTHROPIC_MODEL
-      value: "claude-sonnet-4-20250514"
     - name: OTEL_INSTRUMENTATION_A2A_SDK_ENABLED
       value: "false"
 

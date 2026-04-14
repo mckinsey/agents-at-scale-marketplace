@@ -1,0 +1,44 @@
+---
+title: Speech MCP Server
+description: Audio transcription via OpenAI Whisper
+---
+
+# Speech MCP Server
+
+Local audio transcription via OpenAI Whisper, exposed as an MCP tool. Supports mp3, mp4, m4a, wav, ogg, flac, and webm formats.
+
+## Install
+
+```bash
+ark install marketplace/mcps/speech-mcp-server
+```
+
+Or with Helm:
+
+```bash
+cd mcps/speech-mcp-server
+helm install speech-mcp-server ./chart -n default --create-namespace
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `transcribe_audio` | Transcribe an audio file using Whisper |
+
+## Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `8080` |
+| `BASE_DATA_DIR` | Base directory for audio files | `/data` |
+| `WHISPER_MODEL` | Whisper model size (tiny, base, small, medium, large) | `small` |
+| `CACHE_DIR` | Transcription cache directory | `/data/whisper-cache` |
+
+## Usage
+
+Used by the COBOL modernization bundle for transcribing interview recordings.
+
+## Additional Resources
+
+- [Speech MCP Server README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/mcps/speech-mcp-server)

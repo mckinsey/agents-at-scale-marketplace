@@ -4,7 +4,7 @@ MCP server that exposes a single tool **`perplexity-ask`** for conversational AI
 
 ## Tool
 
-- **perplexity-ask** (ARK Tool name when MCPServer is registered as `perplexity`): accepts `messages` in the form `[{"role": "user", "content": "<prompt>"}]` and returns the Perplexity model response.
+- **perplexity-ask** (Ark Tool name when MCPServer is registered as `perplexity`): accepts `messages` in the form `[{"role": "user", "content": "<prompt>"}]` and returns the Perplexity model response.
 
 ## Requirements
 

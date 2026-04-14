@@ -1,0 +1,126 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Company Lookup Agent — structured output example.
+#
+# Extends the website-search-agent pattern with JSON schema enforcement via
+# the output-schema annotation. The model is constrained to return a valid
+# JSON object (no prose, no markdown) — enforced at token level by the API.
+#
+#   Ark CR                                         Responses API field
+#   ─────────────────────────────────────────────  ──────────────────────────────
+#   Model.spec.model.value                         model
+#   Model.spec.config.openai.apiKey                api_key
+#   Agent.spec.prompt                              instructions
+#   Query.spec.input                               input
+#   annotation: .../tools                          tools  (web_search_preview)
+#   annotation: .../reasoning                      reasoning
+#   annotation: .../output-schema                  text.format (json_schema)
+#
+# Output schema fields:
+#   company_name            — official registered name
+#   website_url             — primary website
+#   companies_house_number  — UK Companies House number (null if not UK)
+#   registered_address      — official registered address
+#   company_status          — e.g. "Active", "Dissolved", "Registered"
+# ──────────────────────────────────────────────────────────────────────────────
+
+# 1. Model CR (shared with other gpt-5 examples — skip if already applied)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: openai-gpt-5-nano
+spec:
+  provider: openai
+  type: completions
+  model:
+    value: gpt-5.2-2025-12-11
+  config:
+    openai:
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: api-key
+      baseUrl:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: base-url
+---
+# 2. Agent CR — static configuration
+#    spec.prompt         → Responses API `instructions`
+#    annotation: tools   → web_search_preview with UK location context
+#    annotation: schema  → constrains response to a JSON object (no prose)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: company-lookup-agent
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "medium"}'
+    executor-openai-responses.ark.mckinsey.com/tools: |
+      [
+        {
+          "type": "web_search_preview",
+          "user_location": {
+            "type": "approximate",
+            "country": "GB",
+            "city": "London",
+            "region": "London"
+          }
+        }
+      ]
+    executor-openai-responses.ark.mckinsey.com/output-schema: |
+      {
+        "type": "object",
+        "properties": {
+          "company_name": {
+            "type": "string",
+            "description": "Official registered company name"
+          },
+          "website_url": {
+            "type": "string",
+            "description": "Primary company website URL"
+          },
+          "companies_house_number": {
+            "type": "string",
+            "description": "UK Companies House registration number, or null if not a UK company"
+          },
+          "registered_address": {
+            "type": "string",
+            "description": "Official registered address of the company"
+          },
+          "company_status": {
+            "type": "string",
+            "description": "Current company status, e.g. Active, Dissolved, In Administration"
+          }
+        },
+        "required": ["company_name", "website_url", "companies_house_number", "registered_address", "company_status"],
+        "additionalProperties": false
+      }
+spec:
+  modelRef:
+    name: openai-gpt-5-nano
+  executionEngine:
+    name: executor-openai-responses
+  prompt: |
+    You are a company research assistant located in the UK.
+    Given a company name, search the web to find accurate, up-to-date information and return it as structured data.
+    Search for the following fields:
+    1. The official registered company name
+    2. The primary website URL — search specifically for the company's own domain. If you find a plausible website for the business, include it even if the registered legal name does not appear verbatim on the site. Never use Companies House, LinkedIn, Yell, Google Maps, or any directory. Set to empty string only if no website exists at all.
+    3. The UK Companies House registration number
+    4. The official registered address
+    5. The current company status (Active, Dissolved, etc.)
+---
+# 3. Query CR — runtime input per request
+#    spec.input → company name to look up
+#    Add an output-schema annotation here to override the schema for a specific query.
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: company-lookup-query
+spec:
+  target:
+    type: agent
+    name: company-lookup-agent
+  input: "ADAM GROOMING BN LTD"
+  # expected: {"company_name": "Adam Grooming BN Ltd", "website_url": "https://adamgroomingatelier.com/", ...}

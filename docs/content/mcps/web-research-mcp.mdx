@@ -1,0 +1,51 @@
+---
+title: Web Research MCP Server
+description: Web research via Tavily or Perplexity
+---
+
+# Web Research MCP Server
+
+Web research for ownership information discovery via Tavily or Perplexity search APIs.
+
+## Install
+
+```bash
+ark install marketplace/mcps/web-research-mcp
+```
+
+Or with Helm:
+
+```bash
+cd mcps/web-research-mcp
+helm install web-research-mcp ./chart -n default --create-namespace
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `research_ubo_web` | Search web for ownership information |
+| `get_web_research_results` | Compatibility stub (stateless) |
+| `list_web_evidence` | Compatibility stub (stateless) |
+
+## Configuration
+
+Set via Kubernetes Secret `web-search-credentials`:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SEARCH_PROVIDER` | Search provider (tavily or perplexity) | `tavily` |
+| `TAVILY_API_KEY` | Tavily API key | — |
+| `PERPLEXITY_API_KEY` | Perplexity API key | — |
+
+## Tool Usage
+
+```yaml
+tools:
+  - type: mcp
+    name: web-research-mcp-research-ubo-web
+```
+
+## Additional Resources
+
+- [Web Research MCP README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/mcps/web-research-mcp)

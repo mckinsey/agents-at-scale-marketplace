@@ -1,10 +1,10 @@
-# ARK Sandbox
+# Ark Sandbox
 
 Isolated container environments for AI agent code execution with MCP tool access.
 
 ## Overview
 
-ARK Sandbox provides:
+Ark Sandbox provides:
 - **Sandbox CRDs** - Kubernetes-native sandbox lifecycle management
 - **MCP Server** - Tools for agents to execute commands, upload/download files
 - **Warm Pools** - Pre-created sandboxes for instant availability
@@ -12,7 +12,7 @@ ARK Sandbox provides:
 
 ## Quickstart
 
-### Using ARK CLI (Recommended)
+### Using Ark CLI (Recommended)
 
 ```bash
 ark install marketplace/services/ark-sandbox
@@ -21,7 +21,7 @@ ark install marketplace/services/ark-sandbox
 ### Using DevSpace
 
 ```bash
-# Deploy ARK Sandbox
+# Deploy Ark Sandbox
 devspace deploy
 
 # Port-forward MCP server
@@ -37,7 +37,7 @@ devspace purge
 # Install CRDs first
 kubectl apply -f chart/crds/
 
-# Install ARK Sandbox
+# Install Ark Sandbox
 helm install ark-sandbox ./chart -n default
 
 # Uninstall

@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.1.27](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.26...v0.1.27) (2026-04-03)
+
+
+### Bug Fixes
+
+* **executors/claude-agent-sdk:** pin dependencies via uv.lock in Docker build ([#190](https://github.com/mckinsey/agents-at-scale-marketplace/issues/190)) ([5e130e0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5e130e0235ea5553a42c973a58d11a9c8795a170))
+
+## [0.1.26](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.25...v0.1.26) (2026-04-02)
+
+
+### Bug Fixes
+
+* **executors/claude-agent-sdk:** update model reference to claude-sonnet-4-6 ([#188](https://github.com/mckinsey/agents-at-scale-marketplace/issues/188)) ([b17021b](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b17021bd4379a01baafe0e20b90a5b8b5b09d66e))
+
+## [0.1.25](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.24...v0.1.25) (2026-04-02)
+
+
+### Bug Fixes
+
+* replace local file:// helm refs with OCI registry and pin ark-sdk ([#182](https://github.com/mckinsey/agents-at-scale-marketplace/issues/182)) ([0b3a907](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0b3a907b6118ce0655be024b1b34474a2334b498))
+
+## [0.1.24](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.23...v0.1.24) (2026-03-30)
+
+
+### Features
+
+* **executor-claude-agent-sdk:** read model config from Model CRD ([#158](https://github.com/mckinsey/agents-at-scale-marketplace/issues/158)) ([df75acb](https://github.com/mckinsey/agents-at-scale-marketplace/commit/df75acb09ef1b57226b38fc857db0c0d566ca697))
+
+
+### Bug Fixes
+
+* **charts:** bump file-gateway dependency to 0.1.5 in demo bundles ([#151](https://github.com/mckinsey/agents-at-scale-marketplace/issues/151)) ([9859d1d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9859d1d82c9552bd6da5d3177bb0a742513dbb49))
+* remove root requirement from versitygw init container ([#155](https://github.com/mckinsey/agents-at-scale-marketplace/issues/155)) ([04952cc](https://github.com/mckinsey/agents-at-scale-marketplace/commit/04952cc21587fb6e8676a50a01ccdb5d631dadce))
+* resolve deployment failures for team CRDs and file-gateway dependency             ([#157](https://github.com/mckinsey/agents-at-scale-marketplace/issues/157)) ([d68bdc5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/d68bdc58842314de3e877d0b58d118f38a78de78))
+
 ## [0.1.23](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.22...v0.1.23) (2026-03-25)
 
 

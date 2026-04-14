@@ -48,7 +48,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY --from=sdk-builder /build/dist/*.whl /tmp/sdk/
 
 # Copy project files
-COPY pyproject.toml setup.cfg README.md ./
+COPY pyproject.toml setup.cfg README.md uv.lock ./
 COPY src/ ./src/
 
 # Sync dependencies first (creates .venv), then install the pre-built SDK wheel into it

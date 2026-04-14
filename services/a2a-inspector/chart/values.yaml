@@ -19,6 +19,12 @@ service:
   type: ClusterIP
   port: 8080
 
+# UI URL configuration
+# Set uiUrl and uiLabel when installing to make the UI accessible from the dashboard
+# Example: --set uiUrl=https://a2a-inspector.example.com --set uiLabel="A2A Inspector"
+uiUrl: ""
+uiLabel: ""
+
 # Namespace configuration
 namespace: default
 

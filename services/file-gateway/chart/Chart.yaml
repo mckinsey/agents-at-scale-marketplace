@@ -4,7 +4,7 @@ description: >-
   File Gateway - VersityGW S3 gateway with filesystem-mcp for shared storage
   access
 type: application
-version: 0.1.5
+version: 0.1.6
 appVersion: 0.1.2
 keywords:
   - s3
@@ -12,3 +12,5 @@ keywords:
   - mcp
   - filesystem
   - storage
+annotations:
+  ark.mckinsey.com/marketplace-item-name: "service/file-gateway"

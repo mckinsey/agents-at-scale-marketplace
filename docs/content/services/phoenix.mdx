@@ -9,9 +9,9 @@ description: AI/ML observability and evaluation platform
 
 ## Overview
 
-Phoenix integration with ARK provides:
+Phoenix integration with Ark provides:
 
-- **OpenTelemetry Tracing**: Automatic trace collection from ARK agents and services
+- **OpenTelemetry Tracing**: Automatic trace collection from Ark agents and services
 - **LLM Observability**: Track token usage, latency, and model performance
 - **Evaluation Framework**: Assess agent responses and behavior
 - **Interactive Dashboard**: Visualize traces, metrics, and evaluation results
@@ -31,7 +31,7 @@ cd services/phoenix
 devspace deploy
 ```
 
-**Note**: DevSpace automatically restarts the ARK controller after deployment to ensure it picks up the new Phoenix configuration.
+**Note**: DevSpace automatically restarts the Ark controller after deployment to ensure it picks up the new Phoenix configuration.
 
 **Using Helm:**
 ```bash
@@ -88,7 +88,7 @@ envFrom:
       optional: true
 ```
 
-**Note**: When using DevSpace, the ARK controller is automatically restarted after Phoenix deployment. For manual deployments, existing deployments must be restarted to pick up new/updated secrets:
+**Note**: When using DevSpace, the Ark controller is automatically restarted after Phoenix deployment. For manual deployments, existing deployments must be restarted to pick up new/updated secrets:
 ```bash
 # Only needed for manual deployments (not DevSpace)
 kubectl rollout restart deployment/ark-controller -n ark-system

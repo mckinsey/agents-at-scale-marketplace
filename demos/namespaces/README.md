@@ -1,10 +1,10 @@
 # Demo Namespaces
 
-Namespace manifests for ARK demo environments. Each file creates a Kubernetes namespace with labels and annotations used by the ARK landing page for demo discovery.
+Namespace manifests for Ark demo environments. Each file creates a Kubernetes namespace with labels and annotations used by the Ark landing page for demo discovery.
 
 ## How it works
 
-The ARK landing page lists all namespaces with the label `ark.mckinsey.com/demo: "true"` and displays the name/description from annotations.
+The Ark landing page lists all namespaces with the label `ark.mckinsey.com/demo: "true"` and displays the name/description from annotations.
 
 ## Usage
 

@@ -1,7 +1,7 @@
 [project]
 name = "executor-claude-agent-sdk"
 # Version is managed via Release Please
-version = "0.1.0"
+version = "0.2.0"
 description = "Claude Agent SDK executor with built-in tool access and session persistence"
 authors = [
     {name = "McKinsey Agent Platform Team"}
@@ -18,7 +18,7 @@ dependencies = [
     "opentelemetry-sdk>=1.20.0", # OTEL SDK
     "opentelemetry-exporter-otlp-proto-http>=1.20.0", # OTLP HTTP exporter
     "opentelemetry-instrumentation-asgi>=0.40b0", # extract propagated trace context from incoming requests
-    "ark-sdk",
+    "ark-sdk>=0.1.56",
     "urllib3>=2.6.0",
     "a2a-sdk[http-server]>=0.3.0",
 ]

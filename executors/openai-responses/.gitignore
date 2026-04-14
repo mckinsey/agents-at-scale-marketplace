@@ -1,0 +1,6 @@
+vendor/
+.venv/
+uv.lock
+.pytest_cache/
+__pycache__/
+*.pyc

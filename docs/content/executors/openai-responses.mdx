@@ -1,0 +1,179 @@
+---
+title: OpenAI Responses Executor
+description: OpenAI Responses API executor with built-in tools, CFG-constrained output, structured JSON output, and multi-turn conversation threading
+---
+
+# OpenAI Responses Executor
+
+Executor for Ark agents backed by the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses). Supports built-in tools (web search, code interpreter, file search), CFG/Lark grammar-constrained output, structured JSON output, MCP function tools, and stateless multi-turn threading via `previous_response_id`.
+
+## Overview
+
+- **Built-in Tools** — `web_search_preview`, `file_search`, `code_interpreter`, `computer_use` configured via annotations
+- **CFG/Grammar Output** — Lark grammar constraints enforced at token level (not by prompt) via `custom` tool type
+- **Structured Output** — JSON schema enforcement via `text.format` annotation; response is a valid JSON object
+- **Multi-turn Threading** — Conversations thread via `previous_response_id` — no full history resent each turn
+- **MCP Tools** — Custom function tools from `spec.tools` wired through Ark's tool infrastructure
+- **GPT-5 Support** — Reasoning parameter (`effort`) for `gpt-5` models; temperature disabled automatically
+- **OTEL Tracing** — Optional observability via `openinference-instrumentation-openai`
+- **A2A Protocol** — Compliant with the Agent-to-Agent protocol for seamless Ark integration
+
+## Conversation Threading
+
+Each request carries an A2A `context_id` → mapped to `conversationId` in the executor → used as a key to look up the last `response_id` on disk (`/data/sessions/<conversationId>/response_id`). Subsequent turns pass `previous_response_id` to the API instead of resending history — keeping payloads small and preserving server-side context.
+
+```
+Query CR                A2A layer              Executor              OpenAI API
+─────────────────────   ──────────────────     ────────────────────  ──────────────────
+conversationId: "abc" → context_id: "abc"   → lookup session file → previous_response_id: "resp_xyz"
+                                                save response.id    ← response.id: "resp_xyz2"
+```
+
+## Install
+
+```bash
+ark install marketplace/executors/executor-openai-responses
+```
+
+Or with DevSpace:
+
+```bash
+cd executors/openai-responses
+devspace deploy
+```
+
+Or with Helm:
+
+```bash
+helm install executor-openai-responses ./chart -n default --create-namespace
+```
+
+## Prerequisites
+
+### Model CRD (Required)
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: openai-gpt-4o
+spec:
+  provider: openai
+  type: completions
+  model:
+    value: gpt-4o
+  config:
+    openai:
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: api-key
+```
+
+For GPT-5 models, include `baseUrl`:
+
+```yaml
+      baseUrl:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: base-url
+```
+
+### OpenAI Credentials Secret
+
+```bash
+kubectl create secret generic openai-credentials \
+  --from-literal=api-key=sk-... \
+  --from-literal=base-url=https://your-endpoint  # optional
+```
+
+## Annotations
+
+All configuration uses annotations with cascade: `ExecutionEngine → Agent → Query` (highest priority wins, merged by `type` key).
+
+### Built-in Tools
+
+```yaml
+annotations:
+  executor-openai-responses.ark.mckinsey.com/tools: |
+    [
+      {
+        "type": "web_search_preview",
+        "user_location": {"type": "approximate", "country": "GB", "city": "London", "region": "London"}
+      }
+    ]
+```
+
+Available types: `web_search_preview`, `file_search`, `code_interpreter`, `computer_use`.
+
+### Reasoning (GPT-5 only)
+
+```yaml
+annotations:
+  executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
+```
+
+Effort values: `"low"`, `"medium"`, `"high"`. Omitting the annotation defaults to `"medium"`.
+
+Use `"low"` for focused single-task agents (e.g. find one URL). Use `"medium"` or higher for agents that must gather multiple pieces of information (e.g. structured lookup with web search across several fields) — lower effort may not perform enough searches to find all required data.
+
+### Structured Output
+
+Constrains the response to a JSON object matching the schema — enforced at token level:
+
+```yaml
+annotations:
+  executor-openai-responses.ark.mckinsey.com/output-schema: |
+    {
+      "type": "object",
+      "properties": {
+        "company_name": {"type": "string"},
+        "website_url": {"type": "string"}
+      },
+      "required": ["company_name", "website_url"],
+      "additionalProperties": false
+    }
+```
+
+## Examples
+
+See [`examples/`](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/openai-responses/examples) for ready-to-use YAML manifests and demo scripts.
+
+### Running the demo
+
+Against a live cluster:
+
+```bash
+# Apply all CRDs and run each example, printing prompt, input and response
+examples/demo.sh
+```
+
+Locally without Kubernetes:
+
+```bash
+export OPENAI_API_KEY=sk-...
+export OPENAI_BASE_URL=https://your-endpoint  # optional
+export MODEL_NAME=gpt-5.2-2025-12-11         # optional
+python3 examples/demo_local.py
+```
+
+### Example manifests
+
+| Example | What it shows |
+|---------|--------------|
+| `website-search-agent.yaml` | `web_search_preview` with UK location context |
+| `company-lookup-agent.yaml` | Web search + structured JSON output (company data) |
+| `sql-generator-agent.yaml` | CFG/Lark grammar-constrained SQL generation |
+| `dsl-generator-agent.yaml` | CFG/Lark grammar for a functional pipeline DSL |
+| `companies-house-agent.yaml` | MCP function tools via `spec.tools` |
+
+## Configuration
+
+| Env Var | Default | Description |
+|---------|---------|-------------|
+| `SESSIONS_DIR` | `/data/sessions` | Directory for persisting `response_id` per conversation |
+| `MAX_TOOL_ITERATIONS` | `10` | Max function-call loop iterations before returning |
+| `OTEL_INSTRUMENTATION_ENABLED` | `false` | Enable OpenAI OTEL instrumentation |
+| `PORT` | `8000` | HTTP server port |

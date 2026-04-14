@@ -55,7 +55,7 @@ Use conventional commits and semantic versioning.
 
 ## Adding Marketplace Items
 
-The marketplace is designed to host a variety of items including services, tools, agents, and other resources for the ARK platform. When contributing a new item:
+The marketplace is designed to host a variety of items including services, tools, agents, and other resources for the Ark platform. When contributing a new item:
 
 **Repository Structure**
 
@@ -80,11 +80,12 @@ Each marketplace item should include:
    - Usage examples
    - Troubleshooting
 
-3. **Helm Chart** (for services): 
+3. **Helm Chart** (for services):
    - Place in `chart/` subdirectory
-   - Include `Chart.yaml` with proper metadata
+   - Include `Chart.yaml` with proper metadata (see [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup))
    - Provide `values.yaml` with sensible defaults
    - Include necessary templates
+   - For services with web UIs, configure UI URL annotations (see [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup#ui-url-configuration))
 
 4. **DevSpace Configuration** (recommended):
    - `devspace.yaml` for local development
@@ -98,7 +99,9 @@ Before submitting:
 - Test locally using DevSpace or Helm
 - Verify all documentation is accurate
 - Ensure examples work as described
-- Check that your item integrates properly with the ARK platform
+- Check that your item integrates properly with the Ark platform
+
+For detailed information on configuring chart annotations and UI URLs, see the [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup).
 
 **Language and Technology Choices**
 
@@ -112,7 +115,7 @@ The key is that your contribution should:
 - Be well-documented
 - Follow Kubernetes best practices (if applicable)
 - Include proper Helm charts for deployment
-- Integrate cleanly with the ARK platform
+- Integrate cleanly with the Ark platform
 
 ## Contributing to Documentation
 
