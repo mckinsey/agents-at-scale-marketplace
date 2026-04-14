@@ -66,6 +66,11 @@ kubectl create secret generic ai-gateway-azure-openai -n default \
 kubectl create secret generic web-search-credentials -n default \
   --from-literal=tavily-api-key='YOUR_TAVILY_API_KEY' \
   --from-literal=perplexity-api-key='YOUR_PERPLEXITY_API_KEY'
+
+# 3. Companies House API key (for companies-house MCP — required)
+#    Register for a free key at https://developer.company-information.service.gov.uk/get-started
+kubectl create secret generic companies-house-api-key -n default \
+  --from-literal=api-key='YOUR_COMPANIES_HOUSE_API_KEY'
 ```
 
 ## Quick Start
@@ -176,6 +181,7 @@ After each workflow completes, verify the output files in **ARK Dashboard → Fi
 |--------|-------------|
 | `make install-with-argo` | Deploy bundle with WorkflowTemplates |
 | `make build` | Build and deploy all MCP images |
+| `make build-companies-house-mcp` | Deploy Companies House MCP only |
 | `make upload-data` | Upload sample data to file-gateway |
 | `make ready` | Full deployment readiness check |
 | `make verify-mcp` | Verify MCP servers and Tool CRs |
