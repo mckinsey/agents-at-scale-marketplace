@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 from ark_sdk.executor import BaseExecutor, MCPServerConfig, Message
 from ark_sdk.executor_app import is_otel_enabled
-from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, list_sessions
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +94,14 @@ class ClaudeAgentExecutor(BaseExecutor):
         session_dir = SESSIONS_DIR / conversation_id
         session_dir.mkdir(parents=True, exist_ok=True)
 
-        # SDK stores sessions at ~/.claude/projects/<mangled-cwd>/, not in cwd
-        mangled = str(session_dir).replace("/", "-")
-        sdk_session_dir = Path.home() / ".claude" / "projects" / mangled
-        has_previous_session = sdk_session_dir.exists() and any(sdk_session_dir.iterdir())
+        # Find existing session to resume
+        previous_session_id = None
+        try:
+            sessions = list_sessions(directory=str(session_dir), limit=1)
+            if sessions:
+                previous_session_id = sessions[0].session_id
+        except Exception:
+            logger.debug("Could not list sessions for %s", session_dir, exc_info=True)
 
         mcp_kwargs: Dict = {}
         mcp_servers = getattr(request, "mcpServers", None) or []
@@ -113,15 +117,18 @@ class ClaudeAgentExecutor(BaseExecutor):
         if base_url:
             env["ANTHROPIC_BASE_URL"] = base_url
 
+        resume_kwargs: Dict = {}
+        if previous_session_id:
+            resume_kwargs["resume"] = previous_session_id
         options = ClaudeAgentOptions(
             model=model_name,
             cwd=str(session_dir),
-            continue_conversation=has_previous_session,
             permission_mode="bypassPermissions",
             env=env,
             **mcp_kwargs,
+            **resume_kwargs,
         )
-        logger.info(f"{'Resuming' if has_previous_session else 'Starting new'} session for conversation {conversation_id}")
+        logger.info(f"{'Resuming session ' + previous_session_id if previous_session_id else 'Starting new session'} for conversation {conversation_id}")
 
         try:
             result_text = ""
