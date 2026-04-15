@@ -4,15 +4,15 @@
 import asyncio
 import logging
 import os
-import signal
 from contextlib import asynccontextmanager
 
+import httpx
 import uvicorn
 from fastapi import FastAPI
 
 from .config import ConfigWatcher, SchedulerConfig
 from .observability import setup_otel
-from .proxy import create_proxy_app
+from .proxy import PROXY_TIMEOUT, create_proxy_app
 from .sandbox_manager import SandboxManager
 
 logging.basicConfig(level=logging.INFO)
@@ -31,8 +31,10 @@ async def run_scheduler() -> None:
     config = SchedulerConfig()
     config_watcher = ConfigWatcher(configmap_name=configmap_name, namespace=namespace, config=config)
     sandbox_manager = SandboxManager(config=config)
-
-    shutdown_event = asyncio.Event()
+    http_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(PROXY_TIMEOUT, connect=3.0),
+        limits=httpx.Limits(max_connections=500, max_keepalive_connections=100),
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):  # type: ignore[type-arg]
@@ -40,23 +42,19 @@ async def run_scheduler() -> None:
         await sandbox_manager.warm_cache()
         reaper_task = asyncio.create_task(sandbox_manager.run_reaper())
         yield
-        shutdown_event.set()
         reaper_task.cancel()
         try:
             await reaper_task
         except asyncio.CancelledError:
             pass
+        await http_client.aclose()
         await sandbox_manager.close()
         await config_watcher.stop()
 
-    app = create_proxy_app(sandbox_manager=sandbox_manager, lifespan=lifespan)
+    app = create_proxy_app(sandbox_manager=sandbox_manager, http_client=http_client, lifespan=lifespan)
 
     server_config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(server_config)
-
-    loop = asyncio.get_event_loop()
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, shutdown_event.set)
 
     await server.serve()
 

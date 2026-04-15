@@ -98,6 +98,8 @@ kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/downl
 - Idle sessions are reaped after `sessionIdleTTL` (default 30 minutes)
 - Optional warm pool pre-creates sandbox pods for faster first-message latency
 
+**Session identity:** The scheduler owns session identity. For new conversations, omit `conversationId` from the Query — the scheduler generates a UUID4 and injects it. Use the returned `status.conversationId` for follow-up queries. Non-UUID4 values are rejected.
+
 ### Scheduler Configuration
 
 | Parameter | Description | Default |
@@ -106,8 +108,13 @@ kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/downl
 | `scheduler.config.sessionIdleTTL` | Idle session timeout (seconds) | `1800` |
 | `scheduler.config.shutdownPolicy` | `Delete` or `Retain` expired sandboxes | `Delete` |
 | `scheduler.config.sandboxReadyTimeout` | Sandbox readiness timeout (seconds) | `60` |
+| `scheduler.config.maxActiveSandboxes` | Max concurrent sandbox pods (0 = unlimited) | `0` |
 | `scheduler.warmPool.enabled` | Enable pre-warmed sandbox pool | `false` |
 | `scheduler.warmPool.replicas` | Number of warm pool pods | `2` |
+
+### Known Limitations
+
+- **No streaming support**: The proxy buffers the full upstream response before relaying. A2A `message/stream` (SSE) is not supported; use `message/send` only.
 
 ## How It Works
 
@@ -116,6 +123,7 @@ kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/downl
 - Sessions resume across requests via `ClaudeSDKClient` with explicit session ID
 - In standalone mode, session data survives pod restarts via a PersistentVolumeClaim
 - In scheduler mode, session data lives on the sandbox pod's ephemeral filesystem for the conversation lifetime
+- For new conversations, omit `conversationId` — the scheduler generates one. Reuse the returned value from `Query.status.conversationId` for follow-ups.
 
 ## MCP Tools
 

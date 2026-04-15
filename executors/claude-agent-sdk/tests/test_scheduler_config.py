@@ -13,6 +13,7 @@ class TestSchedulerConfigDefaults:
         assert config.sandbox_ready_timeout == 60
         assert config.sandbox_template == "claude-agent-sdk"
         assert config.namespace == "default"
+        assert config.max_active_sandboxes == 0
 
 
 class TestSchedulerConfigFromYaml:
@@ -23,6 +24,7 @@ shutdownPolicy: Retain
 sandboxReadyTimeout: 120
 sandboxTemplate: claude-agent-sdk-large
 namespace: my-namespace
+maxActiveSandboxes: 50
 """
         config = SchedulerConfig.from_yaml(yaml_str)
         assert config.session_idle_ttl == 3600
@@ -30,6 +32,7 @@ namespace: my-namespace
         assert config.sandbox_ready_timeout == 120
         assert config.sandbox_template == "claude-agent-sdk-large"
         assert config.namespace == "my-namespace"
+        assert config.max_active_sandboxes == 50
 
     def test_partial_config_uses_defaults(self) -> None:
         yaml_str = "sessionIdleTTL: 900\n"

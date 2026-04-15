@@ -27,6 +27,10 @@ rules:
   - apiGroups: ["ark.mckinsey.com"]
     resources: ["queries", "agents", "models", "tools", "mcpservers"]
     verbs: ["get"]
+  # Namespace-wide secret access is required because Model CRD API keys reference
+  # dynamically-named secrets. Cannot scope with resourceNames since secret names
+  # are not known at deploy time. Container-level sandbox isolation mitigates the
+  # blast radius — each sandbox runs in its own pod with its own service account.
   - apiGroups: [""]
     resources: ["secrets", "configmaps", "services"]
     verbs: ["get"]

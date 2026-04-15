@@ -154,6 +154,12 @@ kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/downl
 
 Routing state is stored on SandboxClaim labels and annotations — the scheduler is stateless and supports multiple replicas.
 
+### Session Identity
+
+The scheduler owns session identity. For new conversations, omit `conversationId` from the Query — the scheduler generates a UUID4 and injects it into the A2A message. The executor echoes it back, and the Ark controller stores it in `Query.status.conversationId`. Use this value for follow-up queries to route back to the same sandbox.
+
+Non-UUID4 `contextId` values are rejected with a 400 error.
+
 ### Scheduler Configuration
 
 | Parameter | Description | Default |
@@ -162,10 +168,15 @@ Routing state is stored on SandboxClaim labels and annotations — the scheduler
 | `scheduler.config.sessionIdleTTL` | Idle session timeout (seconds) | `1800` |
 | `scheduler.config.shutdownPolicy` | `Delete` or `Retain` expired sandboxes | `Delete` |
 | `scheduler.config.sandboxReadyTimeout` | Sandbox readiness timeout (seconds) | `60` |
+| `scheduler.config.maxActiveSandboxes` | Max concurrent sandbox pods (0 = unlimited) | `0` |
 | `scheduler.warmPool.enabled` | Enable pre-warmed sandbox pool | `false` |
 | `scheduler.warmPool.replicas` | Number of warm pool pods | `2` |
 
 Configuration is hot-reloadable via ConfigMap — changes apply without restart.
+
+### Known Limitations
+
+- **No streaming support**: The proxy buffers the full upstream response. A2A `message/stream` (SSE) is not supported; use `message/send` only.
 
 ## Session Behavior
 
@@ -184,8 +195,8 @@ Each conversation gets an isolated filesystem directory:
 └── ...
 ```
 
-- **New conversation**: A fresh directory is created, and the SDK starts a new session
-- **Continued conversation**: The SDK resumes the previous session by explicit session ID
+- **New conversation**: Omit `conversationId` — the scheduler generates a UUID4. A fresh directory is created and the SDK starts a new session.
+- **Continued conversation**: Set `conversationId` to the value from `Query.status.conversationId`. The SDK resumes the previous session by explicit session ID.
 - **Standalone mode**: Session data survives pod restarts via a PersistentVolumeClaim
 - **Scheduler mode**: Session data lives on the sandbox pod's ephemeral filesystem for the conversation lifetime
 

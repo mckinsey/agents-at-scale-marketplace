@@ -19,6 +19,7 @@ class SchedulerConfig(BaseModel):
     sandbox_ready_timeout: int = Field(default=60, description="Sandbox readiness timeout in seconds")
     sandbox_template: str = Field(default="claude-agent-sdk", description="SandboxTemplate name")
     namespace: str = Field(default="default", description="Namespace for sandbox resources")
+    max_active_sandboxes: int = Field(default=0, description="Max concurrent sandboxes (0 = unlimited)")
 
     @classmethod
     def from_yaml(cls, raw: str) -> "SchedulerConfig":
@@ -35,6 +36,7 @@ def _normalize_keys(data: dict[str, Any]) -> dict[str, Any]:
         "sandboxReadyTimeout": "sandbox_ready_timeout",
         "sandboxTemplate": "sandbox_template",
         "namespace": "namespace",
+        "maxActiveSandboxes": "max_active_sandboxes",
     }
     return {mapping.get(k, k): v for k, v in data.items() if mapping.get(k, k) in SchedulerConfig.model_fields}
 

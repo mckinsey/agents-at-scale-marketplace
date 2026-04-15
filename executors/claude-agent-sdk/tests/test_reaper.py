@@ -1,7 +1,7 @@
-"""Tests for annotation-based idle reaper (Tasks 6.3)."""
+"""Tests for the reaper — calls _reap_once directly against the real code."""
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, call, patch
 
 import pytest
 
@@ -44,7 +44,7 @@ def manager(config: SchedulerConfig) -> SandboxManager:
         return mgr
 
 
-class TestAnnotationReaper:
+class TestReapOnce:
     @pytest.mark.asyncio
     async def test_expired_claim_deleted(self, manager: SandboxManager) -> None:
         old = datetime.now(timezone.utc) - timedelta(seconds=120)
@@ -52,18 +52,39 @@ class TestAnnotationReaper:
         manager._k8s.list_sandbox_claims = AsyncMock(return_value=claims)
         manager._k8s.delete_sandbox_claim = AsyncMock()
 
-        # Run one reaper cycle manually
-        manager._config.session_idle_ttl = 60
-        now = datetime.now(timezone.utc)
-        for item in claims:
-            annotations = item["metadata"]["annotations"]
-            la_str = annotations.get(ANNOTATION_LAST_ACTIVITY, "")
-            la = datetime.fromisoformat(la_str)
-            idle = (now - la).total_seconds()
-            if idle > 60:
-                await manager._k8s.delete_sandbox_claim("claim-old", "test-ns")
+        await manager._reap_once()
 
         manager._k8s.delete_sandbox_claim.assert_called_once_with("claim-old", "test-ns")
+
+    @pytest.mark.asyncio
+    async def test_expired_claim_with_retain_policy_not_deleted(self, manager: SandboxManager) -> None:
+        old = datetime.now(timezone.utc) - timedelta(seconds=120)
+        claims = [_make_claim("claim-retain", "conv-retain", last_activity=old)]
+        manager._k8s.list_sandbox_claims = AsyncMock(return_value=claims)
+        manager._k8s.delete_sandbox_claim = AsyncMock()
+        manager._config.shutdown_policy = "Retain"
+
+        await manager._reap_once()
+
+        manager._k8s.delete_sandbox_claim.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_expired_claim_evicts_cache(self, manager: SandboxManager) -> None:
+        from claude_agent_scheduler.sandbox_manager import SandboxInfo
+
+        old = datetime.now(timezone.utc) - timedelta(seconds=120)
+        claims = [_make_claim("claim-cached", "conv-cached", last_activity=old)]
+        manager._k8s.list_sandbox_claims = AsyncMock(return_value=claims)
+        manager._k8s.delete_sandbox_claim = AsyncMock()
+
+        # Pre-populate cache
+        info = SandboxInfo(claim_name="claim-cached", sandbox_name="sb-cached", service_fqdn="sb-cached.test-ns.svc.cluster.local")
+        manager._cache.put("conv-cached", info)
+        assert manager._cache.get("conv-cached") is not None
+
+        await manager._reap_once()
+
+        assert manager._cache.get("conv-cached") is None
 
     @pytest.mark.asyncio
     async def test_fresh_claim_not_deleted(self, manager: SandboxManager) -> None:
@@ -72,13 +93,7 @@ class TestAnnotationReaper:
         manager._k8s.list_sandbox_claims = AsyncMock(return_value=claims)
         manager._k8s.delete_sandbox_claim = AsyncMock()
 
-        now = datetime.now(timezone.utc)
-        for item in claims:
-            la_str = item["metadata"]["annotations"].get(ANNOTATION_LAST_ACTIVITY, "")
-            la = datetime.fromisoformat(la_str)
-            idle = (now - la).total_seconds()
-            if idle > 60:
-                await manager._k8s.delete_sandbox_claim("claim-fresh", "test-ns")
+        await manager._reap_once()
 
         manager._k8s.delete_sandbox_claim.assert_not_called()
 
@@ -89,16 +104,54 @@ class TestAnnotationReaper:
         manager._k8s.list_sandbox_claims = AsyncMock(return_value=claims)
         manager._k8s.delete_sandbox_claim = AsyncMock()
 
-        now = datetime.now(timezone.utc)
-        for item in claims:
-            la_str = item["metadata"]["annotations"].get(ANNOTATION_LAST_ACTIVITY, "")
-            if not la_str:
-                created = item["metadata"].get("creationTimestamp", "")
-                created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                idle = (now - created_dt).total_seconds()
-            else:
-                idle = 0
-            if idle > 60:
-                await manager._k8s.delete_sandbox_claim("claim-no-anno", "test-ns")
+        await manager._reap_once()
 
         manager._k8s.delete_sandbox_claim.assert_called_once_with("claim-no-anno", "test-ns")
+
+    @pytest.mark.asyncio
+    async def test_unparseable_annotation_treated_as_expired(self, manager: SandboxManager) -> None:
+        claims = [_make_claim("claim-bad-ts", "conv-bad-ts")]
+        claims[0]["metadata"]["annotations"][ANNOTATION_LAST_ACTIVITY] = "not-a-timestamp"
+        manager._k8s.list_sandbox_claims = AsyncMock(return_value=claims)
+        manager._k8s.delete_sandbox_claim = AsyncMock()
+
+        await manager._reap_once()
+
+        manager._k8s.delete_sandbox_claim.assert_called_once_with("claim-bad-ts", "test-ns")
+
+    @pytest.mark.asyncio
+    async def test_label_selector_passed_to_list(self, manager: SandboxManager) -> None:
+        manager._k8s.list_sandbox_claims = AsyncMock(return_value=[])
+
+        await manager._reap_once()
+
+        manager._k8s.list_sandbox_claims.assert_called_once_with(
+            "test-ns", f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_evict_before_delete_ordering(self, manager: SandboxManager) -> None:
+        """Cache eviction must happen before claim deletion."""
+        from claude_agent_scheduler.sandbox_manager import SandboxInfo
+
+        old = datetime.now(timezone.utc) - timedelta(seconds=120)
+        claims = [_make_claim("claim-order", "conv-order", last_activity=old)]
+        manager._k8s.list_sandbox_claims = AsyncMock(return_value=claims)
+
+        # Track call order
+        call_order: list[str] = []
+        original_evict = manager._cache.evict
+
+        def tracking_evict(cid: str) -> None:
+            call_order.append("evict")
+            original_evict(cid)
+
+        async def tracking_delete(name: str, ns: str) -> None:
+            call_order.append("delete")
+
+        manager._cache.evict = tracking_evict  # type: ignore[assignment]
+        manager._k8s.delete_sandbox_claim = tracking_delete  # type: ignore[assignment]
+
+        await manager._reap_once()
+
+        assert call_order == ["evict", "delete"]

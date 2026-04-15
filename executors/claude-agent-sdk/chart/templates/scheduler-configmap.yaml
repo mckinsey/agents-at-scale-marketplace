@@ -17,4 +17,5 @@ data:
     sandboxReadyTimeout: {{ .Values.scheduler.config.sandboxReadyTimeout }}
     sandboxTemplate: {{ .Values.scheduler.config.sandboxTemplate }}
     namespace: {{ .Values.scheduler.config.namespace | default .Release.Namespace }}
+    maxActiveSandboxes: {{ .Values.scheduler.config.maxActiveSandboxes }}
 {{- end }}

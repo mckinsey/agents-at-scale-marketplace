@@ -114,6 +114,8 @@ scheduler:
     sandboxReadyTimeout: 60    # seconds
     sandboxTemplate: claude-agent-sdk
     namespace: ""              # defaults to release namespace
+    maxActiveSandboxes: 0      # 0 = unlimited; set to cap concurrent sandbox pods
+    # For a hard cap independent of the scheduler, set a namespace-level ResourceQuota on pods
   sandboxTemplate:
     resources:
       requests:

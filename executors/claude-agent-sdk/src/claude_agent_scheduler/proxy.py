@@ -12,7 +12,7 @@ from opentelemetry.context import attach, detach
 from opentelemetry.propagate import extract, inject
 from opentelemetry.trace import StatusCode
 
-from .sandbox_manager import SandboxManager
+from .sandbox_manager import SandboxCapacityError, SandboxManager
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer("claude-agent-scheduler")
@@ -20,36 +20,69 @@ tracer = trace.get_tracer("claude-agent-scheduler")
 PROXY_TIMEOUT = 600.0  # 10 minutes — agent execution can be long-running
 
 
-def extract_context_id(body: bytes) -> tuple[str, bytes]:
-    """Extract contextId from A2A JSON-RPC body and return (id, possibly-patched body).
+def _is_valid_uuid4(value: str) -> bool:
+    """Check if a string is a valid UUID4."""
+    try:
+        parsed = uuid.UUID(value, version=4)
+        return str(parsed) == value.lower()
+    except (ValueError, AttributeError):
+        return False
 
-    A2A uses JSON-RPC 2.0 with camelCase fields.
-    The contextId lives at params.message.contextId.
-    If missing, we generate one and inject it so the downstream executor uses it.
+
+def _jsonrpc_error(request_id: Any, code: int, message: str) -> bytes:
+    """Build a JSON-RPC 2.0 error response."""
+    return json.dumps({
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "error": {"code": code, "message": message},
+    }).encode()
+
+
+def extract_context_id(body: bytes) -> tuple[str, bytes, bool]:
+    """Extract and validate contextId from A2A JSON-RPC body.
+
+    Returns (context_id, body, is_new) where:
+    - is_new=True: contextId was missing/empty, a UUID4 was generated and injected
+    - is_new=False: contextId was a valid UUID4, passed through unchanged
+
+    Raises ValueError if contextId is present but not a valid UUID4.
     """
     try:
         data = json.loads(body)
         message = data.get("params", {}).get("message", {})
         context_id = message.get("contextId") or ""
-        if isinstance(context_id, str) and context_id.strip():
-            return context_id.strip(), body
-        # contextId missing or empty — generate and inject
-        generated = str(uuid.uuid4())
-        if isinstance(data.get("params", {}).get("message"), dict):
-            data["params"]["message"]["contextId"] = generated
-        return generated, json.dumps(data).encode()
+
+        if isinstance(context_id, str):
+            context_id = context_id.strip()
+
+        if not context_id:
+            # No contextId — generate UUID4 and inject
+            generated = str(uuid.uuid4())
+            if isinstance(data.get("params", {}).get("message"), dict):
+                data["params"]["message"]["contextId"] = generated
+            return generated, json.dumps(data).encode(), True
+
+        # contextId present — must be a valid UUID4
+        if not _is_valid_uuid4(context_id):
+            raise ValueError(
+                f"Invalid contextId '{context_id}': must be a valid UUID4 "
+                "or omitted for auto-generation"
+            )
+
+        return context_id, body, False
+
     except (json.JSONDecodeError, AttributeError, TypeError):
-        return str(uuid.uuid4()), body
+        # Unparseable body — generate UUID4, don't modify body
+        return str(uuid.uuid4()), body, True
 
 
 def create_proxy_app(
     sandbox_manager: SandboxManager,
+    http_client: httpx.AsyncClient,
     lifespan: Any = None,
 ) -> FastAPI:
     """Create the FastAPI application with A2A proxy and health endpoints."""
     app = FastAPI(title="Claude Agent SDK Scheduler", lifespan=lifespan)
-
-    http_client = httpx.AsyncClient(timeout=httpx.Timeout(PROXY_TIMEOUT, connect=10.0))
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -59,7 +92,23 @@ def create_proxy_app(
     @app.post("/{path:path}")
     async def proxy_a2a(request: Request, path: str = "") -> Response:
         raw_body = await request.body()
-        conversation_id, body = extract_context_id(raw_body)
+
+        # Extract and parse JSON-RPC id for error responses
+        request_id = None
+        try:
+            request_id = json.loads(raw_body).get("id")
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+        # Validate and extract contextId
+        try:
+            conversation_id, body, is_new = extract_context_id(raw_body)
+        except ValueError as e:
+            return Response(
+                content=_jsonrpc_error(request_id, -32602, str(e)),
+                status_code=400,
+                media_type="application/json",
+            )
 
         # Extract incoming trace context
         ctx = extract(carrier=dict(request.headers))
@@ -68,17 +117,34 @@ def create_proxy_app(
         try:
             with tracer.start_as_current_span(
                 "scheduler.route",
-                attributes={"sandbox.conversation_id": conversation_id},
+                attributes={"sandbox.conversation_id": conversation_id, "sandbox.is_new": is_new},
             ) as route_span:
-                # Ensure sandbox exists for this conversation
+                # Route to sandbox based on session type
                 try:
-                    info, is_new = await sandbox_manager.ensure_sandbox(conversation_id)
+                    if is_new:
+                        info = await sandbox_manager.create_sandbox(conversation_id)
+                    else:
+                        info = await sandbox_manager.get_sandbox(conversation_id)
+                        if info is None:
+                            return Response(
+                                content=_jsonrpc_error(request_id, -32001, "Session not found or expired"),
+                                status_code=404,
+                                media_type="application/json",
+                            )
+                except SandboxCapacityError as e:
+                    route_span.set_status(StatusCode.ERROR, str(e))
+                    return Response(
+                        content=_jsonrpc_error(request_id, -32000, str(e)),
+                        status_code=503,
+                        media_type="application/json",
+                        headers={"Retry-After": "30"},
+                    )
                 except Exception as e:
                     route_span.set_status(StatusCode.ERROR, str(e))
                     route_span.record_exception(e)
                     logger.error("Sandbox creation failed for conversation=%s: %s", conversation_id, e)
                     return Response(
-                        content=json.dumps({"error": f"Sandbox creation failed: {e}"}),
+                        content=_jsonrpc_error(request_id, -32603, f"Sandbox creation failed: {e}"),
                         status_code=502,
                         media_type="application/json",
                     )
@@ -106,7 +172,7 @@ def create_proxy_app(
                         e,
                     )
                     try:
-                        info, _ = await sandbox_manager.recover_sandbox(conversation_id)
+                        info = await sandbox_manager.recover_sandbox(conversation_id)
                         target_url = f"http://{info.service_fqdn}:8000/{path}"
                         response = await _proxy_request(http_client, request, body, target_url)
                         return response
@@ -114,7 +180,7 @@ def create_proxy_app(
                         route_span.set_status(StatusCode.ERROR, str(recovery_err))
                         route_span.record_exception(recovery_err)
                         return Response(
-                            content=json.dumps({"error": f"Sandbox recovery failed: {recovery_err}"}),
+                            content=_jsonrpc_error(request_id, -32603, f"Sandbox recovery failed: {recovery_err}"),
                             status_code=502,
                             media_type="application/json",
                         )
@@ -122,16 +188,12 @@ def create_proxy_app(
                     route_span.set_status(StatusCode.ERROR, str(e))
                     route_span.record_exception(e)
                     return Response(
-                        content=json.dumps({"error": f"Proxy error: {e}"}),
+                        content=_jsonrpc_error(request_id, -32603, f"Proxy error: {e}"),
                         status_code=502,
                         media_type="application/json",
                     )
         finally:
             detach(token)
-
-    @app.on_event("shutdown")
-    async def shutdown() -> None:
-        await http_client.aclose()
 
     return app
 

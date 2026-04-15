@@ -34,6 +34,10 @@ ANNOTATION_LAST_ACTIVITY = "ark.mckinsey.com/last-activity"
 CACHE_TTL = 5.0  # seconds
 
 
+class SandboxCapacityError(Exception):
+    """Raised when sandbox creation is rejected due to capacity limits."""
+
+
 @dataclass
 class SandboxInfo:
     """Conversation-to-sandbox mapping entry."""
@@ -283,12 +287,12 @@ class SandboxManager:
         suffix = uuid.uuid5(uuid.NAMESPACE_URL, conversation_id).hex[:8]
         return f"sched-{short}-{suffix}"
 
-    async def ensure_sandbox(self, conversation_id: str) -> tuple[SandboxInfo, bool]:
-        """Get or create a sandbox for the conversation. Returns (info, is_new)."""
+    async def get_sandbox(self, conversation_id: str) -> SandboxInfo | None:
+        """Look up an existing sandbox for the conversation. Returns None if not found."""
         # 1. Check local cache
         cached = self._cache.get(conversation_id)
         if cached:
-            return cached, False
+            return cached
 
         claim_name = self._claim_name(conversation_id)
         namespace = self._config.namespace
@@ -300,18 +304,25 @@ class SandboxManager:
             if info:
                 self._cache.put(conversation_id, info)
                 await self._patch_last_activity(claim_name, namespace)
-                return info, False
+                return info
 
-        # 3. Create new sandbox
-        info = await self._create_sandbox(conversation_id)
-        self._cache.put(conversation_id, info)
-        return info, True
+        return None
 
-    async def _create_sandbox(self, conversation_id: str) -> SandboxInfo:
-        """Create a new sandbox, handling 409 conflict from another replica."""
+    async def create_sandbox(self, conversation_id: str) -> SandboxInfo:
+        """Create a new sandbox for the conversation. Checks admission control."""
         claim_name = self._claim_name(conversation_id)
         namespace = self._config.namespace
-        timeout = self._config.sandbox_ready_timeout
+        deadline = time.monotonic() + self._config.sandbox_ready_timeout
+
+        # Admission control
+        if self._config.max_active_sandboxes > 0:
+            claims = await self._k8s.list_sandbox_claims(
+                namespace, f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
+            )
+            if len(claims) >= self._config.max_active_sandboxes:
+                raise SandboxCapacityError(
+                    f"Sandbox capacity reached ({len(claims)}/{self._config.max_active_sandboxes} active). Retry later."
+                )
 
         labels = {
             LABEL_CONVERSATION_ID: conversation_id,
@@ -346,8 +357,11 @@ class SandboxManager:
             attributes={"sandbox.claim_name": claim_name},
         ) as span:
             try:
+                remaining = int(deadline - time.monotonic())
+                if remaining <= 0:
+                    raise TimeoutError(f"Sandbox creation timed out for '{claim_name}'")
                 sandbox_name = await self._k8s.resolve_sandbox_name(
-                    claim_name=claim_name, namespace=namespace, timeout=timeout
+                    claim_name=claim_name, namespace=namespace, timeout=remaining
                 )
                 span.set_attribute("sandbox.name", sandbox_name)
             except Exception as e:
@@ -360,28 +374,47 @@ class SandboxManager:
             attributes={"sandbox.name": sandbox_name},
         ) as span:
             try:
-                await self._k8s.wait_for_sandbox_ready(name=sandbox_name, namespace=namespace, timeout=timeout)
+                remaining = int(deadline - time.monotonic())
+                if remaining <= 0:
+                    raise TimeoutError(f"Sandbox creation timed out waiting for '{sandbox_name}' to become ready")
+                await self._k8s.wait_for_sandbox_ready(name=sandbox_name, namespace=namespace, timeout=remaining)
             except Exception as e:
                 span.set_status(StatusCode.ERROR, str(e))
                 span.record_exception(e)
                 raise
 
         service_fqdn = self._service_fqdn(sandbox_name)
+        info = SandboxInfo(claim_name=claim_name, sandbox_name=sandbox_name, service_fqdn=service_fqdn)
+        self._cache.put(conversation_id, info)
         logger.info("Sandbox ready: conversation=%s sandbox=%s fqdn=%s", conversation_id, sandbox_name, service_fqdn)
 
-        return SandboxInfo(claim_name=claim_name, sandbox_name=sandbox_name, service_fqdn=service_fqdn)
+        return info
 
     async def update_last_activity(self, conversation_id: str) -> None:
         """PATCH last-activity annotation on the claim."""
         claim_name = self._claim_name(conversation_id)
         await self._patch_last_activity(claim_name, self._config.namespace)
 
-    async def recover_sandbox(self, conversation_id: str) -> tuple[SandboxInfo, bool]:
-        """Evict stale cache and create a new sandbox."""
+    async def recover_sandbox(self, conversation_id: str) -> SandboxInfo:
+        """Attempt to recover a sandbox. Checks health before deleting."""
         self._cache.evict(conversation_id)
         claim_name = self._claim_name(conversation_id)
-        await self._k8s.delete_sandbox_claim(claim_name, self._config.namespace)
-        return await self.ensure_sandbox(conversation_id)
+        namespace = self._config.namespace
+
+        # Check if claim and sandbox still exist and are healthy
+        claim = await self._k8s.get_sandbox_claim(claim_name, namespace)
+        if claim:
+            info = self._info_from_claim(claim)
+            if info:
+                sandbox = await self._k8s.get_sandbox(name=info.sandbox_name, namespace=namespace)
+                if sandbox and self._is_sandbox_ready(sandbox):
+                    # Sandbox is actually healthy — cache was stale
+                    self._cache.put(conversation_id, info)
+                    return info
+
+        # Sandbox is genuinely gone — delete stale claim and recreate
+        await self._k8s.delete_sandbox_claim(claim_name, namespace)
+        return await self.create_sandbox(conversation_id)
 
     async def warm_cache(self) -> None:
         """Warm local cache from existing SandboxClaims on startup."""
@@ -435,47 +468,51 @@ class SandboxManager:
         while True:
             try:
                 await asyncio.sleep(30)
-                namespace = self._config.namespace
-                ttl = self._config.session_idle_ttl
-                now = datetime.now(timezone.utc)
-
-                claims = await self._k8s.list_sandbox_claims(
-                    namespace, f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
-                )
-
-                for item in claims:
-                    metadata = item.get("metadata", {})
-                    claim_name = metadata.get("name", "")
-                    conversation_id = metadata.get("labels", {}).get(LABEL_CONVERSATION_ID, "")
-                    annotations = metadata.get("annotations", {})
-
-                    last_activity_str = annotations.get(ANNOTATION_LAST_ACTIVITY, "")
-                    if last_activity_str:
-                        try:
-                            last_activity = datetime.fromisoformat(last_activity_str)
-                            idle_seconds = (now - last_activity).total_seconds()
-                        except ValueError:
-                            idle_seconds = ttl + 1  # treat unparseable as expired
-                    else:
-                        # No annotation — use creation timestamp as fallback
-                        created = metadata.get("creationTimestamp", "")
-                        try:
-                            created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                            idle_seconds = (now - created_dt).total_seconds()
-                        except (ValueError, AttributeError):
-                            idle_seconds = ttl + 1
-
-                    if idle_seconds > ttl:
-                        logger.info("Reaping idle session: conversation=%s claim=%s idle=%.0fs", conversation_id, claim_name, idle_seconds)
-                        if self._config.shutdown_policy == "Delete":
-                            await self._k8s.delete_sandbox_claim(claim_name, namespace)
-                        if conversation_id:
-                            self._cache.evict(conversation_id)
-
+                await self._reap_once()
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Reaper error")
+
+    async def _reap_once(self) -> None:
+        """Single reaper cycle: list claims, evict+delete expired ones."""
+        namespace = self._config.namespace
+        ttl = self._config.session_idle_ttl
+        now = datetime.now(timezone.utc)
+
+        claims = await self._k8s.list_sandbox_claims(
+            namespace, f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
+        )
+
+        for item in claims:
+            metadata = item.get("metadata", {})
+            claim_name = metadata.get("name", "")
+            conversation_id = metadata.get("labels", {}).get(LABEL_CONVERSATION_ID, "")
+            annotations = metadata.get("annotations", {})
+
+            last_activity_str = annotations.get(ANNOTATION_LAST_ACTIVITY, "")
+            if last_activity_str:
+                try:
+                    last_activity = datetime.fromisoformat(last_activity_str)
+                    idle_seconds = (now - last_activity).total_seconds()
+                except ValueError:
+                    idle_seconds = ttl + 1  # treat unparseable as expired
+            else:
+                # No annotation — use creation timestamp as fallback
+                created = metadata.get("creationTimestamp", "")
+                try:
+                    created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    idle_seconds = (now - created_dt).total_seconds()
+                except (ValueError, AttributeError):
+                    idle_seconds = ttl + 1
+
+            if idle_seconds > ttl:
+                logger.info("Reaping idle session: conversation=%s claim=%s idle=%.0fs", conversation_id, claim_name, idle_seconds)
+                # Evict cache before deleting claim to avoid routing to a dead sandbox
+                if conversation_id:
+                    self._cache.evict(conversation_id)
+                if self._config.shutdown_policy == "Delete":
+                    await self._k8s.delete_sandbox_claim(claim_name, namespace)
 
     async def close(self) -> None:
         await self._k8s.close()
