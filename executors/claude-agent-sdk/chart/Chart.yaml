@@ -2,10 +2,9 @@ apiVersion: v2
 name: executor-claude-agent-sdk
 description: Claude Agent SDK executor with built-in tool access and session persistence
 type: application
-version: 0.1.6
+version: 0.1.7
 appVersion: 0.2.0
 annotations:
   ark.mckinsey.com/service: executor-claude-agent-sdk
   ark.mckinsey.com/resources: service
   ark.mckinsey.com/marketplace-item-name: executor/executor-claude-agent-sdk
-
