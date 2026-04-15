@@ -4,3 +4,4 @@ description: A Helm chart for MCP Filesystem Server
 type: application
 version: 0.1.54
 appVersion: 0.1.54
+

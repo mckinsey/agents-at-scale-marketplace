@@ -7,3 +7,4 @@ appVersion: 0.1.4
 annotations:
   ark.mckinsey.com/service: executor-langchain
   ark.mckinsey.com/resources: service
+
