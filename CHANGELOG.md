@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.31](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.30...v0.1.31) (2026-04-15)
+
+
+### Bug Fixes
+
+* Use correct version tag ([#221](https://github.com/mckinsey/agents-at-scale-marketplace/issues/221)) ([1455a10](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1455a10dc7abb0e26353c472d450f63f64bd183c))
+
 ## [0.1.30](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.29...v0.1.30) (2026-04-15)
 
 
