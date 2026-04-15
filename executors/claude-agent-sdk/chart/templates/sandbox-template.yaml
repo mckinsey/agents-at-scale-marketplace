@@ -1,0 +1,51 @@
+{{- if .Values.scheduler.enabled }}
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: {{ .Values.scheduler.config.sandboxTemplate }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.app.name }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  # Disable the default restrictive NetworkPolicy from agent-sandbox.
+  # Sandbox executor pods need cluster-internal access for:
+  # - K8s API (CRD resolution: Agent, Model, Tool, MCPServer, Secret)
+  # - OTEL collector (trace export)
+  # - MCP servers (tool execution)
+  networkPolicyManagement: Unmanaged
+  podTemplate:
+    spec:
+      serviceAccountName: {{ .Values.app.name }}-sandbox-sa
+      automountServiceAccountToken: true
+      {{- if .Values.scheduler.sandboxTemplate.runtimeClassName }}
+      runtimeClassName: {{ .Values.scheduler.sandboxTemplate.runtimeClassName }}
+      {{- end }}
+      containers:
+        - name: executor
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            {{- range .Values.app.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: otel-environment-variables
+                optional: true
+          resources:
+            {{- toYaml .Values.scheduler.sandboxTemplate.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: 8000
+            initialDelaySeconds: {{ .Values.healthCheck.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.readinessProbe.periodSeconds }}
+{{- end }}

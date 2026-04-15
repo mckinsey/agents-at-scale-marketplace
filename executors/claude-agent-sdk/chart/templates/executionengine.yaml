@@ -14,6 +14,10 @@ spec:
   address:
     valueFrom:
       serviceRef:
+        {{- if .Values.scheduler.enabled }}
+        name: {{ .Values.app.name }}-scheduler
+        {{- else }}
         name: {{ .Values.service.name }}
+        {{- end }}
   description: {{ .Values.executionEngine.description | quote }}
 {{- end }}
