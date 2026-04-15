@@ -1,0 +1,77 @@
+{{- if .Values.scheduler.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.app.name }}-scheduler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.app.name }}-scheduler
+    app.kubernetes.io/name: {{ .Values.app.name }}-scheduler
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}-scheduler
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}-scheduler
+        app.kubernetes.io/name: {{ .Values.app.name }}-scheduler
+      annotations:
+        {{- with .Values.global.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.app.name }}-scheduler-sa
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: scheduler
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.scheduler.image.repository }}:{{ .Values.scheduler.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.scheduler.image.pullPolicy }}
+          command: ["uv", "run", "executor-claude-agent-scheduler"]
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8000"
+            - name: SCHEDULER_CONFIGMAP
+              value: {{ .Values.app.name }}-scheduler-config
+            - name: SCHEDULER_NAMESPACE
+              value: {{ .Values.scheduler.config.namespace | default .Release.Namespace | quote }}
+          envFrom:
+            - secretRef:
+                name: otel-environment-variables
+                optional: true
+          resources:
+            {{- toYaml .Values.scheduler.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/scheduler
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.app.name }}-scheduler-config
+{{- end }}

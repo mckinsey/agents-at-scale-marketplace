@@ -1,0 +1,21 @@
+{{- if .Values.scheduler.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.app.name }}-scheduler-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.app.name }}-scheduler
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  config.yaml: |
+    sessionIdleTTL: {{ .Values.scheduler.config.sessionIdleTTL }}
+    shutdownPolicy: {{ .Values.scheduler.config.shutdownPolicy }}
+    sandboxReadyTimeout: {{ .Values.scheduler.config.sandboxReadyTimeout }}
+    sandboxTemplate: {{ .Values.scheduler.config.sandboxTemplate }}
+    namespace: {{ .Values.scheduler.config.namespace | default .Release.Namespace }}
+    maxActiveSandboxes: {{ .Values.scheduler.config.maxActiveSandboxes }}
+{{- end }}
