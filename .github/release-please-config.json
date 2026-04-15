@@ -114,7 +114,11 @@
       "release-type": "helm",
       "package-name": "executor-openai-responses",
       "extra-files": [
-        "chart/Chart.yaml"
+        {
+          "type": "yaml",
+          "path": "chart/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
       ]
     }
   }
