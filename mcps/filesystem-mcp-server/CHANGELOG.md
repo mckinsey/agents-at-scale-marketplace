@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.54](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.53...filesystem-mcp-server-v0.1.54) (2026-04-15)
+
+
+### Bug Fixes
+
+* Use correct name for mcp filesystem ([#220](https://github.com/mckinsey/agents-at-scale-marketplace/issues/220)) ([af2b4fd](https://github.com/mckinsey/agents-at-scale-marketplace/commit/af2b4fd25002124d09e9f76e4c716dcfc2e44cad))
+
 ## [0.1.53](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.52...filesystem-mcp-server-v0.1.53) (2026-04-15)
 
 
