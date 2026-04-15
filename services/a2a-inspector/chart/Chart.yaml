@@ -3,7 +3,7 @@ name: a2a-inspector
 description: A2A Inspector - Developer tool for testing and debugging A2A protocol agents
 type: application
 version: 0.1.2
-appVersion: 0.1.0
+appVersion: 0.1.2
 annotations:
   ark.mckinsey.com/service: a2a-inspector
   ark.mckinsey.com/resources: service
