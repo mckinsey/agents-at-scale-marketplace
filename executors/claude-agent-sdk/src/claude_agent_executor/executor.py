@@ -113,7 +113,8 @@ class ClaudeAgentExecutor(BaseExecutor):
                 summary = ", ".join(f"{s.name} ({len(s.tools)} tools)" for s in mcp_servers if s.tools)
                 logger.info(f"Connecting {len(sdk_servers)} MCP servers: {summary}")
 
-        env: Dict[str, str] = {"ANTHROPIC_API_KEY": api_key}
+        env: Dict[str, str] = dict(os.environ)
+        env["ANTHROPIC_API_KEY"] = api_key
         if base_url:
             env["ANTHROPIC_BASE_URL"] = base_url
 

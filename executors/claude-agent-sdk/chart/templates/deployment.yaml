@@ -47,6 +47,9 @@ spec:
             - secretRef:
                 name: otel-environment-variables
                 optional: true
+            {{- with .Values.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.app.resources | nindent 12 }}
           volumeMounts:
