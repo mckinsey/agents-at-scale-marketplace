@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.29](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.28...v0.1.29) (2026-04-15)
+
+
+### Bug Fixes
+
+* Allow release-please to update all appVersion values ([#217](https://github.com/mckinsey/agents-at-scale-marketplace/issues/217)) ([f23d8e4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f23d8e4a0ebf728a4e91287d52e1e9ec89f45323))
+* company house api key fix ([#212](https://github.com/mckinsey/agents-at-scale-marketplace/issues/212)) ([c7a6aa2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c7a6aa23a454f7aed78aab596b822fea5d9aec15))
+
 ## [0.1.28](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.27...v0.1.28) (2026-04-14)
 
 
