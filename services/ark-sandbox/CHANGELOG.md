@@ -2,6 +2,20 @@
 
 All notable changes to ARK Sandbox will be documented in this file.
 
+## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.3...ark-sandbox-v0.1.4) (2026-04-15)
+
+
+### Bug Fixes
+
+* Allow release-please to update all appVersion values ([#217](https://github.com/mckinsey/agents-at-scale-marketplace/issues/217)) ([f23d8e4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f23d8e4a0ebf728a4e91287d52e1e9ec89f45323))
+
+## [0.1.3](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.2...ark-sandbox-v0.1.3) (2026-04-14)
+
+
+### Features
+
+* marketplace install detection and url discovery ([#196](https://github.com/mckinsey/agents-at-scale-marketplace/issues/196)) ([b016ccf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b016ccf3203d5895ff7e70b40d349a66bf512bdf))
+
 ## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.1...ark-sandbox-v0.1.2) (2026-01-13)
 
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.12](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.11...noah-v0.1.12) (2026-04-15)
+
+
+### Bug Fixes
+
+* Allow release-please to update all appVersion values ([#217](https://github.com/mckinsey/agents-at-scale-marketplace/issues/217)) ([f23d8e4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f23d8e4a0ebf728a4e91287d52e1e9ec89f45323))
+
+## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.10...noah-v0.1.11) (2026-04-14)
+
+
+### Features
+
+* marketplace install detection and url discovery ([#196](https://github.com/mckinsey/agents-at-scale-marketplace/issues/196)) ([b016ccf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b016ccf3203d5895ff7e70b40d349a66bf512bdf))
+
 ## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.9...noah-v0.1.10) (2026-04-02)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.5...executor-claude-agent-sdk-v0.1.6) (2026-04-15)
+
+
+### Bug Fixes
+
+* annotation added ([#214](https://github.com/mckinsey/agents-at-scale-marketplace/issues/214)) ([a963fc2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a963fc2ecb7459b7108b467b7fb69b40411233d0))
+
 ## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.4...executor-claude-agent-sdk-v0.1.5) (2026-04-03)
 
 

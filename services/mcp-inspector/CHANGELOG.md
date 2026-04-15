@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/mcp-inspector-v0.1.1...mcp-inspector-v0.1.2) (2026-04-14)
+
+
+### Features
+
+* marketplace install detection and url discovery ([#196](https://github.com/mckinsey/agents-at-scale-marketplace/issues/196)) ([b016ccf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b016ccf3203d5895ff7e70b40d349a66bf512bdf))
+
 ## [0.1.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/mcp-inspector-v0.1.0...mcp-inspector-v0.1.1) (2025-12-03)
 
 

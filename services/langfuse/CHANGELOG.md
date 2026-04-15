@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.5...langfuse-v0.1.6) (2026-04-14)
+
+
+### Features
+
+* marketplace install detection and url discovery ([#196](https://github.com/mckinsey/agents-at-scale-marketplace/issues/196)) ([b016ccf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b016ccf3203d5895ff7e70b40d349a66bf512bdf))
+
 ## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/langfuse-v0.1.4...langfuse-v0.1.5) (2025-12-02)
 
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.1.30](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.29...v0.1.30) (2026-04-15)
+
+
+### Bug Fixes
+
+* annotation added ([#214](https://github.com/mckinsey/agents-at-scale-marketplace/issues/214)) ([a963fc2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a963fc2ecb7459b7108b467b7fb69b40411233d0))
+* Use correct name for mcp filesystem ([#220](https://github.com/mckinsey/agents-at-scale-marketplace/issues/220)) ([af2b4fd](https://github.com/mckinsey/agents-at-scale-marketplace/commit/af2b4fd25002124d09e9f76e4c716dcfc2e44cad))
+
+## [0.1.29](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.28...v0.1.29) (2026-04-15)
+
+
+### Bug Fixes
+
+* Allow release-please to update all appVersion values ([#217](https://github.com/mckinsey/agents-at-scale-marketplace/issues/217)) ([f23d8e4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/f23d8e4a0ebf728a4e91287d52e1e9ec89f45323))
+* company house api key fix ([#212](https://github.com/mckinsey/agents-at-scale-marketplace/issues/212)) ([c7a6aa2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c7a6aa23a454f7aed78aab596b822fea5d9aec15))
+
+## [0.1.28](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.27...v0.1.28) (2026-04-14)
+
+
+### Features
+
+* marketplace install detection and url discovery ([#196](https://github.com/mckinsey/agents-at-scale-marketplace/issues/196)) ([b016ccf](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b016ccf3203d5895ff7e70b40d349a66bf512bdf))
+* OpenAI responses executor ([#179](https://github.com/mckinsey/agents-at-scale-marketplace/issues/179)) ([cb852e1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cb852e11420a5228993e76e4e0c95e45b0a24e5a))
+* **openai-responses:** improve example agents and docs ([#211](https://github.com/mckinsey/agents-at-scale-marketplace/issues/211)) ([8826200](https://github.com/mckinsey/agents-at-scale-marketplace/commit/88262007dbe3e231a613c5e8de96af25d535c065))
+
+
+### Bug Fixes
+
+* use CPU-only PyTorch in speech-mcp-server to reduce build time ([#168](https://github.com/mckinsey/agents-at-scale-marketplace/issues/168)) ([18c30af](https://github.com/mckinsey/agents-at-scale-marketplace/commit/18c30afae7ccbe28ff34891da67729d62bdf0d78))
+
 ## [0.1.27](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.26...v0.1.27) (2026-04-03)
 
 

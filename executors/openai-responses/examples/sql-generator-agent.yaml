@@ -1,0 +1,80 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# SQL Query Generator using GPT-5 CFG (Context-Free Grammar) with Lark syntax.
+#
+# The CFG tool constrains the model's output to only produce syntactically valid
+# PostgreSQL SELECT statements — enforced at the token level by the model, not
+# by prompt engineering.
+#
+# Requires:
+#   - executor-openai-responses deployed
+#   - Secret openai-credentials with api-key and base-url
+#   - Model gpt-5.2-2025-12-11 or newer (CFG is a gpt-5 feature)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# 1. Model CR
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: openai-gpt-5-nano
+spec:
+  provider: openai
+  type: completions
+  model:
+    value: gpt-5.2-2025-12-11
+  config:
+    openai:
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: api-key
+      baseUrl:
+        valueFrom:
+          secretKeyRef:
+            name: openai-credentials
+            key: base-url
+---
+# 2. Agent CR
+#    The CFG tool is passed via annotation as a custom tool with a Lark grammar.
+#    The grammar enforces valid PostgreSQL SELECT syntax — columns, table, WHERE,
+#    ORDER BY, and LIMIT clauses only. No INSERT/UPDATE/DELETE allowed.
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: sql-generator-agent
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/reasoning: '{"effort": "low"}'
+    executor-openai-responses.ark.mckinsey.com/tools: |
+      [
+        {
+          "type": "custom",
+          "name": "generate_sql",
+          "description": "Generate a valid read-only PostgreSQL SELECT query constrained by grammar",
+          "format": {
+            "type": "grammar",
+            "syntax": "lark",
+            "definition": "SP: \" \"\nCOMMA: \",\"\nGT: \">\"\nLT: \"<\"\nEQ: \"=\"\nSEMI: \";\"\n\nstart: \"SELECT\" SP select_list SP \"FROM\" SP table where_clause? order_clause? limit_clause SEMI\n\nselect_list: \"*\" | column (COMMA SP column)*\ncolumn: IDENTIFIER\n\ntable: IDENTIFIER\n\nwhere_clause: SP \"WHERE\" SP condition (SP \"AND\" SP condition)*\ncondition: IDENTIFIER SP op SP value\nop: GT | LT | EQ | \">=\" | \"<=\"  | \"!=\"\nvalue: NUMBER | QUOTED_STRING\n\norder_clause: SP \"ORDER\" SP \"BY\" SP IDENTIFIER SP (\"ASC\" | \"DESC\")\nlimit_clause: SP \"LIMIT\" SP NUMBER\n\nIDENTIFIER: /[A-Za-z_][A-Za-z0-9_]*/\nNUMBER: /[0-9]+/\nQUOTED_STRING: /\\'[^']*\\'/\n"
+          }
+        }
+      ]
+spec:
+  modelRef:
+    name: openai-gpt-5-nano
+  executionEngine:
+    name: executor-openai-responses
+  prompt: |
+    You are a SQL query generator. Given a natural language request, generate a
+    valid PostgreSQL SELECT query using the generate_sql tool.
+    Only SELECT queries are allowed — no INSERT, UPDATE, DELETE, or DDL.
+    Always use the generate_sql tool to return your query.
+---
+# 3. Query CR — natural language input
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: sql-query-request
+spec:
+  target:
+    type: agent
+    name: sql-generator-agent
+  input: "Get the top 10 orders from the orders table where total_amount > 500, ordered by order_date descending"

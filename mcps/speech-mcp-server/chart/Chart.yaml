@@ -4,3 +4,5 @@ description: MCP server for audio transcription via Whisper
 type: application
 version: 0.1.1
 appVersion: 0.1.0
+annotations:
+  ark.mckinsey.com/marketplace-item-name: "mcp/speech-mcp-server"
