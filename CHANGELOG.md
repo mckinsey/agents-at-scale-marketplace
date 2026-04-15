@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.30](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.29...v0.1.30) (2026-04-15)
+
+
+### Bug Fixes
+
+* annotation added ([#214](https://github.com/mckinsey/agents-at-scale-marketplace/issues/214)) ([a963fc2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a963fc2ecb7459b7108b467b7fb69b40411233d0))
+* Use correct name for mcp filesystem ([#220](https://github.com/mckinsey/agents-at-scale-marketplace/issues/220)) ([af2b4fd](https://github.com/mckinsey/agents-at-scale-marketplace/commit/af2b4fd25002124d09e9f76e4c716dcfc2e44cad))
+
 ## [0.1.29](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.28...v0.1.29) (2026-04-15)
 
 
