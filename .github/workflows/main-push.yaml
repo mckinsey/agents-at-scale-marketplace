@@ -165,7 +165,7 @@ jobs:
       service-name: ${{ matrix.service.name }}
       service-path: ${{ matrix.service.path }}
       push-to-registry: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.service.path)] == 'true' }}
-      image-tag: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--tag_name', matrix.service.path)] || 'latest' }}
+      image-tag: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--version', matrix.service.path)] || 'latest' }}
 
   deploy-charts:
     name: Deploy Chart - ${{ matrix.chart.name }}
