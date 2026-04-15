@@ -28,7 +28,7 @@ The scheduler SHALL maintain an in-memory mapping of conversation IDs to sandbox
 
 #### Scenario: Existing sandbox is no longer reachable
 - **WHEN** an A2A request arrives for a mapped conversation but the sandbox pod is unreachable (crashed, deleted)
-- **THEN** the scheduler SHALL remove the stale mapping, attempt to create a new sandbox, and forward the request to the new sandbox
+- **THEN** the scheduler SHALL check sandbox health (GET claim + check sandbox Ready status) before deleting. Only delete and recreate the sandbox if it is genuinely gone.
 
 ### Requirement: Idle session reaping
 The scheduler SHALL run a background task that periodically checks for conversations whose last activity exceeds the configured `sessionIdleTTL` and deletes their `SandboxClaim` resources.
@@ -62,3 +62,32 @@ When deleting a sandbox (idle reaping or explicit cleanup), the scheduler SHALL 
 #### Scenario: Retain shutdown policy
 - **WHEN** a sandbox is reaped with `shutdownPolicy: Retain`
 - **THEN** the scheduler SHALL remove the conversation from its routing table but SHALL NOT delete the `SandboxClaim`, leaving the sandbox running for inspection
+
+### Requirement: ensure_sandbox split into get and create
+
+The monolithic `ensure_sandbox` method SHALL be replaced with two distinct operations to separate the read path from the write path.
+
+- [ ] Remove `ensure_sandbox` method
+- [ ] Add `get_sandbox(conversation_id) -> SandboxInfo | None`: check cache, then K8s GET by deterministic claim name. Return None if not found. Never creates.
+- [ ] Add `create_sandbox(conversation_id) -> SandboxInfo`: create claim, resolve sandbox name, wait for ready. Handles 409 conflict (another replica created first).
+- [ ] `recover_sandbox` checks sandbox health before deleting (GET claim + check sandbox Ready status). Only delete+recreate if sandbox is genuinely gone.
+
+### Requirement: Single deadline in create_sandbox
+
+Sandbox creation SHALL use a single monotonic deadline to prevent timeout drift across sequential async steps.
+
+- [ ] Compute `deadline = time.monotonic() + sandbox_ready_timeout` once at entry
+- [ ] Pass `remaining = int(deadline - time.monotonic())` to `resolve_sandbox_name`
+- [ ] Check remaining > 0, then pass to `wait_for_sandbox_ready`
+- [ ] If remaining <= 0 at any point, raise `TimeoutError`
+
+### Requirement: Reaper extraction
+
+The reaper loop SHALL be refactored into a testable single-pass function with corrected eviction ordering.
+
+- [ ] Extract `_reap_once(self) -> None` from `run_reaper`
+- [ ] `run_reaper` becomes: `while True: sleep(30); await _reap_once()`
+- [ ] Inside `_reap_once`, evict cache **before** deleting claim (reverse current order)
+- [ ] `_reap_once` checks `shutdown_policy == "Delete"` before deleting (already does, but tests must verify)
+- [ ] `_reap_once` handles missing annotation by falling back to `creationTimestamp`
+- [ ] `_reap_once` catches `ValueError` on `fromisoformat` and treats as expired
