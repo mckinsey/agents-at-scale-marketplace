@@ -31,8 +31,11 @@ conversationId: "abc" → context_id: "abc"   → lookup session file → previo
 
 ## Install
 
+With Helm:
+
 ```bash
-ark install marketplace/executors/executor-openai-responses
+cd executors/openai-responses
+helm install executor-openai-responses ./chart -n default --create-namespace
 ```
 
 Or with DevSpace:
@@ -40,12 +43,6 @@ Or with DevSpace:
 ```bash
 cd executors/openai-responses
 devspace deploy
-```
-
-Or with Helm:
-
-```bash
-helm install executor-openai-responses ./chart -n default --create-namespace
 ```
 
 ## Prerequisites
