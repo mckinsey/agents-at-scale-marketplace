@@ -117,6 +117,11 @@ class ClaudeAgentExecutor(BaseExecutor):
         if base_url:
             env["ANTHROPIC_BASE_URL"] = base_url
 
+        prompt_kwargs: Dict = {}
+        agent_prompt = getattr(request.agent, "prompt", "") or ""
+        if agent_prompt:
+            prompt_kwargs["system_prompt"] = {"type": "preset", "preset": "claude_code", "append": agent_prompt}
+
         resume_kwargs: Dict = {}
         if previous_session_id:
             resume_kwargs["resume"] = previous_session_id
@@ -126,6 +131,7 @@ class ClaudeAgentExecutor(BaseExecutor):
             permission_mode="bypassPermissions",
             env=env,
             **mcp_kwargs,
+            **prompt_kwargs,
             **resume_kwargs,
         )
         logger.info(f"{'Resuming session ' + previous_session_id if previous_session_id else 'Starting new session'} for conversation {conversation_id}")
