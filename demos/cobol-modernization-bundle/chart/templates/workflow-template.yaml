@@ -12,7 +12,9 @@ metadata:
     workflows.argoproj.io/description: "Complete COBOL modernization workflow: Reverse Engineer (Pseudocode) → Shape (Audio Transcription + Diagram) → Modernize (Python/PySpark)"
 spec:
   entrypoint: main
+  onExit: exit-handler
   serviceAccountName: {{ .Release.Name }}-argo-workflow
+  activeDeadlineSeconds: 10800
   parallelism: {{ .Values.argoWorkflows.workflowTemplate.parallelism | default 2 }}
   arguments:
     parameters:
@@ -36,6 +38,8 @@ spec:
 
         - - name: generate-pseudocode
             template: query-agent
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: agent-name
@@ -53,7 +57,7 @@ spec:
             withParam: "{{ "{{steps.list-cobol-files.outputs.parameters.files}}" }}"
 
         - - name: transcribe-audio
-            template: query-agent
+            template: query-agent-with-retry
             arguments:
               parameters:
                 - name: agent-name
@@ -75,6 +79,8 @@ spec:
 
         - - name: create-diagram
             template: query-agent
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: agent-name
@@ -92,8 +98,7 @@ spec:
                     - British English throughout
 
                     Save the PlantUML diagram to: {{ "{{workflow.parameters.output-dir}}" }}/diagrams/modernization-process.puml
-
-        - - name: list-pseudocode-files
+          - name: list-pseudocode-files
             template: list-files
             arguments:
               parameters:
@@ -104,6 +109,8 @@ spec:
 
         - - name: modernize-to-python
             template: query-agent
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: agent-name
@@ -126,14 +133,25 @@ spec:
                     Save the Python code to: {{ "{{workflow.parameters.output-dir}}" }}/python/{{ "{{item}}" }}.py
             withParam: "{{ "{{steps.list-pseudocode-files.outputs.parameters.files}}" }}"
 
+    - name: exit-handler
+      steps:
         - - name: generate-summary
             template: workflow-summary
             arguments:
               parameters:
                 - name: output-dir
                   value: "{{ "{{workflow.parameters.output-dir}}" }}"
+                - name: workflow-status
+                  value: "{{ "{{workflow.status}}" }}"
 
     - name: list-files
+      retryStrategy:
+        limit: 3
+        retryPolicy: "Always"
+        backoff:
+          duration: "15s"
+          factor: 2
+          maxDuration: "2m"
       inputs:
         parameters:
           - name: directory
@@ -160,12 +178,12 @@ spec:
               type: agent
               name: cobol-pseudocode-documenter
             serviceAccount: {{ .Release.Name }}-argo-workflow
-            timeout: 2m
+            timeout: 5m
             ttl: 1h
           EOF
 
           kubectl apply -n {{ .Release.Namespace }} -f /tmp/query.yaml
-          kubectl wait --for=condition=Completed --timeout=2m -n {{ .Release.Namespace }} query/$QUERY_NAME || true
+          kubectl wait --for=condition=Completed --timeout=5m -n {{ .Release.Namespace }} query/$QUERY_NAME || true
 
           kubectl get query $QUERY_NAME -n {{ .Release.Namespace }} -o json > /tmp/query.json
 
@@ -175,12 +193,41 @@ spec:
 
           jq -c '.' /tmp/files.json > /tmp/validated.json 2>/dev/null && mv /tmp/validated.json /tmp/files.json || echo '[]' > /tmp/files.json
 
+          FILE_COUNT=$(jq '. | length' /tmp/files.json)
+          if [ "$FILE_COUNT" -eq 0 ]; then
+            echo "Error: No files found matching pattern '{{ "{{inputs.parameters.pattern}}" }}' in directory '{{ "{{inputs.parameters.directory}}" }}'"
+            exit 1
+          fi
+
+          echo "Found $FILE_COUNT file(s)"
           cat /tmp/files.json
       outputs:
         parameters:
           - name: files
             valueFrom:
               path: /tmp/files.json
+
+    - name: query-agent-with-retry
+      retryStrategy:
+        limit: 3
+        retryPolicy: "Always"
+        backoff:
+          duration: "30s"
+          factor: 2
+          maxDuration: "5m"
+      inputs:
+        parameters:
+          - name: agent-name
+          - name: task-description
+      steps:
+        - - name: run
+            template: query-agent
+            arguments:
+              parameters:
+                - name: agent-name
+                  value: "{{ "{{inputs.parameters.agent-name}}" }}"
+                - name: task-description
+                  value: "{{ "{{inputs.parameters.task-description}}" }}"
 
     - name: query-agent
       inputs:
@@ -249,14 +296,21 @@ spec:
       inputs:
         parameters:
           - name: output-dir
+          - name: workflow-status
       script:
         image: alpine:3.19
         command: [sh]
         source: |
           set -e
 
+          if [ "{{ "{{inputs.parameters.workflow-status}}" }}" = "Succeeded" ]; then
+            STATUS_LABEL="COMPLETED SUCCESSFULLY"
+          else
+            STATUS_LABEL="COMPLETED WITH FAILURES (status: {{ "{{inputs.parameters.workflow-status}}" }})"
+          fi
+
           echo "================================================================================"
-          echo "COBOL MODERNIZATION WORKFLOW COMPLETE"
+          echo "COBOL MODERNIZATION WORKFLOW ${STATUS_LABEL}"
           echo "================================================================================"
           echo "Workflow: {{ "{{workflow.name}}" }}"
           echo "Completed: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"

@@ -21,15 +21,14 @@ spec:
     - A formatted transcription file in markdown format
   modelRef:
     name: {{ ((.Values.agents.audioTranscriber.modelRef).name) | default .Values.modelRef.name }}
-  maxCompletionTokens: 8192
   tools:
   - name: {{ .Release.Name }}-speech-mcp-server-transcribe-audio
     type: mcp
-  - name: file-gateway-mcpserver-read-file
+  - name: file-gateway-read-file
     type: mcp
-  - name: file-gateway-mcpserver-write-file
+  - name: file-gateway-write-file
     type: mcp
-  - name: file-gateway-mcpserver-list-directory
+  - name: file-gateway-list-directory
     type: mcp
   prompt: |
     You are a team of expert system analysts with extensive experience in technological modernisations.
