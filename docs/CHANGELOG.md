@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.15](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.14...marketplace-docs-v0.1.15) (2026-04-16)
+
+
+### Features
+
+* **executors/claude-agent-sdk:** add scheduler for sandbox-based session isolation ([#192](https://github.com/mckinsey/agents-at-scale-marketplace/issues/192)) ([33f8521](https://github.com/mckinsey/agents-at-scale-marketplace/commit/33f85217d12c2e8bdeea0c77c880c10a91ecf45e))
+
 ## [0.1.14](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.13...marketplace-docs-v0.1.14) (2026-04-14)
 
 

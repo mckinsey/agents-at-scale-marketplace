@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.5...cobol-modernization-bundle-v0.1.6) (2026-04-16)
+
+
+### Bug Fixes
+
+* **demos/cobol-modernization-bundle:** update for Ark compatibility and improve workflow fault tolerance ([#202](https://github.com/mckinsey/agents-at-scale-marketplace/issues/202)) ([cd63cc7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cd63cc7692c0ba904b316cfbf7c1d930f95482c5))
+
 ## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.4...cobol-modernization-bundle-v0.1.5) (2026-04-02)
 
 
