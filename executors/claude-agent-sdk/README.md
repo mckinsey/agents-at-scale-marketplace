@@ -31,16 +31,18 @@ helm install executor-claude-agent-sdk ./chart -n default --create-namespace --s
 Create a Model CRD with your Anthropic configuration:
 
 ```yaml
-apiVersion: ark.mckinsey.com/v1
+apiVersion: ark.mckinsey.com/v1alpha1
 kind: Model
 metadata:
   name: claude-sonnet
 spec:
   model:
     value: claude-sonnet-4-6
-  type: anthropic
+  provider: anthropic
   config:
     anthropic:
+      baseUrl:
+        value: my-base-url
       apiKey:
         valueFrom:
           secretKeyRef:
@@ -68,8 +70,8 @@ metadata:
 spec:
   executionEngine:
     name: executor-claude-agent-sdk
-  model:
-    ref: claude-sonnet
+  modelRef:
+    name: claude-sonnet
   prompt: |
     You are a helpful assistant with access to filesystem tools.
 ```
