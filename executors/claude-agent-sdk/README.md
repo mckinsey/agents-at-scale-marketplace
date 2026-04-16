@@ -183,7 +183,7 @@ extraEnvFrom:
 
 ```bash
 helm upgrade executor-claude-agent-sdk ./chart \
-  --set extraEnvFrom[0].secretRef.name=github-credentials
+  --set 'extraEnvFrom[0].secretRef.name=github-credentials'
 ```
 
 ### How It Works
@@ -201,7 +201,7 @@ kubectl create secret generic github-credentials \
 
 # Install executor with credentials
 helm install executor-claude-agent-sdk ./chart \
-  --set extraEnvFrom[0].secretRef.name=github-credentials
+  --set 'extraEnvFrom[0].secretRef.name=github-credentials'
 
 # Create an agent that uses gh CLI
 kubectl apply -f - <<EOF
@@ -212,15 +212,15 @@ metadata:
 spec:
   executionEngine:
     name: executor-claude-agent-sdk
-  model:
-    ref: claude-sonnet
+  modelRef:
+    name: claude-sonnet
   prompt: |
     You are a GitHub automation assistant.
     Use the gh CLI to interact with repositories.
 EOF
 
 # Query the agent
-ark query github-agent "Create a PR in myorg/myrepo with title 'Update README'"
+ark query agent/github-agent "Create a PR in myorg/myrepo with title 'Update README'"
 ```
 
 The agent will now have access to `GITHUB_TOKEN` and can use `gh` CLI commands that require authentication.
