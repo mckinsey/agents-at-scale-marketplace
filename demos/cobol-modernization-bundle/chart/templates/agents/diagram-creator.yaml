@@ -21,13 +21,12 @@ spec:
     - A PlantUML diagram capturing the major components of the technical modernisation process
   modelRef:
     name: {{ .Values.modelRef.name }}
-  maxCompletionTokens: 8192
   tools:
-  - name: file-gateway-mcpserver-read-file
+  - name: file-gateway-read-file
     type: mcp
-  - name: file-gateway-mcpserver-write-file
+  - name: file-gateway-write-file
     type: mcp
-  - name: file-gateway-mcpserver-list-directory
+  - name: file-gateway-list-directory
     type: mcp
   prompt: |
     You are an expert PlantUML diagram creator specialising in visualising software architectures.
