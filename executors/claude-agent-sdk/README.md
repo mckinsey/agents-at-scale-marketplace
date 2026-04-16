@@ -31,16 +31,18 @@ helm install executor-claude-agent-sdk ./chart -n default --create-namespace --s
 Create a Model CRD with your Anthropic configuration:
 
 ```yaml
-apiVersion: ark.mckinsey.com/v1
+apiVersion: ark.mckinsey.com/v1alpha1
 kind: Model
 metadata:
   name: claude-sonnet
 spec:
   model:
     value: claude-sonnet-4-6
-  type: anthropic
+  provider: anthropic
   config:
     anthropic:
+      baseUrl:
+        value: my-base-url
       apiKey:
         valueFrom:
           secretKeyRef:
@@ -68,8 +70,8 @@ metadata:
 spec:
   executionEngine:
     name: executor-claude-agent-sdk
-  model:
-    ref: claude-sonnet
+  modelRef:
+    name: claude-sonnet
   prompt: |
     You are a helpful assistant with access to filesystem tools.
 ```
@@ -154,3 +156,92 @@ Model name and API key are configured via the Model CRD (see [Prerequisites](#pr
 |----------|-------------|---------|
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint for tracing | Disabled |
 | `OTEL_EXPORTER_OTLP_HEADERS` | OTLP auth headers | None |
+
+## Credential Injection
+
+The executor supports injecting credentials from Kubernetes Secrets as environment variables into Claude Code sessions. This enables agents to authenticate with external services like GitHub, Git, or APIs.
+
+### Setup
+
+1. Create a Kubernetes Secret with your credentials:
+
+```bash
+kubectl create secret generic github-credentials \
+  --from-literal=GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+```
+
+2. Configure the executor to load the secret via `extraEnvFrom` in your Helm values:
+
+```yaml
+# values.yaml or --set flag
+extraEnvFrom:
+  - secretRef:
+      name: github-credentials
+```
+
+3. Deploy or upgrade the executor:
+
+```bash
+helm upgrade executor-claude-agent-sdk ./chart \
+  --set 'extraEnvFrom[0].secretRef.name=github-credentials'
+```
+
+### How It Works
+
+- Environment variables from the executor pod (including those loaded from Secrets via `extraEnvFrom`) are forwarded to the Claude Code subprocess
+- Tools like `gh`, `git`, and `curl` automatically discover credentials from the environment
+- Credentials are scoped per-deployment — all agents using this executor instance share the same credentials
+
+### Example: GitHub Authentication
+
+```bash
+# Create secret with GitHub token
+kubectl create secret generic github-credentials \
+  --from-literal=GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+
+# Install executor with credentials
+helm install executor-claude-agent-sdk ./chart \
+  --set 'extraEnvFrom[0].secretRef.name=github-credentials'
+
+# Create an agent that uses gh CLI
+kubectl apply -f - <<EOF
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: github-agent
+spec:
+  executionEngine:
+    name: executor-claude-agent-sdk
+  modelRef:
+    name: claude-sonnet
+  prompt: |
+    You are a GitHub automation assistant.
+    Use the gh CLI to interact with repositories.
+EOF
+
+# Query the agent
+ark query agent/github-agent "Create a PR in myorg/myrepo with title 'Update README'"
+```
+
+The agent will now have access to `GITHUB_TOKEN` and can use `gh` CLI commands that require authentication.
+
+### Multiple Secrets
+
+You can inject multiple secrets by adding more entries to `extraEnvFrom`:
+
+```yaml
+extraEnvFrom:
+  - secretRef:
+      name: github-credentials
+  - secretRef:
+      name: jira-credentials
+  - secretRef:
+      name: slack-credentials
+```
+
+### Security Notes
+
+- Credentials are scoped at the **executor deployment level**, not per-agent
+- If you need different credentials for different agents, deploy multiple executor instances
+- Use Kubernetes RBAC to control which service accounts can read which Secrets
+- Use fine-grained tokens (e.g., GitHub PATs with minimal scope) rather than broad credentials

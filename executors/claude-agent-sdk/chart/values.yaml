@@ -29,6 +29,16 @@ app:
       memory: "1Gi"
       cpu: "1000m"
 
+# Additional environment variables from Kubernetes Secrets or ConfigMaps
+# Use this to inject credentials (GitHub tokens, API keys, etc.) into the executor
+# Example:
+# extraEnvFrom:
+#   - secretRef:
+#       name: github-credentials
+#   - secretRef:
+#       name: jira-credentials
+extraEnvFrom: []
+
 # Service configuration
 service:
   name: executor-claude-agent-sdk
