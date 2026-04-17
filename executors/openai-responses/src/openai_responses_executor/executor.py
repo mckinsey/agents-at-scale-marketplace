@@ -6,7 +6,6 @@ import os
 from typing import Any, Optional
 
 from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
-from openai import AsyncOpenAI, AsyncAzureOpenAI
 
 from .config import config
 from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_output_schema
@@ -95,17 +94,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
             f"{'resuming' if previous_response_id else 'new session'})"
         )
 
-        if model_config.provider == "azure":
-            client = AsyncAzureOpenAI(
-                api_key=model_config.api_key,
-                azure_endpoint=model_config.base_url,
-                api_version=model_config.api_version,
-            )
-        else:
-            client = AsyncOpenAI(
-                api_key=model_config.api_key,
-                **({"base_url": model_config.base_url} if model_config.base_url else {}),
-            )
+        client = model_config.build_client()
 
         if previous_response_id:
             params = ResponsesCreateParams.continuation(

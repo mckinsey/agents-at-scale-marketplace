@@ -2,10 +2,13 @@
 
 import json
 import logging
-from typing import Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 from pydantic import BaseModel
 
 from ark_sdk.executor import ExecutionEngineRequest
+
+if TYPE_CHECKING:
+    from openai import AsyncAzureOpenAI, AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +40,19 @@ class ModelConfig(BaseModel):
     provider: str = "openai"
     base_url: Optional[str] = None
     api_version: Optional[str] = None
+
+    def build_client(self) -> "Union[AsyncOpenAI, AsyncAzureOpenAI]":
+        from openai import AsyncAzureOpenAI, AsyncOpenAI
+        if self.provider == "azure":
+            return AsyncAzureOpenAI(
+                api_key=self.api_key,
+                azure_endpoint=self.base_url,
+                api_version=self.api_version,
+            )
+        return AsyncOpenAI(
+            api_key=self.api_key,
+            **({"base_url": self.base_url} if self.base_url else {}),
+        )
 
     @classmethod
     def from_request(cls, request: ExecutionEngineRequest) -> "ModelConfig":
