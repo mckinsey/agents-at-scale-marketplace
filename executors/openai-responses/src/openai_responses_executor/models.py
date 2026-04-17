@@ -20,9 +20,18 @@ OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/outpu
 # ---------------------------------------------------------------------------
 
 
-class ModelConfig(BaseModel):
-    """OpenAI credentials and model name extracted from the Model CRD."""
+class AzureModelConfig(BaseModel):
+    apiKey: str
+    baseUrl: str
+    apiVersion: str
 
+
+class OpenAIModelConfig(BaseModel):
+    apiKey: str
+    baseUrl: Optional[str] = None
+
+
+class ModelConfig(BaseModel):
     model_name: str
     api_key: str
     provider: str = "openai"
@@ -39,38 +48,11 @@ class ModelConfig(BaseModel):
         provider = getattr(model, "type", "openai") or "openai"
 
         if provider == "azure":
-            azure_config = config.get("azure") or {}
-            api_key = azure_config.get("apiKey")
-            if not api_key:
-                raise ValueError("Model CRD azure config must include an apiKey")
-            base_url = azure_config.get("baseUrl")
-            if not base_url:
-                raise ValueError("Model CRD azure config must include a baseUrl")
-            api_version = azure_config.get("apiVersion")
-            if not api_version:
-                raise ValueError("Model CRD azure config must include an apiVersion")
-            return cls(
-                model_name=model.name,
-                api_key=api_key,
-                provider="azure",
-                base_url=base_url,
-                api_version=api_version,
-            )
+            azure = AzureModelConfig.model_validate(config.get("azure") or {})
+            return cls(model_name=model.name, api_key=azure.apiKey, provider="azure", base_url=azure.baseUrl, api_version=azure.apiVersion)
 
-        openai_config = config.get("openai")
-        if not openai_config:
-            raise ValueError(
-                "Agent model must have provider 'openai' or 'azure' with apiKey configured via Model CRD"
-            )
-        api_key = openai_config.get("apiKey")
-        if not api_key:
-            raise ValueError("Model CRD openai config must include an apiKey")
-        return cls(
-            model_name=model.name,
-            api_key=api_key,
-            provider="openai",
-            base_url=openai_config.get("baseUrl") or None,
-        )
+        openai = OpenAIModelConfig.model_validate(config.get("openai") or {})
+        return cls(model_name=model.name, api_key=openai.apiKey, provider="openai", base_url=openai.baseUrl)
 
 
 # ---------------------------------------------------------------------------
