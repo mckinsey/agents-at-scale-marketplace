@@ -2,10 +2,13 @@
 
 import json
 import logging
-from typing import Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 from pydantic import BaseModel
 
 from ark_sdk.executor import ExecutionEngineRequest
+
+if TYPE_CHECKING:
+    from openai import AsyncAzureOpenAI, AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +23,36 @@ OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/outpu
 # ---------------------------------------------------------------------------
 
 
-class ModelConfig(BaseModel):
-    """OpenAI credentials and model name extracted from the Model CRD."""
+class AzureModelConfig(BaseModel):
+    apiKey: str
+    baseUrl: str
+    apiVersion: str
 
+
+class OpenAIModelConfig(BaseModel):
+    apiKey: str
+    baseUrl: Optional[str] = None
+
+
+class ModelConfig(BaseModel):
     model_name: str
     api_key: str
+    provider: str = "openai"
     base_url: Optional[str] = None
+    api_version: Optional[str] = None
+
+    def build_client(self) -> "Union[AsyncOpenAI, AsyncAzureOpenAI]":
+        from openai import AsyncAzureOpenAI, AsyncOpenAI
+        if self.provider == "azure":
+            return AsyncAzureOpenAI(
+                api_key=self.api_key,
+                azure_endpoint=self.base_url,
+                api_version=self.api_version,
+            )
+        return AsyncOpenAI(
+            api_key=self.api_key,
+            **({"base_url": self.base_url} if self.base_url else {}),
+        )
 
     @classmethod
     def from_request(cls, request: ExecutionEngineRequest) -> "ModelConfig":
@@ -34,21 +61,14 @@ class ModelConfig(BaseModel):
             raise ValueError("Agent must have a model configured via Model CRD")
 
         config = getattr(model, "config", None) or {}
-        openai_config = config.get("openai")
-        if not openai_config:
-            raise ValueError(
-                "Agent model must have provider 'openai' with apiKey configured via Model CRD"
-            )
+        provider = getattr(model, "type", "openai") or "openai"
 
-        api_key = openai_config.get("apiKey")
-        if not api_key:
-            raise ValueError("Model CRD openai config must include an apiKey")
+        if provider == "azure":
+            azure = AzureModelConfig.model_validate(config.get("azure") or {})
+            return cls(model_name=model.name, api_key=azure.apiKey, provider="azure", base_url=azure.baseUrl, api_version=azure.apiVersion)
 
-        return cls(
-            model_name=model.name,
-            api_key=api_key,
-            base_url=openai_config.get("baseUrl") or None,
-        )
+        openai = OpenAIModelConfig.model_validate(config.get("openai") or {})
+        return cls(model_name=model.name, api_key=openai.apiKey, provider="openai", base_url=openai.baseUrl)
 
 
 # ---------------------------------------------------------------------------
