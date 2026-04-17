@@ -43,12 +43,18 @@ class ModelConfig(BaseModel):
             api_key = azure_config.get("apiKey")
             if not api_key:
                 raise ValueError("Model CRD azure config must include an apiKey")
+            base_url = azure_config.get("baseUrl")
+            if not base_url:
+                raise ValueError("Model CRD azure config must include a baseUrl")
+            api_version = azure_config.get("apiVersion")
+            if not api_version:
+                raise ValueError("Model CRD azure config must include an apiVersion")
             return cls(
                 model_name=model.name,
                 api_key=api_key,
                 provider="azure",
-                base_url=azure_config.get("baseUrl") or None,
-                api_version=azure_config.get("apiVersion") or None,
+                base_url=base_url,
+                api_version=api_version,
             )
 
         openai_config = config.get("openai")

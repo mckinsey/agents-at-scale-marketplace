@@ -96,10 +96,6 @@ class OpenAIResponsesExecutor(BaseExecutor):
         )
 
         if model_config.provider == "azure":
-            if not model_config.base_url:
-                raise ValueError("Model CRD azure config must include a baseUrl")
-            if not model_config.api_version:
-                raise ValueError("Model CRD azure config must include an apiVersion")
             client = AsyncAzureOpenAI(
                 api_key=model_config.api_key,
                 azure_endpoint=model_config.base_url,
