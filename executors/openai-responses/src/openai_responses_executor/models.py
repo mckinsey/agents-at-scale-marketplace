@@ -25,7 +25,9 @@ class ModelConfig(BaseModel):
 
     model_name: str
     api_key: str
+    provider: str = "openai"
     base_url: Optional[str] = None
+    api_version: Optional[str] = None
 
     @classmethod
     def from_request(cls, request: ExecutionEngineRequest) -> "ModelConfig":
@@ -34,19 +36,33 @@ class ModelConfig(BaseModel):
             raise ValueError("Agent must have a model configured via Model CRD")
 
         config = getattr(model, "config", None) or {}
+        provider = getattr(model, "type", "openai") or "openai"
+
+        if provider == "azure":
+            azure_config = config.get("azure") or {}
+            api_key = azure_config.get("apiKey")
+            if not api_key:
+                raise ValueError("Model CRD azure config must include an apiKey")
+            return cls(
+                model_name=model.name,
+                api_key=api_key,
+                provider="azure",
+                base_url=azure_config.get("baseUrl") or None,
+                api_version=azure_config.get("apiVersion") or None,
+            )
+
         openai_config = config.get("openai")
         if not openai_config:
             raise ValueError(
-                "Agent model must have provider 'openai' with apiKey configured via Model CRD"
+                "Agent model must have provider 'openai' or 'azure' with apiKey configured via Model CRD"
             )
-
         api_key = openai_config.get("apiKey")
         if not api_key:
             raise ValueError("Model CRD openai config must include an apiKey")
-
         return cls(
             model_name=model.name,
             api_key=api_key,
+            provider="openai",
             base_url=openai_config.get("baseUrl") or None,
         )
 

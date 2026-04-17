@@ -6,7 +6,7 @@ import os
 from typing import Any, Optional
 
 from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 
 from .config import config
 from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_output_schema
@@ -95,10 +95,17 @@ class OpenAIResponsesExecutor(BaseExecutor):
             f"{'resuming' if previous_response_id else 'new session'})"
         )
 
-        client = AsyncOpenAI(
-            api_key=model_config.api_key,
-            **({"base_url": model_config.base_url} if model_config.base_url else {}),
-        )
+        if model_config.provider == "azure":
+            client = AsyncAzureOpenAI(
+                api_key=model_config.api_key,
+                azure_endpoint=model_config.base_url or "",
+                api_version=model_config.api_version or "2024-12-01-preview",
+            )
+        else:
+            client = AsyncOpenAI(
+                api_key=model_config.api_key,
+                **({"base_url": model_config.base_url} if model_config.base_url else {}),
+            )
 
         if previous_response_id:
             params = ResponsesCreateParams.continuation(
@@ -139,7 +146,14 @@ class OpenAIResponsesExecutor(BaseExecutor):
         for iteration in range(config.max_tool_iterations):
             api_kwargs = params.to_api_kwargs()
             logger.info(f"Request tools: {api_kwargs.get('tools')}")
-            response = await client.responses.create(**api_kwargs)
+
+            response = None
+            async with client.responses.stream(**api_kwargs) as stream:
+                async for event in stream:
+                    if event.type == "response.output_text.delta":
+                        await self.stream_chunk(event.delta)
+                response = await stream.get_final_response()
+
             self._save_response_id(conversation_id, response.id)
             logger.info(f"Response output types: {[getattr(item, 'type', None) for item in response.output]}")
 
