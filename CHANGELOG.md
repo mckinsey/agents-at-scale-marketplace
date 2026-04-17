@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.34](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.33...v0.1.34) (2026-04-17)
+
+
+### Bug Fixes
+
+* **openai-responses:** add Azure OpenAI provider support ([#236](https://github.com/mckinsey/agents-at-scale-marketplace/issues/236)) ([3d59088](https://github.com/mckinsey/agents-at-scale-marketplace/commit/3d590889caaccdbb060858477591d64bbe0adf6f))
+
 ## [0.1.33](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.32...v0.1.33) (2026-04-16)
 
 
