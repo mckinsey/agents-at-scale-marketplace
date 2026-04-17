@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.33](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.32...v0.1.33) (2026-04-16)
+
+
+### Features
+
+* **executors/claude-agent-sdk:** add scheduler for sandbox-based session isolation ([#192](https://github.com/mckinsey/agents-at-scale-marketplace/issues/192)) ([33f8521](https://github.com/mckinsey/agents-at-scale-marketplace/commit/33f85217d12c2e8bdeea0c77c880c10a91ecf45e))
+* inject credentials into claude code executor ([#227](https://github.com/mckinsey/agents-at-scale-marketplace/issues/227)) ([8dcd562](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8dcd562b4965500075f5914643851450ba350275))
+
+
+### Bug Fixes
+
+* **demos/cobol-modernization-bundle:** update for Ark compatibility and improve workflow fault tolerance ([#202](https://github.com/mckinsey/agents-at-scale-marketplace/issues/202)) ([cd63cc7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cd63cc7692c0ba904b316cfbf7c1d930f95482c5))
+
 ## [0.1.32](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.31...v0.1.32) (2026-04-15)
 
 
