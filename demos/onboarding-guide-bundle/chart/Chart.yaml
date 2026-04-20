@@ -1,0 +1,35 @@
+apiVersion: v2
+name: onboarding-guide-bundle
+description: >-
+  Repo onboarding demo: given a public git URL, a 5-agent Argo workflow clones
+  the repo, analyses it, researches its stack on the live web, writes an
+  ONBOARDING.md, and proposes a good-first-ticket. Uses the Claude Agent SDK
+  executor (for git clone and ticket suggestion), the OpenAI Responses executor
+  (for live web search), and the default completions executor (for analysis +
+  writing, with filesystem MCP).
+version: 0.1.0
+type: application
+keywords:
+  - ark
+  - ai-agents
+  - demo
+  - onboarding
+  - multi-agent
+  - claude-agent-sdk
+  - openai-responses
+home: https://github.com/mckinsey/agents-at-scale
+sources:
+  - https://github.com/mckinsey/agents-at-scale-marketplace
+maintainers:
+  - name: ARK Team
+    email: ark-team@mckinsey.com
+annotations:
+  ark.mckinsey.com/category: demo
+  ark.mckinsey.com/type: bundle
+  ark.mckinsey.com/use-case: repo-onboarding
+  ark.mckinsey.com/components: agents,workflow
+dependencies:
+  - name: file-gateway
+    version: 0.1.6
+    repository: oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts
+    condition: file-gateway.enabled

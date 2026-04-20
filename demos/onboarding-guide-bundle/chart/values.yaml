@@ -1,0 +1,69 @@
+# Onboarding Guide Bundle configuration.
+# Override with --set or -f custom-values.yaml at install time.
+
+# Labels applied to every resource created by this chart.
+commonLabels:
+  app.kubernetes.io/part-of: onboarding-guide-bundle
+
+# Anthropic credentials.
+# Either provide a plain apiKey here (chart will create a Secret), or set
+# existingSecretName to an existing Secret with an `apiKey` field.
+anthropic:
+  apiKey: ""
+  existingSecretName: ""
+  # Name of the Secret the chart creates when apiKey is provided.
+  secretName: anthropic-api-key
+
+# Models referenced by the agents. You must create these Model CRs in the
+# target namespace before running the workflow — this bundle does not create
+# them. `default` and `responses` are assumed to exist already (typical Ark
+# cluster setup); the chart creates the Anthropic Model from the credentials
+# above.
+models:
+  # Default completions-compatible model (any provider). Used by
+  # code-analyzer-completions and onboarding-writer-completions.
+  default:
+    name: default
+  # OpenAI Responses-compatible model (provider: openai). Used by
+  # research-buddy-openai-responses.
+  responses:
+    name: responses
+  # Anthropic model created by this chart from anthropic.apiKey (or a
+  # pre-existing Secret). Used by repo-reader-claude-sdk and
+  # ticket-suggester-claude-sdk.
+  anthropic:
+    name: anthropic
+    modelId: claude-sonnet-4-5
+    baseUrl: https://api.anthropic.com
+
+# Execution engines must be installed separately via `ark install`:
+#   ark install marketplace/executors/executor-openai-responses --marketplace-version 0.1.3 -y
+#   ark install marketplace/executors/executor-claude-agent-sdk -y
+# (Pin executor-openai-responses to 0.1.3 — 0.1.4 ships a broken build.)
+executionEngines:
+  claudeAgentSdk:
+    name: executor-claude-agent-sdk
+  openaiResponses:
+    name: executor-openai-responses
+
+# file-gateway provides the filesystem MCP the default-executor agents use to
+# write outputs, and the HTTP API for uploads/downloads. Set to false and
+# install file-gateway separately (or re-use the namespace's existing one).
+file-gateway:
+  enabled: true
+
+# Research-buddy annotation configuration. Override to localise web search or
+# to tune reasoning effort.
+researchBuddy:
+  reasoningEffort: low
+  webSearchLocation:
+    country: GB
+    city: London
+    region: London
+
+# Argo Workflows ServiceAccount + RBAC. The workflow's ark-query step creates
+# Query CRs via kubectl, so the SA needs ark.mckinsey.com/queries permissions.
+argoWorkflows:
+  rbac:
+    enabled: true
+  serviceAccountName: argo-workflow
