@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # Python dependencies for executors
+  - package-ecosystem: "pip"
+    directory: "/executors/langchain"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-name: "ark-sdk"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "pip"
+    directory: "/executors/openai-responses"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-name: "ark-sdk"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "pip"
+    directory: "/executors/claude-agent-sdk"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-name: "ark-sdk"
+    commit-message:
+      prefix: "chore(deps)"
