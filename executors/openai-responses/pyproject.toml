@@ -14,7 +14,7 @@ dependencies = [
     "pydantic>=2.0.0", # data validation
     "openai>=1.60.0", # OpenAI Python SDK with Responses API support
     "pydantic-settings>=2.0.0", # environment variable config
-    "ark-sdk",
+    "ark-sdk==0.1.60",
     "openinference-instrumentation-openai",
     "opentelemetry-exporter-otlp-proto-http",
     "urllib3>=2.6.0",

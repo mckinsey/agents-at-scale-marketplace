@@ -14,4 +14,3 @@ ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8080
 
 CMD ["python", "-m", "file_api"]
-
