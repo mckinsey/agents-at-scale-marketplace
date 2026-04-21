@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-openai-responses-v0.1.4...executor-openai-responses-v0.1.5) (2026-04-21)
+
+
+### Bug Fixes
+
+* Force a release and pin version 0.1.60 ([#239](https://github.com/mckinsey/agents-at-scale-marketplace/issues/239)) ([8075149](https://github.com/mckinsey/agents-at-scale-marketplace/commit/807514971d3ce57ce6ad2b6e5975f343694c39d4))
+
 ## [0.1.4](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-openai-responses-v0.1.3...executor-openai-responses-v0.1.4) (2026-04-17)
 
 
