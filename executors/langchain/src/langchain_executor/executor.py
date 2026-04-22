@@ -67,13 +67,12 @@ class LangChainExecutor(BaseExecutor):
 
             history.add_message(HumanMessage(content=user_content))
 
-            response = await chat_client.ainvoke(history.messages)
-
-            # Handle response content
-            if hasattr(response, "content"):
-                result = str(response.content)
-            else:
-                result = str(response)
+            result = ""
+            async for chunk in chat_client.astream(history.messages):
+                token = chunk.content if hasattr(chunk, "content") else str(chunk)
+                if token:
+                    await self.stream_chunk(token)
+                    result += token
 
             history.add_message(AIMessage(content=result))
 
