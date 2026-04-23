@@ -596,7 +596,7 @@ spec:
             generateName: doc-extract-
           spec:
             input: |
-              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use filesystem-mcp-server-read-file on the PDF — it is too large.**
 
               Step 1 — Extract: Use the pdf-extraction-mcp-extract-pdf-sections tool with these parameters:
               - pdf_path: "{{ "{{inputs.parameters.document-file}}" }}"
@@ -608,7 +608,7 @@ spec:
 
               IMPORTANT: The annual report lists 70+ subsidiary undertakings across multiple pages (typically pages 100-107). Make sure the extraction captures ALL of them.
 
-              Step 3 — Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Step 3 — Save the extracted information as a JSON file. Use filesystem-mcp-server-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
 
               The JSON structure should be:
@@ -661,7 +661,7 @@ spec:
 
               Use the 'web-research-mcp-research-ubo-web' tool to research information about the company.
 
-              After collecting the information, save it to a JSON file using the 'mcp-filesystem-write-file' tool.
+              After collecting the information, save it to a JSON file using the 'filesystem-mcp-server-write-file' tool.
               Use the section name as part of the filename: {{ "{{inputs.parameters.output-dir}}" }}/web_{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
 
@@ -783,7 +783,7 @@ spec:
               Company: {{ "{{inputs.parameters.company-name}}" }}
               Date: {{ "{{inputs.parameters.current-date}}" }}
 
-              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+              **Path convention:** Use the paths below exactly as given with filesystem-mcp-server-read-file and filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
               Read the unconsolidated data from: {{ "{{inputs.parameters.input-file}}" }}
 
@@ -791,7 +791,7 @@ spec:
               Merge findings from both document extraction and web research, removing duplicates and reconciling conflicts.
 
               CRITICAL INSTRUCTIONS:
-              1. First, use mcp-filesystem-read-file to read the unconsolidated data file.
+              1. First, use filesystem-mcp-server-read-file to read the unconsolidated data file.
               2. The file is a JSON array. Each element has a "section" field and a "data" field.
                  - The "data" field may be an ARRAY of subsidiary objects (from PDF extraction) OR an OBJECT with a "subsidiary_entities" key (from web research).
                  - You MUST check BOTH formats and merge ALL entries from ALL array elements.

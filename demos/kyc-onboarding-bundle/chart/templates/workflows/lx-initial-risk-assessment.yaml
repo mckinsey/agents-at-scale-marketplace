@@ -106,11 +106,11 @@ spec:
             input: |
               You must complete this task yourself and save the output; do not hand off or terminate.
 
-              **CRITICAL RULE — SINGLE FILE OUTPUT:** You MUST produce exactly ONE JSON file containing ALL sections. Do NOT split the output into multiple files. Do NOT create separate files per section. You will call mcp-filesystem-write-file EXACTLY ONCE to write ONE file that contains the complete merged JSON object with all three top-level keys.
+              **CRITICAL RULE — SINGLE FILE OUTPUT:** You MUST produce exactly ONE JSON file containing ALL sections. Do NOT split the output into multiple files. Do NOT create separate files per section. You will call filesystem-mcp-server-write-file EXACTLY ONCE to write ONE file that contains the complete merged JSON object with all three top-level keys.
 
               **CRITICAL — Populate with real data from files.** You MUST read the JSON files from the intermediate directory and **copy the actual values** from them into your output. Do NOT use "NA", "[sender company]", or placeholders for fields that exist in the source files. Only use NA or _Pending_ when a source file is missing or a field is genuinely absent in all sources.
 
-              Step 1 — List and read files: Call mcp-filesystem-list-directory on {{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ then mcp-filesystem-read-file for each JSON file (inquiry_information.json, web_data_initial_profile.json, government_data_initial_profile.json, kyc_standards.json). Read every file that exists.
+              Step 1 — List and read files: Call filesystem-mcp-server-list-directory on {{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ then filesystem-mcp-server-read-file for each JSON file (inquiry_information.json, web_data_initial_profile.json, government_data_initial_profile.json, kyc_standards.json). Read every file that exists.
 
               Step 2 — Merge ALL data into ONE single KYC profile JSON object using the exact LegacyX schema below. The final JSON must be a SINGLE object with exactly three top-level keys. **Copy real values** from the files you read.
 
@@ -143,7 +143,7 @@ spec:
               If a file is missing, only then use minimal placeholders for that section. Otherwise **merge and copy the real data** from every file you read.
 
               Step 3 — Write the SINGLE consolidated file:
-              You MUST call mcp-filesystem-write-file EXACTLY ONCE with:
+              You MUST call filesystem-mcp-server-write-file EXACTLY ONCE with:
               - path: {{ "{{inputs.parameters.profile-json}}" }}
               - content: your COMPLETE merged JSON (one object with all three top-level keys)
               Do NOT write multiple files. Do NOT split by section. Do NOT add /data or /mnt prefix to the path. ONE call, ONE file, ALL data.
@@ -171,7 +171,7 @@ spec:
             input: |
               You must complete this task yourself and save the output; do not hand off or terminate.
 
-              Read the KYC profile JSON from: {{ "{{inputs.parameters.profile-json}}" }} using mcp-filesystem-read-file.
+              Read the KYC profile JSON from: {{ "{{inputs.parameters.profile-json}}" }} using filesystem-mcp-server-read-file.
               The profile uses the LegacyX schema: "KYC Standards and Requirements", "Inquiry information", "Initial Profile".
 
               Convert it to Markdown matching the **LegacyX kyc_profile.md** format exactly. **Use the actual values from the JSON** — do not use "NA", "(url)", or placeholders when the JSON has real data. Use the **exact section order** below.
@@ -200,7 +200,7 @@ spec:
               - #### 3.1 Required Documents — bullet list of document items from JSON (each line one item).
               - #### 3.2 Required Checks — bullet list with **bold** check name and description, e.g. **Identity Verification:** Confirm authenticity... (global requirement). Use the exact strings from the JSON; bold the leading check name (e.g. **Key Controllers Verification:**, **Sanctions Screening:**).
 
-              You MUST call mcp-filesystem-write-file with path set to the exact string below (no leading slash, no /data or /mnt prefix) and content set to your full Markdown:
+              You MUST call filesystem-mcp-server-write-file with path set to the exact string below (no leading slash, no /data or /mnt prefix) and content set to your full Markdown:
               {{ "{{inputs.parameters.profile-md}}" }}
     - name: summary-risk-query
       inputs:
@@ -226,9 +226,9 @@ spec:
             input: |
               You must complete this task yourself and save the output; do not hand off or terminate.
 
-              **CRITICAL — FILE OUTPUT REQUIRED:** Your task is NOT complete until you call mcp-filesystem-write-file to save the report. You MUST call mcp-filesystem-write-file with path: {{ "{{inputs.parameters.risk-report}}" }} and content: your full Markdown report. Do NOT just respond with the report text — you MUST save it to the file. Do NOT add /data or /mnt prefix to the path.
+              **CRITICAL — FILE OUTPUT REQUIRED:** Your task is NOT complete until you call filesystem-mcp-server-write-file to save the report. You MUST call filesystem-mcp-server-write-file with path: {{ "{{inputs.parameters.risk-report}}" }} and content: your full Markdown report. Do NOT just respond with the report text — you MUST save it to the file. Do NOT add /data or /mnt prefix to the path.
 
-              Read the KYC profile from: {{ "{{inputs.parameters.profile-json}}" }} using mcp-filesystem-read-file.
+              Read the KYC profile from: {{ "{{inputs.parameters.profile-json}}" }} using filesystem-mcp-server-read-file.
 
               Produce an **Initial risk assessment report** in Markdown matching the **LegacyX summary_risk_report.md** format exactly. **Use the actual values from the profile JSON** (company name, address, key individuals, geography, industry, purpose, etc.) — do not use "NA" or placeholders when the JSON contains real data.
 
@@ -263,6 +263,6 @@ spec:
 
               - ### Recommendations: — Bullet list of recommendations (e.g. collect missing documents, complete pending checks, monitor risks). Then on the next line: **Overall Risk Rating**: **<span style="color: orange"> moderate </span>** (or low/green, high/red).
 
-              You MUST call mcp-filesystem-write-file with path set to the exact string below (no leading slash, no /data or /mnt prefix) and content set to your full report:
+              You MUST call filesystem-mcp-server-write-file with path set to the exact string below (no leading slash, no /data or /mnt prefix) and content set to your full report:
               {{ "{{inputs.parameters.risk-report}}" }}
 {{- end }}
