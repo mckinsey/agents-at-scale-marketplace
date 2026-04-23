@@ -2,8 +2,8 @@ apiVersion: v2
 name: executor-langchain
 description: LangChain execution engine for ARK agents with RAG support
 type: application
-version: 0.1.5
-appVersion: 0.1.5
+version: 0.1.6
+appVersion: 0.1.6
 annotations:
   ark.mckinsey.com/service: executor-langchain
   ark.mckinsey.com/resources: service

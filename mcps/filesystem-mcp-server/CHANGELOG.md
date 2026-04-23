@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.56](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.55...filesystem-mcp-server-v0.1.56) (2026-04-21)
+
+
+### Bug Fixes
+
+* Force a release and pin version 0.1.60 ([#239](https://github.com/mckinsey/agents-at-scale-marketplace/issues/239)) ([8075149](https://github.com/mckinsey/agents-at-scale-marketplace/commit/807514971d3ce57ce6ad2b6e5975f343694c39d4))
+
 ## [0.1.55](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.54...filesystem-mcp-server-v0.1.55) (2026-04-15)
 
 
