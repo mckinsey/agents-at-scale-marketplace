@@ -8,9 +8,12 @@ import json
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
+import logging
 import fitz  # PyMuPDF
 import httpx
 from mcp.server.fastmcp import FastMCP
+
+logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP(
@@ -106,6 +109,11 @@ def call_openai(prompt: str, model: str) -> str:
         response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
+        actual_model = result.get("model", "unknown")
+        if actual_model != model:
+            logger.warning("LLM_MODEL env=%s but gateway returned model=%s", model, actual_model)
+        else:
+            logger.info("LLM call succeeded: model=%s", actual_model)
         return result["choices"][0]["message"]["content"]
 
 
