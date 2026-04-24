@@ -7,8 +7,11 @@ import os
 import json
 from typing import Dict, List, Any, Optional
 
+import logging
 import httpx
 from mcp.server.fastmcp import FastMCP
+
+logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP(
@@ -61,6 +64,12 @@ def search_perplexity(query: str, max_results: int = 5) -> str:
         response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
+        actual_model = result.get("model", "unknown")
+        requested_model = "sonar"
+        if actual_model != requested_model:
+            logger.warning("requested model=%s but gateway returned model=%s", requested_model, actual_model)
+        else:
+            logger.info("LLM call succeeded: model=%s", actual_model)
         return result["choices"][0]["message"]["content"]
 
 
