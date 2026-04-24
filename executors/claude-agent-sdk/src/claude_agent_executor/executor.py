@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from ark_sdk.executor import BaseExecutor, MCPServerConfig, Message
 from ark_sdk.executor_app import is_otel_enabled
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, list_sessions
-from claude_agent_sdk.types import AssistantMessage, TextBlock
+from claude_agent_sdk.types import StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +127,7 @@ class ClaudeAgentExecutor(BaseExecutor):
             cwd=str(session_dir),
             permission_mode="bypassPermissions",
             env=env,
+            include_partial_messages=True,
             **mcp_kwargs,
             **resume_kwargs,
         )
@@ -137,10 +138,14 @@ class ClaudeAgentExecutor(BaseExecutor):
             async with ClaudeSDKClient(options=options) as client:
                 await client.query(user_input)
                 async for message in client.receive_response():
-                    if isinstance(message, AssistantMessage):
-                        for block in message.content:
-                            if isinstance(block, TextBlock) and block.text:
-                                await self.stream_chunk(block.text)
+                    if isinstance(message, StreamEvent):
+                        event = message.event or {}
+                        if event.get("type") == "content_block_delta":
+                            delta = event.get("delta") or {}
+                            if delta.get("type") == "text_delta":
+                                text = delta.get("text")
+                                if text:
+                                    await self.stream_chunk(text)
                     if hasattr(message, "result") and message.result:
                         result_text = message.result
 

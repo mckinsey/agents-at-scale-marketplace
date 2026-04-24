@@ -51,6 +51,13 @@ def _build_stub() -> None:
         structured_output: Any = None
 
     @dataclass
+    class StreamEvent:
+        uuid: str = ""
+        session_id: str = ""
+        event: dict = field(default_factory=dict)
+        parent_tool_use_id: Optional[str] = None
+
+    @dataclass
     class ClaudeAgentOptions:
         model: str = ""
         cwd: str = "."
@@ -59,6 +66,7 @@ def _build_stub() -> None:
         mcp_servers: Optional[dict] = None
         allowed_tools: Optional[list] = None
         resume: Optional[str] = None
+        include_partial_messages: bool = False
 
     class ClaudeSDKClient:
         def __init__(self, options=None):
@@ -87,6 +95,7 @@ def _build_stub() -> None:
     sdk_types.ToolResultBlock = ToolResultBlock
     sdk_types.AssistantMessage = AssistantMessage
     sdk_types.ResultMessage = ResultMessage
+    sdk_types.StreamEvent = StreamEvent
     sdk_types.ClaudeAgentOptions = ClaudeAgentOptions
 
     sdk = types.ModuleType("claude_agent_sdk")
