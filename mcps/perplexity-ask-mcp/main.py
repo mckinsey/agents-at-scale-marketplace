@@ -9,11 +9,8 @@ import os
 import json
 from typing import List, Dict, Any
 
-import logging
 import httpx
 from mcp.server.fastmcp import FastMCP
-
-logger = logging.getLogger(__name__)
 
 mcp = FastMCP(
     "PerplexityAsk",
@@ -44,11 +41,6 @@ def _call_perplexity(messages: List[Dict[str, str]]) -> str:
         response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
-        actual_model = result.get("model", "unknown")
-        if actual_model != PERPLEXITY_MODEL:
-            logger.warning("PERPLEXITY_MODEL env=%s but gateway returned model=%s", PERPLEXITY_MODEL, actual_model)
-        else:
-            logger.info("LLM call succeeded: model=%s", actual_model)
         return result["choices"][0]["message"]["content"]
 
 
