@@ -3,9 +3,11 @@
 import json
 import logging
 import uuid
-from typing import Any
+from typing import Any, Optional
 
 import httpx
+from ark_sdk.extensions.query import QUERY_EXTENSION_METADATA_KEY, QueryRef
+from ark_sdk.query_status_updater import QueryStatusUpdater
 from fastapi import FastAPI, Request, Response
 from opentelemetry import trace
 from opentelemetry.context import attach, detach
@@ -27,6 +29,26 @@ def _is_valid_uuid4(value: str) -> bool:
         return str(parsed) == value.lower()
     except (ValueError, AttributeError):
         return False
+
+
+def _extract_query_ref_from_body(body: bytes) -> Optional[QueryRef]:
+    """Extract QueryRef from A2A JSON-RPC message metadata.
+
+    Returns None if the body is unparseable or the query extension metadata is missing.
+    """
+    try:
+        data = json.loads(body)
+        metadata = data.get("params", {}).get("message", {}).get("metadata", {})
+        ref_data = metadata.get(QUERY_EXTENSION_METADATA_KEY)
+        if not ref_data or not isinstance(ref_data, dict):
+            return None
+        name = ref_data.get("name")
+        namespace = ref_data.get("namespace")
+        if not name or not namespace:
+            return None
+        return QueryRef(name=name, namespace=namespace)
+    except Exception:
+        return None
 
 
 def _jsonrpc_error(request_id: Any, code: int, message: str) -> bytes:
@@ -119,10 +141,31 @@ def create_proxy_app(
                 "scheduler.route",
                 attributes={"sandbox.conversation_id": conversation_id, "sandbox.is_new": is_new},
             ) as route_span:
+                # Build status updater for new conversations
+                status_updater: Optional[QueryStatusUpdater] = None
+                if is_new:
+                    query_ref = _extract_query_ref_from_body(raw_body)
+                    if query_ref:
+                        status_updater = QueryStatusUpdater(query_ref)
+
                 # Route to sandbox based on session type
                 try:
                     if is_new:
+                        if status_updater:
+                            try:
+                                await status_updater.update_query_phase(
+                                    "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
+                                )
+                            except Exception:
+                                logger.warning("Failed to set provisioning status for conversation=%s", conversation_id, exc_info=True)
                         info = await sandbox_manager.create_sandbox(conversation_id)
+                        if status_updater:
+                            try:
+                                await status_updater.update_query_phase(
+                                    "running", "QueryRunning", "Query is running",
+                                )
+                            except Exception:
+                                logger.warning("Failed to set running status for conversation=%s", conversation_id, exc_info=True)
                     else:
                         info = await sandbox_manager.get_sandbox(conversation_id)
                         if info is None:
