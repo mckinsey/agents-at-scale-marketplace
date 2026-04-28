@@ -89,7 +89,12 @@ build-pdf-mcp:
 		minikube image load $(PDF_EXTRACTION_MCP_IMAGE); \
 	fi
 	@echo "Deploying pdf-extraction MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/pdf-extraction-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template pdf-extraction-mcp ../../mcps/pdf-extraction-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=pdf-extraction-mcp \
+		--set image.tag=latest \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build-companies-house-mcp:
