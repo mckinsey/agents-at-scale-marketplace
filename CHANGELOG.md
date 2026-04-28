@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.36](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.35...v0.1.36) (2026-04-24)
+
+
+### Features
+
+* Add dependabot for ark-sdk ([#241](https://github.com/mckinsey/agents-at-scale-marketplace/issues/241)) ([c1917fd](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c1917fd2f579ff931842c2c0f046210d13742d41))
+* **demos:** add onboarding-guide-bundle ([#238](https://github.com/mckinsey/agents-at-scale-marketplace/issues/238)) ([2259bb0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/2259bb0763465c66213c8cc0721ef58e0860ee1c))
+* **executors:** add broker streaming support to LangChain and Claude… ([#246](https://github.com/mckinsey/agents-at-scale-marketplace/issues/246)) ([7f88c67](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7f88c675e49f93a8820b14af61e8e276fa9f3c79))
+
 ## [0.1.35](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.34...v0.1.35) (2026-04-21)
 
 
