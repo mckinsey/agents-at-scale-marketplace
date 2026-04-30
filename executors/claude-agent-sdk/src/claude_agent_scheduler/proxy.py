@@ -6,6 +6,8 @@ import uuid
 from typing import Any
 
 import httpx
+from ark_sdk.extensions.query import extract_query_ref
+from ark_sdk.query_status_updater import QueryStatusUpdater
 from fastapi import FastAPI, Request, Response
 from opentelemetry import trace
 from opentelemetry.context import attach, detach
@@ -27,6 +29,15 @@ def _is_valid_uuid4(value: str) -> bool:
         return str(parsed) == value.lower()
     except (ValueError, AttributeError):
         return False
+
+
+def _extract_query_ref_from_body(body: bytes):
+    """Extract QueryRef from A2A JSON-RPC body, or None on any failure."""
+    try:
+        message = json.loads(body).get("params", {}).get("message", {})
+        return extract_query_ref(message)
+    except Exception:
+        return None
 
 
 def _jsonrpc_error(request_id: Any, code: int, message: str) -> bytes:
@@ -119,10 +130,19 @@ def create_proxy_app(
                 "scheduler.route",
                 attributes={"sandbox.conversation_id": conversation_id, "sandbox.is_new": is_new},
             ) as route_span:
+                query_ref = _extract_query_ref_from_body(raw_body) if is_new else None
+                status_updater = QueryStatusUpdater(query_ref)
+
                 # Route to sandbox based on session type
                 try:
                     if is_new:
+                        await status_updater.update_query_phase(
+                            "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
+                        )
                         info = await sandbox_manager.create_sandbox(conversation_id)
+                        await status_updater.update_query_phase(
+                            "running", "QueryRunning", "Query is running",
+                        )
                     else:
                         info = await sandbox_manager.get_sandbox(conversation_id)
                         if info is None:
