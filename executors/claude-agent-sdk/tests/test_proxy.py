@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from ark_sdk.extensions.query import QUERY_EXTENSION_METADATA_KEY
+from ark_sdk.extensions.query import QUERY_EXTENSION_METADATA_KEY, QueryRef
 from fastapi.testclient import TestClient
 
 from claude_agent_scheduler.config import SchedulerConfig

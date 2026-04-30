@@ -3,10 +3,10 @@
 import json
 import logging
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 import httpx
-from ark_sdk.extensions.query import QUERY_EXTENSION_METADATA_KEY, QueryRef
+from ark_sdk.extensions.query import extract_query_ref
 from ark_sdk.query_status_updater import QueryStatusUpdater
 from fastapi import FastAPI, Request, Response
 from opentelemetry import trace
@@ -31,22 +31,11 @@ def _is_valid_uuid4(value: str) -> bool:
         return False
 
 
-def _extract_query_ref_from_body(body: bytes) -> Optional[QueryRef]:
-    """Extract QueryRef from A2A JSON-RPC message metadata.
-
-    Returns None if the body is unparseable or the query extension metadata is missing.
-    """
+def _extract_query_ref_from_body(body: bytes):
+    """Extract QueryRef from A2A JSON-RPC body, or None on any failure."""
     try:
-        data = json.loads(body)
-        metadata = data.get("params", {}).get("message", {}).get("metadata", {})
-        ref_data = metadata.get(QUERY_EXTENSION_METADATA_KEY)
-        if not ref_data or not isinstance(ref_data, dict):
-            return None
-        name = ref_data.get("name")
-        namespace = ref_data.get("namespace")
-        if not name or not namespace:
-            return None
-        return QueryRef(name=name, namespace=namespace)
+        message = json.loads(body).get("params", {}).get("message", {})
+        return extract_query_ref(message)
     except Exception:
         return None
 
