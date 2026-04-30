@@ -141,31 +141,19 @@ def create_proxy_app(
                 "scheduler.route",
                 attributes={"sandbox.conversation_id": conversation_id, "sandbox.is_new": is_new},
             ) as route_span:
-                # Build status updater for new conversations
-                status_updater: Optional[QueryStatusUpdater] = None
-                if is_new:
-                    query_ref = _extract_query_ref_from_body(raw_body)
-                    if query_ref:
-                        status_updater = QueryStatusUpdater(query_ref)
+                query_ref = _extract_query_ref_from_body(raw_body) if is_new else None
+                status_updater = QueryStatusUpdater(query_ref)
 
                 # Route to sandbox based on session type
                 try:
                     if is_new:
-                        if status_updater:
-                            try:
-                                await status_updater.update_query_phase(
-                                    "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
-                                )
-                            except Exception:
-                                logger.warning("Failed to set provisioning status for conversation=%s", conversation_id, exc_info=True)
+                        await status_updater.update_query_phase(
+                            "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
+                        )
                         info = await sandbox_manager.create_sandbox(conversation_id)
-                        if status_updater:
-                            try:
-                                await status_updater.update_query_phase(
-                                    "running", "QueryRunning", "Query is running",
-                                )
-                            except Exception:
-                                logger.warning("Failed to set running status for conversation=%s", conversation_id, exc_info=True)
+                        await status_updater.update_query_phase(
+                            "running", "QueryRunning", "Query is running",
+                        )
                     else:
                         info = await sandbox_manager.get_sandbox(conversation_id)
                         if info is None:

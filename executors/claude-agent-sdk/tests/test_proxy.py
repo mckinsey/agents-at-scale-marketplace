@@ -159,9 +159,9 @@ class TestProxyQueryStatus:
             return_value=httpx.Response(200, content=b'{"ok":true}', headers={"content-type": "application/json"}),
         )
 
-        mock_updater_cls = MagicMock()
+        mock_updater = AsyncMock()
 
-        with patch("claude_agent_scheduler.proxy.QueryStatusUpdater", mock_updater_cls):
+        with patch("claude_agent_scheduler.proxy.QueryStatusUpdater", return_value=mock_updater):
             fastapi_app = create_proxy_app(sandbox_manager=sandbox_manager, http_client=mock_http)
             client = TestClient(fastapi_app, raise_server_exceptions=False)
 
@@ -170,8 +170,7 @@ class TestProxyQueryStatus:
             response = client.post("/", json=_a2a_body_with_query_ref(context_id=test_uuid))
 
         assert response.status_code == 200
-        # QueryStatusUpdater should not have been instantiated for existing conversations
-        mock_updater_cls.assert_not_called()
+        mock_updater.update_query_phase.assert_not_awaited()
 
     def test_status_update_failure_does_not_block(
         self, sandbox_manager: MagicMock, http_client: httpx.AsyncClient,
