@@ -277,7 +277,7 @@ spec:
               type: agent
               name: consolidation-analyst-agent
             input: |
-              Read the following files using `mcp-filesystem-read-file`:
+              Read the following files using `filesystem-mcp-server-read-file`:
               - Key controllers: {{ "{{inputs.parameters.key-controllers-file}}" }}
               Do NOT add /data or any other prefix to file paths when using MCP tools.
 
@@ -449,7 +449,7 @@ spec:
               Name to screen: {{ "{{inputs.parameters.name}}" }}
               Screening type: {{ "{{inputs.parameters.screening-type}}" }}
 
-              Read the {{ "{{inputs.parameters.screening-type}}" }} file using the `mcp-filesystem-read-file` tool at path: {{ "{{inputs.parameters.document-file}}" }}
+              Read the {{ "{{inputs.parameters.screening-type}}" }} file using the `filesystem-mcp-server-read-file` tool at path: {{ "{{inputs.parameters.document-file}}" }}
               Do NOT add /data or any other prefix to the path.
 
               Search for "{{ "{{inputs.parameters.name}}" }}" in the file content.
@@ -579,7 +579,7 @@ spec:
             input: |
               Current date: {{ "{{inputs.parameters.current-date}}" }}
 
-              STEP 1 - READ FILES: You MUST use the `mcp-filesystem-read-file` tool to read BOTH of these files. Do NOT skip this step. Do NOT add /data or any other prefix to file paths.
+              STEP 1 - READ FILES: You MUST use the `filesystem-mcp-server-read-file` tool to read BOTH of these files. Do NOT skip this step. Do NOT add /data or any other prefix to file paths.
               - Blacklist screening results: {{ "{{inputs.parameters.blacklist-file}}" }}
               - Sanctions screening results: {{ "{{inputs.parameters.sanction-file}}" }}
 
@@ -634,7 +634,7 @@ spec:
               CRITICAL: The top-level key MUST be "screening". Group all blacklist results under "Internal blacklist screening" subsection and all sanction results under "Sanction screening" subsection. Each person's results should be keyed by their name in the "content" object.
               IMPORTANT: Every person from the screening input files MUST appear in BOTH subsections. Do NOT return an empty or partial result.
 
-              You MUST use the `mcp-filesystem-write-file` tool to save the JSON to: {{ "{{inputs.parameters.json-output-file}}" }}
+              You MUST use the `filesystem-mcp-server-write-file` tool to save the JSON to: {{ "{{inputs.parameters.json-output-file}}" }}
               Do NOT add /data or any other prefix to the path.
 
               2. Also create a Markdown report with this EXACT structure:
@@ -669,7 +669,7 @@ spec:
               #### Entities and vessels
               - None (or list if any)
 
-              You MUST use the `mcp-filesystem-write-file` tool to save the Markdown to: {{ "{{inputs.parameters.md-output-file}}" }}
+              You MUST use the `filesystem-mcp-server-write-file` tool to save the Markdown to: {{ "{{inputs.parameters.md-output-file}}" }}
               Do NOT add /data or any other prefix to the path.
 
               After saving both files, confirm the files were written successfully.

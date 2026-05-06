@@ -374,11 +374,11 @@ spec:
 
   tools:
     - type: mcp
-      name: mcp-filesystem-read-file
+      name: filesystem-mcp-server-read-file
     - type: mcp
-      name: mcp-filesystem-write-file
+      name: filesystem-mcp-server-write-file
     - type: mcp
-      name: mcp-filesystem-list-directory
+      name: filesystem-mcp-server-list-directory
     - type: built-in
       name: terminate
 {{- end }}
