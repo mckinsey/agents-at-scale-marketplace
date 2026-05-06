@@ -29,15 +29,6 @@ def _is_valid_uuid4(value: str) -> bool:
         return False
 
 
-def _extract_query_ref_from_body(body: bytes):
-    """Extract QueryRef from A2A JSON-RPC body, or None on any failure."""
-    try:
-        message = json.loads(body).get("params", {}).get("message", {})
-        return extract_query_ref(message)
-    except Exception:
-        return None
-
-
 def _inject_context_id(response_body: bytes, context_id: str) -> bytes:
     """Inject contextId into A2A JSON-RPC response message."""
     try:
