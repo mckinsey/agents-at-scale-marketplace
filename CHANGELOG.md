@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.37](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.36...v0.1.37) (2026-05-06)
+
+
+### Bug Fixes
+
+* claude sdk proxy context id properly ([#257](https://github.com/mckinsey/agents-at-scale-marketplace/issues/257)) ([69b6303](https://github.com/mckinsey/agents-at-scale-marketplace/commit/69b630303f4add9e133419a52bde89102337c4d3))
+* **executors/claude-agent-sdk:** pass Agent CRD prompt to Claude subprocess ([#232](https://github.com/mckinsey/agents-at-scale-marketplace/issues/232)) ([860db08](https://github.com/mckinsey/agents-at-scale-marketplace/commit/860db08a94a79db767366e34ec49ad407aa70c12))
+* **kyc-onboarding-bundle:** correct filesystem MCP tool name prefix in agent and workflow templates ([#250](https://github.com/mckinsey/agents-at-scale-marketplace/issues/250)) ([97ef2fa](https://github.com/mckinsey/agents-at-scale-marketplace/commit/97ef2fa88b87114d292287f947ccedc16670fc47))
+
 ## [0.1.36](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.35...v0.1.36) (2026-04-24)
 
 

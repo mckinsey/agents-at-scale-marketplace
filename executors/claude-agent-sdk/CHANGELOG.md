@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.10...executor-claude-agent-sdk-v0.1.11) (2026-05-06)
+
+
+### Bug Fixes
+
+* claude sdk proxy context id properly ([#257](https://github.com/mckinsey/agents-at-scale-marketplace/issues/257)) ([69b6303](https://github.com/mckinsey/agents-at-scale-marketplace/commit/69b630303f4add9e133419a52bde89102337c4d3))
+* **executors/claude-agent-sdk:** pass Agent CRD prompt to Claude subprocess ([#232](https://github.com/mckinsey/agents-at-scale-marketplace/issues/232)) ([860db08](https://github.com/mckinsey/agents-at-scale-marketplace/commit/860db08a94a79db767366e34ec49ad407aa70c12))
+
 ## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.9...executor-claude-agent-sdk-v0.1.10) (2026-04-24)
 
 
