@@ -29,6 +29,28 @@ def _is_valid_uuid4(value: str) -> bool:
         return False
 
 
+def _extract_query_ref_from_body(body: bytes):
+    """Extract QueryRef from A2A JSON-RPC body, or None on any failure."""
+    try:
+        message = json.loads(body).get("params", {}).get("message", {})
+        return extract_query_ref(message)
+    except Exception:
+        return None
+
+
+def _inject_context_id(response_body: bytes, context_id: str) -> bytes:
+    """Inject contextId into A2A JSON-RPC response message."""
+    try:
+        data = json.loads(response_body)
+        message = data.get("result", {}).get("message")
+        if isinstance(message, dict):
+            message["contextId"] = context_id
+            return json.dumps(data).encode()
+    except Exception:
+        pass
+    return response_body
+
+
 def _jsonrpc_error(request_id: Any, code: int, message: str) -> bytes:
     """Build a JSON-RPC 2.0 error response."""
     return json.dumps({
@@ -163,6 +185,7 @@ def create_proxy_app(
                     except Exception:
                         logger.warning("Failed to update last-activity for conversation=%s", conversation_id, exc_info=True)
 
+                    response.body = _inject_context_id(response.body, conversation_id)
                     return response
                 except httpx.ConnectError as e:
                     # Sandbox unreachable — attempt recovery
@@ -175,6 +198,7 @@ def create_proxy_app(
                         info = await sandbox_manager.recover_sandbox(conversation_id)
                         target_url = f"http://{info.service_fqdn}:8000/{path}"
                         response = await _proxy_request(http_client, request, body, target_url)
+                        response.body = _inject_context_id(response.body, conversation_id)
                         return response
                     except Exception as recovery_err:
                         route_span.set_status(StatusCode.ERROR, str(recovery_err))
