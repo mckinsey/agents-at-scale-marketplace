@@ -363,7 +363,7 @@ spec:
             input: |
               Current date: {{ "{{inputs.parameters.current-date}}" }}
 
-              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use filesystem-mcp-server-read-file on the PDF — it is too large.**
 
               Step 1 — Extract: Use the pdf-extraction-mcp-extract-pdf-sections tool with these parameters:
               - pdf_path: "{{ "{{inputs.parameters.document-file}}" }}"
@@ -375,7 +375,7 @@ spec:
 
               Important: Only include ACTIVE members. Exclude anyone who has resigned, stepped down, or whose tenure has ended.
 
-              Step 3 — Save the extracted information as a JSON file using mcp-filesystem-write-file.
+              Step 3 — Save the extracted information as a JSON file using filesystem-mcp-server-write-file.
               Save to: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
 

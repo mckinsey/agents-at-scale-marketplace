@@ -243,15 +243,15 @@ spec:
   tools:
     # MCP filesystem tools for reading and writing consolidated data
     - type: mcp
-      name: mcp-filesystem-read-file
+      name: filesystem-mcp-server-read-file
     - type: mcp
-      name: mcp-filesystem-write-file
+      name: filesystem-mcp-server-write-file
     - type: mcp
-      name: mcp-filesystem-list-directory
+      name: filesystem-mcp-server-list-directory
     - type: mcp
-      name: mcp-filesystem-search-files
+      name: filesystem-mcp-server-search-files
     - type: mcp
-      name: mcp-filesystem-get-file-info
+      name: filesystem-mcp-server-get-file-info
     - type: built-in
       name: terminate
 {{- end }}
