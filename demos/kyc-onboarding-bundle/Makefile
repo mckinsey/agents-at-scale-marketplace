@@ -1,4 +1,4 @@
-.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents
+.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents fix-argo-artifact-config
 
 NAMESPACE ?= $(or $(K8S_NAMESPACE),default)
 MCP_SOURCE_NAMESPACE ?= $(or $(MCP_NAMESPACE),default)
@@ -51,8 +51,10 @@ help:
 	@echo "  make clean                  Remove workflow artifacts"
 	@echo "  make delete-data-seeder-job Delete data-seeder Job"
 	@echo ""
-	@echo "Quick Start A: make uninstall && make build-data-seeder && make install-with-argo && make build && make ready"
-	@echo "Quick Start B: make uninstall && make install-with-argo DATA_SEEDER_ENABLED=false && make build && make upload-data && make ready"
+	@echo "  make fix-argo-artifact-config Disable broken artifact driver in workflow-controller-configmap"
+	@echo ""
+	@echo "Quick Start A: make fix-argo-artifact-config && make uninstall && make build-data-seeder && make install-with-argo && make build && make ready"
+	@echo "Quick Start B: make fix-argo-artifact-config && make uninstall && make install-with-argo DATA_SEEDER_ENABLED=false && make build && make upload-data && make ready"
 
 build-filesystem:
 	@echo "Building filesystem MCP server image..."
@@ -351,6 +353,14 @@ build-data-seeder:
 		minikube image load $(DATA_SEEDER_IMAGE):latest; \
 	fi
 	@echo "Done. Image: $(DATA_SEEDER_IMAGE):latest"
+
+# ── Cluster prerequisites ────────────────────────────────────────────
+
+fix-argo-artifact-config:
+	@echo "Patching workflow-controller-configmap to disable broken artifact plugin driver..."
+	@kubectl patch configmap workflow-controller-configmap -n argo \
+		--type merge -p '{"data":{"artifactRepository":"archiveLogs: false\n"}}'
+	@echo "Done. Workflows will no longer fail with 'artifact driver test not found'."
 
 # ── Verify & Debug ──────────────────────────────────────────────────
 
