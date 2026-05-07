@@ -15,7 +15,7 @@ Minimal replacement for ubo-pdf-tools with ~200 lines of code.
 docker build -t pdf-extraction-mcp:latest .
 
 # Deploy to Kubernetes
-kubectl apply -f k8s-deployment.yaml
+helm template pdf-extraction-mcp ./chart | kubectl apply -f -
 
 # Verify
 kubectl get mcpserver pdf-extraction-mcp
