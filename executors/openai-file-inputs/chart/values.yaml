@@ -1,0 +1,95 @@
+# Default values for executor-openai-file-inputs
+
+# Global annotations added to all resources
+global:
+  annotations:
+    ark.mckinsey.com/service: executor-openai-file-inputs
+
+# Application configuration
+app:
+  name: executor-openai-file-inputs
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/executor-openai-file-inputs
+    pullPolicy: IfNotPresent
+    # tag: defaults to appVersion
+
+  env:
+    - name: HOST
+      value: "0.0.0.0"
+    - name: PORT
+      value: "8000"
+    - name: OTEL_INSTRUMENTATION_A2A_SDK_ENABLED
+      value: "false"
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Service configuration
+service:
+  name: executor-openai-file-inputs
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+# HTTPRoute configuration (Gateway API - modern routing method)
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  hostnames:
+    - "executor-openai-file-inputs.default.127.0.0.1.nip.io"
+
+# RBAC configuration
+rbac:
+  create: true
+
+# Service account configuration
+serviceAccount:
+  name: executor-openai-file-inputs-sa
+  create: true
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+# Health check configuration
+healthCheck:
+  path: /health
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# ExecutionEngine CRD configuration
+executionEngine:
+  enabled: true
+  description: "OpenAI File Inputs Executor - Responses API with file attachment support via OpenAI Files API"
+
+# Persistent volume for session data (stores previous_response_id per conversation)
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi

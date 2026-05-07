@@ -1,0 +1,19 @@
+{{- if .Values.executionEngine.enabled }}
+apiVersion: ark.mckinsey.com/v1prealpha1
+kind: ExecutionEngine
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.app.name }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ .Values.service.name }}
+  description: {{ .Values.executionEngine.description | quote }}
+{{- end }}

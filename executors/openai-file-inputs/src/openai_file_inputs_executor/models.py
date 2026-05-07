@@ -1,8 +1,8 @@
-"""Pydantic models for OpenAI Responses API tool declarations and request building."""
+"""Pydantic models for OpenAI Responses API with file input support."""
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 from pydantic import BaseModel
 
 from ark_sdk.executor import ExecutionEngineRequest
@@ -12,10 +12,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Annotation key for tool configuration on Agent, Query, and ExecutionEngine CRs
-ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
-REASONING_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/reasoning"
-OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/output-schema"
+ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/tools"
+REASONING_ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/reasoning"
+OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/output-schema"
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +76,6 @@ class ModelConfig(BaseModel):
 
 
 def _parse_tools_annotation(value: str) -> list[dict[str, Any]]:
-    """Parse a JSON tool array from an annotation value. Returns [] on failure."""
     if not value:
         return []
     try:
@@ -92,7 +90,6 @@ def _parse_tools_annotation(value: str) -> list[dict[str, Any]]:
 
 
 def _merge_tools(base: list[dict[str, Any]], override: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Merge two tool arrays, replacing entries with matching 'type' keys."""
     merged: dict[str, dict[str, Any]] = {t["type"]: t for t in base if "type" in t}
     for tool in override:
         if "type" in tool:
@@ -103,13 +100,6 @@ def _merge_tools(base: list[dict[str, Any]], override: list[dict[str, Any]]) -> 
 
 
 def resolve_built_in_tools(request: ExecutionEngineRequest) -> list[dict[str, Any]]:
-    """Resolve built-in tools using the annotation cascade.
-
-    Cascade order (lowest → highest priority):
-        ExecutionEngine annotations → Agent annotations → Query annotations
-
-    Each layer merges by 'type' key: same type replaces, new type is added.
-    """
     engine_tools = _parse_tools_annotation(
         request.execution_engine_annotations.get(ANNOTATION_KEY, "")
     )
@@ -126,7 +116,6 @@ def resolve_built_in_tools(request: ExecutionEngineRequest) -> list[dict[str, An
 
 
 def resolve_reasoning(request: ExecutionEngineRequest) -> Optional[dict[str, Any]]:
-    """Resolve reasoning config from annotations (Agent overrides ExecutionEngine, Query overrides Agent)."""
     for source in [
         request.execution_engine_annotations,
         (getattr(request.agent, "annotations", None) or {}),
@@ -142,7 +131,6 @@ def resolve_reasoning(request: ExecutionEngineRequest) -> Optional[dict[str, Any
 
 
 def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str, Any]]:
-    """Resolve JSON output schema from annotations. Returns text.format dict or None."""
     for source in [
         request.execution_engine_annotations,
         (getattr(request.agent, "annotations", None) or {}),
@@ -159,25 +147,24 @@ def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str,
 
 
 # ---------------------------------------------------------------------------
-# Function tool
+# Input building — multimodal with file support
 # ---------------------------------------------------------------------------
 
 
-class FunctionTool(BaseModel):
-    """Custom function tool derived from an Ark ToolDefinition."""
+def _build_content_parts(text: str, file_ids: list[str]) -> list[dict[str, Any]]:
+    """Build a multimodal content array with input_file and input_text parts."""
+    parts: list[dict[str, Any]] = []
+    for fid in file_ids:
+        parts.append({"type": "input_file", "file_id": fid})
+    parts.append({"type": "input_text", "text": text})
+    return parts
 
-    type: Literal["function"] = "function"
-    name: str
-    description: str
-    parameters: dict[str, Any] = {"type": "object", "properties": {}}
 
-    @classmethod
-    def from_definition(cls, tool: Any) -> "FunctionTool":
-        return cls(
-            name=tool.name,
-            description=getattr(tool, "description", ""),
-            parameters=getattr(tool, "parameters", None) or {"type": "object", "properties": {}},
-        )
+def build_user_input(text: str, file_ids: list[str]) -> dict[str, Any]:
+    """Build a user message dict, using multimodal content when files are attached."""
+    if file_ids:
+        return {"role": "user", "content": _build_content_parts(text, file_ids)}
+    return {"role": "user", "content": text}
 
 
 # ---------------------------------------------------------------------------
@@ -186,8 +173,6 @@ class FunctionTool(BaseModel):
 
 
 class ResponsesCreateParams(BaseModel):
-    """Full parameters for a client.responses.create() call."""
-
     model: str
     instructions: str
     input: Union[str, list[dict[str, Any]]]
@@ -198,14 +183,6 @@ class ResponsesCreateParams(BaseModel):
 
     def to_api_kwargs(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
-
-    @staticmethod
-    def _build_user_message(text: str, file_ids: list[str]) -> dict[str, Any]:
-        if file_ids:
-            content: list[dict[str, Any]] = [{"type": "input_file", "file_id": fid} for fid in file_ids]
-            content.append({"type": "input_text", "text": text})
-            return {"role": "user", "content": content}
-        return {"role": "user", "content": text}
 
     @classmethod
     def first_turn(
@@ -218,9 +195,10 @@ class ResponsesCreateParams(BaseModel):
         text: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
         file_ids = getattr(request.userInput, "file_ids", None) or []
+
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
-        ] + [cls._build_user_message(request.userInput.content, file_ids)]
+        ] + [build_user_input(request.userInput.content, file_ids)]
 
         return cls(
             model=model_config.model_name,

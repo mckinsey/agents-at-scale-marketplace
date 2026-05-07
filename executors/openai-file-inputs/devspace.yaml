@@ -1,0 +1,85 @@
+# DevSpace configuration for executor-openai-file-inputs
+version: v2beta1
+
+vars:
+  OPENAI_API_KEY:
+    source: env
+    default: ""
+  OPENAI_BASE_URL:
+    source: env
+    default: ""
+  HTTPROUTE_ENABLED:
+    command: |-
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "true"
+      else
+        echo "false"
+      fi
+
+images:
+  executor-openai-file-inputs:
+    image: executor-openai-file-inputs
+    dockerfile: Dockerfile
+    context: .
+
+pipelines:
+  deploy: |-
+    build_images --all
+    create_deployments --all
+  dev: |-
+    build_images --all
+    create_deployments --all
+    start_dev --all
+
+deployments:
+  executor-openai-file-inputs:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart
+      values:
+        app:
+          image:
+            repository: ${runtime.images.executor-openai-file-inputs.image}
+            tag: ${runtime.images.executor-openai-file-inputs.tag}
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8000"
+            - name: OPENAI_API_KEY
+              value: "${OPENAI_API_KEY}"
+            - name: OPENAI_BASE_URL
+              value: "${OPENAI_BASE_URL}"
+        httpRoute:
+          enabled: ${HTTPROUTE_ENABLED}
+        executionEngine:
+          enabled: true
+
+dev:
+  executor-openai-file-inputs:
+    imageSelector: executor-openai-file-inputs
+    namespace: default
+    logs:
+      lastLines: 50
+
+hooks:
+  - command: |-
+      if kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+        echo "✓ Gateway API HTTPRoute CRD found - HTTPRoute will be created"
+      else
+        echo "✗ Gateway API HTTPRoute CRD not found - HTTPRoute will be skipped"
+      fi
+    events: ["before:deploy:executor-openai-file-inputs"]
+  - command: |-
+      echo ""
+      echo "=== Executor OpenAI File Inputs Deployed ==="
+      echo ""
+      echo "Service: executor-openai-file-inputs.default.svc.cluster.local:8000"
+      echo ""
+      echo "Port-forward: kubectl port-forward -n default svc/executor-openai-file-inputs 8000:8000"
+      echo ""
+      echo "Health check:"
+      echo "  curl http://localhost:8000/health"
+      echo ""
+    events: ["after:deploy:executor-openai-file-inputs"]

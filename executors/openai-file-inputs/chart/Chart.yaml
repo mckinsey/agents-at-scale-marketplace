@@ -1,0 +1,10 @@
+apiVersion: v2
+name: executor-openai-file-inputs
+description: >-
+  OpenAI Responses API executor with file input support via the OpenAI Files API
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+annotations:
+  ark.mckinsey.com/service: executor-openai-file-inputs
+  ark.mckinsey.com/resources: service
