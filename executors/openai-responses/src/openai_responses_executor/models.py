@@ -199,6 +199,14 @@ class ResponsesCreateParams(BaseModel):
     def to_api_kwargs(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
 
+    @staticmethod
+    def _build_user_message(text: str, file_ids: list[str]) -> dict[str, Any]:
+        if file_ids:
+            content: list[dict[str, Any]] = [{"type": "input_file", "file_id": fid} for fid in file_ids]
+            content.append({"type": "input_text", "text": text})
+            return {"role": "user", "content": content}
+        return {"role": "user", "content": text}
+
     @classmethod
     def first_turn(
         cls,
@@ -209,9 +217,10 @@ class ResponsesCreateParams(BaseModel):
         reasoning: Optional[dict[str, Any]] = None,
         text: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
+        file_ids = getattr(request.userInput, "file_ids", None) or []
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
-        ] + [{"role": "user", "content": request.userInput.content}]
+        ] + [cls._build_user_message(request.userInput.content, file_ids)]
 
         return cls(
             model=model_config.model_name,
