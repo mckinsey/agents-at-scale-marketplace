@@ -6,6 +6,7 @@ Responses API as input_file content parts.
 """
 
 import logging
+import os
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -16,6 +17,22 @@ from starlette.routing import Route
 from .config import config
 
 logger = logging.getLogger(__name__)
+
+ALLOWED_EXTENSIONS = {
+    # PDF
+    ".pdf",
+    # Text and code
+    ".txt", ".md", ".json", ".html", ".xml", ".css", ".js", ".ts", ".tsx", ".jsx",
+    ".py", ".rb", ".java", ".c", ".cpp", ".h", ".hpp", ".cs", ".go", ".rs", ".swift",
+    ".kt", ".scala", ".sh", ".bash", ".zsh", ".ps1", ".bat", ".r", ".m", ".sql",
+    ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf", ".log", ".csv",
+    # Rich documents
+    ".doc", ".docx", ".rtf", ".odt",
+    # Presentations
+    ".ppt", ".pptx",
+    # Spreadsheets
+    ".xls", ".xlsx", ".tsv",
+}
 
 
 def _get_client(api_key: str | None = None) -> AsyncOpenAI:
@@ -34,8 +51,15 @@ async def upload_file(request: Request) -> JSONResponse:
     if not upload:
         return JSONResponse({"error": "No file provided"}, status_code=400)
 
-    content = await upload.read()
     filename = getattr(upload, "filename", "upload")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return JSONResponse(
+            {"error": f"File type '{ext}' is not supported. Accepted: PDF, text/code, documents, presentations, spreadsheets."},
+            status_code=400,
+        )
+
+    content = await upload.read()
 
     client = _get_client()
     result = await client.files.create(
