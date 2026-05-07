@@ -31,6 +31,23 @@ This annotation enables the Ark dashboard to detect when your item is installed 
 
 **Important:** Marketplace items are detected only when installed in the same namespace as `ark-api`. Ensure your item is deployed to the correct namespace for proper detection.
 
+## Install Arguments Security
+
+Marketplace installations via the Ark dashboard are validated against security policies to prevent shell injection vulnerabilities. Only specific Helm flags are allowed in the `installArgs` field of `marketplace.json`.
+
+**Allowed flags include:**
+- `--create-namespace`, `--wait`, `--atomic`, `--cleanup-on-fail`
+- `--timeout` (with format validation: `5m`, `300s`, `1h`)
+- `--set`, `--set-string` (with value validation to block shell metacharacters)
+
+**Blocked for security:**
+- `--post-renderer` (arbitrary code execution)
+- `--set-file` (file system access)
+- `--kube-context` (context switching)
+- Any flags not explicitly allowed
+
+For complete details on validation rules, allowed flags, and security architecture, see the [Marketplace Installation Security](https://mckinsey.github.io/agents-at-scale-ark/operations-guide/marketplace-install-security/) guide in the Ark documentation.
+
 ## UI URL Configuration
 
 For services with web UIs, enable the Ark dashboard to display "Open" buttons by adding UI URL annotations to your Service resource.
