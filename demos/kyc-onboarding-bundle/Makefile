@@ -89,7 +89,11 @@ build-pdf-mcp:
 		minikube image load $(PDF_EXTRACTION_MCP_IMAGE); \
 	fi
 	@echo "Deploying pdf-extraction MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/pdf-extraction-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template pdf-extraction-mcp ../../mcps/pdf-extraction-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=pdf-extraction-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build-companies-house-mcp:
@@ -100,7 +104,11 @@ build-companies-house-mcp:
 		minikube image load $(COMPANIES_HOUSE_MCP_IMAGE); \
 	fi
 	@echo "Deploying companies-house MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/companies-house-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template companies-house-mcp ../../mcps/companies-house-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=companies-house-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 	@echo "NOTE: Create API key secret with: kubectl create secret generic companies-house-api-key --from-literal=api-key=YOUR_KEY"
 
@@ -112,7 +120,11 @@ build-web-mcp:
 		minikube image load $(WEB_RESEARCH_MCP_IMAGE); \
 	fi
 	@echo "Deploying web-research MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/web-research-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template web-research-mcp ../../mcps/web-research-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=web-research-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build-perplexity-mcp:
@@ -123,7 +135,11 @@ build-perplexity-mcp:
 		minikube image load $(PERPLEXITY_ASK_MCP_IMAGE); \
 	fi
 	@echo "Deploying perplexity-ask MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/perplexity-ask-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template perplexity-ask-mcp ../../mcps/perplexity-ask-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=perplexity-ask-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build: build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp
