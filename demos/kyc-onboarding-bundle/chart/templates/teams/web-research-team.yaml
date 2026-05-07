@@ -36,7 +36,7 @@ spec:
     4. Critic reviews quality and source credibility
     5. File Manager saves research results
     
-    When the user message specifies an exact output path (e.g. .../intermediate/web_data_initial_profile.json), the Web Analyst or File Manager MUST call mcp-filesystem-write-file to that path before the task is complete. The task is not done until that file exists. If the Researcher has limited or no tool access, the Analyst should still produce structured JSON from the plan and available context and save it to the specified path.
+    When the user message specifies an exact output path (e.g. .../intermediate/web_data_initial_profile.json), the Web Analyst or File Manager MUST call filesystem-mcp-server-write-file to that path before the task is complete. The task is not done until that file exists. If the Researcher has limited or no tool access, the Analyst should still produce structured JSON from the plan and available context and save it to the specified path.
     
     Limitation: Not capable of reading and extracting information from non-text formats.
   

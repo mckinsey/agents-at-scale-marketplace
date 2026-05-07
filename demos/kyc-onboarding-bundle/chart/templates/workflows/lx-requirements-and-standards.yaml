@@ -130,7 +130,7 @@ spec:
 
               For non-UK geographies, adapt the lists (e.g. replace UK-specific items with local equivalents and annotate with the geography). Use the exact subsection names "Required documents" and "Required checks". Each content item must be a string ending with "(global requirement)" or the appropriate geography (e.g. "(UK requirement)").
 
-              You MUST call mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-file}}" }} and content: your full JSON. Use the exact path; do NOT add /data or /mnt prefix.
+              You MUST call filesystem-mcp-server-write-file with path: {{ "{{inputs.parameters.output-file}}" }} and content: your full JSON. Use the exact path; do NOT add /data or /mnt prefix.
       outputs:
         parameters:
           - name: response

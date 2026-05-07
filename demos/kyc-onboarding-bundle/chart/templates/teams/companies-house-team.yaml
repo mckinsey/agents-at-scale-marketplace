@@ -36,7 +36,7 @@ spec:
     4. Critic validates data completeness
     5. File Manager saves Companies House data
     
-    When the user message specifies an exact output path (e.g. .../intermediate/government_data_initial_profile.json), the Companies House Analyst or File Manager MUST call mcp-filesystem-write-file to that path before the task is complete. The task is not done until that file exists. If the API Agent has no live data (e.g. Phase 1), the Analyst should still produce structured JSON from the plan and company number and save it to the specified path.
+    When the user message specifies an exact output path (e.g. .../intermediate/government_data_initial_profile.json), the Companies House Analyst or File Manager MUST call filesystem-mcp-server-write-file to that path before the task is complete. The task is not done until that file exists. If the API Agent has no live data (e.g. Phase 1), the Analyst should still produce structured JSON from the plan and company number and save it to the specified path.
     
     Limitation: Not capable of reading and extracting information from non-text formats.
   
