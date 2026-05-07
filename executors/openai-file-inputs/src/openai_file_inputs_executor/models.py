@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 from pydantic import BaseModel
 
 from ark_sdk.executor import ExecutionEngineRequest
@@ -144,26 +144,6 @@ def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str,
             except json.JSONDecodeError as exc:
                 logger.warning("Failed to parse output-schema annotation: %s", exc)
     return None
-
-
-# ---------------------------------------------------------------------------
-# Function tool
-# ---------------------------------------------------------------------------
-
-
-class FunctionTool(BaseModel):
-    type: Literal["function"] = "function"
-    name: str
-    description: str
-    parameters: dict[str, Any] = {"type": "object", "properties": {}}
-
-    @classmethod
-    def from_definition(cls, tool: Any) -> "FunctionTool":
-        return cls(
-            name=tool.name,
-            description=getattr(tool, "description", ""),
-            parameters=getattr(tool, "parameters", None) or {"type": "object", "properties": {}},
-        )
 
 
 # ---------------------------------------------------------------------------
