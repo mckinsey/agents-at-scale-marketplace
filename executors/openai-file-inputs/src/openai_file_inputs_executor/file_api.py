@@ -39,7 +39,10 @@ def _get_client(api_key: str | None = None) -> AsyncOpenAI:
     key = api_key or config.openai_api_key
     if not key:
         raise ValueError("No OpenAI API key configured. Set OPENAI_API_KEY env var.")
-    return AsyncOpenAI(api_key=key)
+    kwargs: dict[str, str] = {"api_key": key}
+    if config.openai_base_url:
+        kwargs["base_url"] = config.openai_base_url
+    return AsyncOpenAI(**kwargs)
 
 
 async def upload_file(request: Request) -> JSONResponse:

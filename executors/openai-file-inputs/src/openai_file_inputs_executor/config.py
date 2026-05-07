@@ -12,6 +12,7 @@ class ExecutorConfig(BaseSettings):
     port: int = Field(default=8000, validation_alias="PORT")
     sessions_dir: Path = Field(default=Path("/data/sessions"), validation_alias="SESSIONS_DIR")
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
+    openai_base_url: str = Field(default="", validation_alias="OPENAI_BASE_URL")
 
 
 config = ExecutorConfig()
