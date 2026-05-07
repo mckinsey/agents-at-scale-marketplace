@@ -612,6 +612,42 @@
             }
         },
         {
+            "name": "executor-openai-file-inputs",
+            "type": "executor",
+            "displayName": "OpenAI File Inputs Executor",
+            "description": "OpenAI Responses API executor with file attachment support via the OpenAI Files API",
+            "version": "0.1.0",
+            "author": "ARK Marketplace",
+            "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "license": "Apache-2.0",
+            "tags": [
+                "openai",
+                "responses-api",
+                "execution-engine",
+                "file-inputs",
+                "attachments",
+                "gpt-5"
+            ],
+            "category": "development",
+            "icon": "https://example.com/executor-openai-file-inputs-icon.png",
+            "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/executors/openai-file-inputs/",
+            "support": {
+                "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+            },
+            "ark": {
+                "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/executor-openai-file-inputs",
+                "namespace": "default",
+                "helmReleaseName": "executor-openai-file-inputs",
+                "installArgs": [
+                    "--create-namespace"
+                ],
+                "k8sServiceName": "executor-openai-file-inputs",
+                "k8sServicePort": 8000,
+                "k8sDeploymentName": "executor-openai-file-inputs"
+            }
+        },
+        {
             "name": "executor-langchain",
             "type": "executor",
             "displayName": "LangChain Executor",
