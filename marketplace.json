@@ -608,7 +608,10 @@
                 ],
                 "k8sServiceName": "executor-openai-responses",
                 "k8sServicePort": 8000,
-                "k8sDeploymentName": "executor-openai-responses"
+                "k8sDeploymentName": "executor-openai-responses",
+                "dependencies": [
+                    "executor-openai-file-inputs"
+                ]
             }
         },
         {
