@@ -1,0 +1,286 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: onboarding-generate
+  labels:
+    {{- include "onboarding.labels" . | nindent 4 }}
+  annotations:
+    workflows.argoproj.io/title: "Generate onboarding guide"
+    workflows.argoproj.io/description: "Reads a repo, analyses it with Claude, researches best practices with OpenAI Responses + web search, then writes ONBOARDING.md"
+spec:
+  entrypoint: generate-onboarding
+  serviceAccountName: {{ .Values.argoWorkflows.serviceAccountName }}
+  arguments:
+    parameters:
+      - name: repo-url
+        value: ""
+
+  templates:
+    - name: generate-onboarding
+      dag:
+        tasks:
+          - name: read-repo
+            template: ark-query
+            arguments:
+              parameters:
+                - name: query-name
+                  value: "read-repo"
+                - name: prompt
+                  value: "Clone the repository at {{`{{workflow.parameters.repo-url}}`}} and return the file tree plus the full contents of every source file, as described in your instructions."
+                - name: prev-query
+                  value: ""
+                - name: prev-query-2
+                  value: ""
+                - name: target-type
+                  value: agent
+                - name: target-name
+                  value: repo-reader-claude-sdk
+                - name: timeout
+                  value: "5m"
+
+          - name: analyze-code
+            template: ark-query
+            depends: "read-repo"
+            arguments:
+              parameters:
+                - name: query-name
+                  value: "analyze-code"
+                - name: prompt
+                  value: "Produce the structured analysis described in your instructions, based on the repository contents below. Output directory for this run: output/{{`{{workflow.name}}`}}"
+                - name: prev-query
+                  value: "{{`{{tasks.read-repo.outputs.parameters.query-name}}`}}"
+                - name: prev-query-2
+                  value: ""
+                - name: target-type
+                  value: agent
+                - name: target-name
+                  value: code-analyzer-completions
+                - name: timeout
+                  value: "5m"
+
+          - name: research-stack
+            template: ark-query
+            depends: "read-repo"
+            arguments:
+              parameters:
+                - name: query-name
+                  value: "research-stack"
+                - name: prompt
+                  value: "Using the stack hint produced by the upstream surveyor, search the web for the most useful public references a new joiner to this stack would want pinned on day one: official docs, quickstarts, style guides, and known pitfalls for the exact versions in use."
+                - name: prev-query
+                  value: "{{`{{tasks.read-repo.outputs.parameters.query-name}}`}}"
+                - name: prev-query-2
+                  value: ""
+                - name: target-type
+                  value: agent
+                - name: target-name
+                  value: research-buddy-openai-responses
+                - name: timeout
+                  value: "5m"
+
+          - name: write-onboarding
+            template: ark-query
+            depends: "analyze-code && research-stack"
+            arguments:
+              parameters:
+                - name: query-name
+                  value: "write-onboarding"
+                - name: prompt
+                  value: "Synthesise the structural analysis and the external references below into a new joiner ONBOARDING.md. Output directory for this run: output/{{`{{workflow.name}}`}} — write the result to output/{{`{{workflow.name}}`}}/ONBOARDING.md via the filesystem tools. Do not print the content back to this conversation — only confirm the file was written."
+                - name: prev-query
+                  value: "{{`{{tasks.analyze-code.outputs.parameters.query-name}}`}}"
+                - name: prev-query-2
+                  value: "{{`{{tasks.research-stack.outputs.parameters.query-name}}`}}"
+                - name: target-type
+                  value: agent
+                - name: target-name
+                  value: onboarding-writer-completions
+                - name: timeout
+                  value: "5m"
+
+          - name: suggest-ticket
+            template: ark-query
+            depends: "write-onboarding"
+            arguments:
+              parameters:
+                - name: query-name
+                  value: "suggest-ticket"
+                - name: prompt
+                  value: "Using the codebase analysis below, propose ONE good-first-ticket for a new joiner following the format in your instructions."
+                - name: prev-query
+                  value: "{{`{{tasks.analyze-code.outputs.parameters.query-name}}`}}"
+                - name: prev-query-2
+                  value: ""
+                - name: target-type
+                  value: agent
+                - name: target-name
+                  value: ticket-suggester-claude-sdk
+                - name: timeout
+                  value: "3m"
+
+          - name: write-ticket
+            template: write-ticket
+            depends: "suggest-ticket"
+            arguments:
+              parameters:
+                - name: query-name
+                  value: "{{`{{tasks.suggest-ticket.outputs.parameters.query-name}}`}}"
+                - name: output-dir
+                  value: "output/{{`{{workflow.name}}`}}"
+
+          - name: summary
+            template: summary
+            depends: "write-ticket"
+
+    - name: ark-query
+      inputs:
+        parameters:
+          - name: query-name
+          - name: prompt
+          - name: prev-query
+          - name: prev-query-2
+          - name: target-type
+          - name: target-name
+          - name: timeout
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eu
+          apk add --no-cache jq > /dev/null 2>&1
+
+          QUERY_NAME="{{`{{inputs.parameters.query-name}}`}}-{{`{{workflow.name}}`}}-$(date +%s%N | tail -c 10)"
+          SAFE_NAME=$(echo "$QUERY_NAME" | tr '.' '-' | tr '[:upper:]' '[:lower:]' | cut -c1-63)
+          echo "$SAFE_NAME" > /tmp/query-name.txt
+
+          cat > /tmp/prompt.txt << 'PROMPTEOF'
+          {{`{{inputs.parameters.prompt}}`}}
+          PROMPTEOF
+
+          PREV_QUERY="{{`{{inputs.parameters.prev-query}}`}}"
+          PREV_QUERY_2="{{`{{inputs.parameters.prev-query-2}}`}}"
+
+          if [ -n "$PREV_QUERY" ]; then
+            echo "" >> /tmp/prompt.txt
+            echo "--- Previous output ---" >> /tmp/prompt.txt
+            kubectl get query "$PREV_QUERY" -o jsonpath='{.status.response.content}' >> /tmp/prompt.txt
+          fi
+
+          if [ -n "$PREV_QUERY_2" ]; then
+            echo "" >> /tmp/prompt.txt
+            echo "--- Additional context ---" >> /tmp/prompt.txt
+            kubectl get query "$PREV_QUERY_2" -o jsonpath='{.status.response.content}' >> /tmp/prompt.txt
+          fi
+
+          MCP_ANNOTATION='{"default/mcp-filesystem": {"toolCalls": [{"name": "set_base_directory", "arguments": {"path": "."}}]}}'
+
+          echo "========================================"
+          echo "AGENT     : {{`{{inputs.parameters.target-type}}`}}/{{`{{inputs.parameters.target-name}}`}}"
+          echo "QUERY NAME: $SAFE_NAME"
+          echo "========================================"
+          echo "---- INPUT ----"
+          cat /tmp/prompt.txt
+          echo ""
+          echo "---- END INPUT ----"
+
+          jq -n \
+            --rawfile input /tmp/prompt.txt \
+            --arg name "$SAFE_NAME" \
+            --arg wf "{{`{{workflow.name}}`}}" \
+            --arg mcp "$MCP_ANNOTATION" \
+            --arg target_name "{{`{{inputs.parameters.target-name}}`}}" \
+            --arg target_type "{{`{{inputs.parameters.target-type}}`}}" \
+            --arg timeout "{{`{{inputs.parameters.timeout}}`}}" \
+            '{
+              apiVersion: "ark.mckinsey.com/v1alpha1",
+              kind: "Query",
+              metadata: {
+                name: $name,
+                labels: {workflow: $wf},
+                annotations: {"ark.mckinsey.com/mcp-server-settings": $mcp}
+              },
+              spec: {
+                input: $input,
+                target: {name: $target_name, type: $target_type},
+                timeout: $timeout,
+                ttl: "1h"
+              }
+            }' | kubectl apply -f -
+
+          # Wait until the query leaves the 'running' phase. If it errored, fail this step so Argo surfaces it.
+          until [ "$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.phase}' 2>/dev/null)" != "running" ] \
+                && [ -n "$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.phase}' 2>/dev/null)" ]; do
+            sleep 3
+          done
+          PHASE=$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.phase}')
+          DURATION=$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.duration}')
+          echo ""
+          echo "query $SAFE_NAME finished phase=$PHASE duration=$DURATION"
+
+          echo "---- OUTPUT ----"
+          kubectl get query "$SAFE_NAME" -o jsonpath='{.status.response.content}'
+          echo ""
+          echo "---- END OUTPUT ----"
+
+          if [ "$PHASE" != "done" ]; then
+            echo "query error: $(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.conditions[0].message}')"
+            exit 1
+          fi
+      outputs:
+        parameters:
+          - name: query-name
+            valueFrom:
+              path: /tmp/query-name.txt
+
+    - name: write-ticket
+      inputs:
+        parameters:
+          - name: query-name
+          - name: output-dir
+      script:
+        image: alpine/k8s:1.28.13
+        command: [sh]
+        source: |
+          set -eu
+          QUERY_NAME="{{`{{inputs.parameters.query-name}}`}}"
+          OUTPUT_DIR="{{`{{inputs.parameters.output-dir}}`}}"
+
+          echo "fetching ticket content from query $QUERY_NAME"
+          kubectl get query "$QUERY_NAME" -o jsonpath='{.status.response.content}' > /tmp/TICKET.md
+          SIZE=$(wc -c < /tmp/TICKET.md | tr -d ' ')
+          echo "ticket size: ${SIZE} bytes"
+
+          if [ "$SIZE" -lt 20 ]; then
+            echo "FAILED: ticket content is suspiciously small (${SIZE} bytes)"
+            exit 1
+          fi
+
+          echo "uploading to file-gateway under ${OUTPUT_DIR}/"
+          CODE=$(curl -sS -o /tmp/resp -w "%{http_code}" \
+            -X POST "http://file-gateway-api/files" \
+            -F "file=@/tmp/TICKET.md" \
+            -F "prefix=${OUTPUT_DIR}/")
+          if [ "$CODE" != "200" ] && [ "$CODE" != "201" ]; then
+            echo "FAILED HTTP $CODE: $(cat /tmp/resp)"
+            exit 1
+          fi
+          echo "wrote ${OUTPUT_DIR}/TICKET.md"
+
+    - name: summary
+      container:
+        image: alpine:3.19
+        command: [sh, -c]
+        args:
+          - |
+            echo "==========================================="
+            echo "    ONBOARDING GUIDE GENERATED             "
+            echo "==========================================="
+            echo "Source: {{`{{workflow.parameters.repo-url}}`}}"
+            echo "Output dir: output/{{`{{workflow.name}}`}}/"
+            echo "  - analysis.md   (from code-analyzer-completions)"
+            echo "  - ONBOARDING.md (from onboarding-writer-completions)"
+            echo "  - TICKET.md     (from ticket-suggester-claude-sdk)"
+            echo ""
+            echo "Fetch all three files to your laptop with:"
+            echo "  kubectl cp ... # see README for fetch instructions {{`{{workflow.name}}`}}"
+            echo "==========================================="

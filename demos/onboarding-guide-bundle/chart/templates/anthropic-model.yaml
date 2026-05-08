@@ -1,0 +1,19 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: {{ .Values.models.anthropic.name }}
+  labels:
+    {{- include "onboarding.labels" . | nindent 4 }}
+spec:
+  provider: anthropic
+  model:
+    value: {{ .Values.models.anthropic.modelId | quote }}
+  config:
+    anthropic:
+      baseUrl:
+        value: {{ .Values.models.anthropic.baseUrl | quote }}
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: {{ include "onboarding.anthropicSecretName" . }}
+            key: apiKey

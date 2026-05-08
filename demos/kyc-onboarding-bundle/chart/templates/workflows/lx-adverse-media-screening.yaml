@@ -297,7 +297,7 @@ spec:
                  - high: Government/regulatory websites (SEC, FCA, Companies House), reputable news agencies (Reuters, Bloomberg, BBC, Financial Times, Law360), court records, audited corporate disclosures (annual reports, 10-K filings)
                  - medium: Industry-specific publications, NGO reports, law firm publications, unaudited corporate disclosures (press releases), social media from verified accounts
                  - low: Tabloid media, unverified social media, blogs, anonymous sources, outdated content
-              3. Save findings to a JSON file using the 'mcp-filesystem-write-file' tool
+              3. Save findings to a JSON file using the 'filesystem-mcp-server-write-file' tool
               4. Use the section name as part of the filename: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
 
@@ -426,7 +426,7 @@ spec:
 
               The "confidence score" should be 1-10 indicating how confident you are in the classification.
 
-              Update the original file with the relevance classifications using the `mcp-filesystem-write-file` tool.
+              Update the original file with the relevance classifications using the `filesystem-mcp-server-write-file` tool.
               Write back to: {{ "{{inputs.parameters.file-path}}" }}
               Preserve the "subsection" field unchanged.
       outputs:

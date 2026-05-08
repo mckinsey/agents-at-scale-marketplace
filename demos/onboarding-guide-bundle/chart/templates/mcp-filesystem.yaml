@@ -1,0 +1,15 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: mcp-filesystem
+  labels:
+    {{- include "onboarding.labels" . | nindent 4 }}
+spec:
+  description: "MCP Filesystem Server used by default-executor agents to read/write workflow artifacts"
+  transport: http
+  address:
+    valueFrom:
+      serviceRef:
+        name: file-gateway-filesystem-mcp
+        port: web
+        path: /mcp

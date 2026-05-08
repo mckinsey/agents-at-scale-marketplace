@@ -104,7 +104,7 @@ spec:
 
               Read all JSON files from the profile sections directory: {{ "{{inputs.parameters.profile-sections-dir}}" }}/
               The expected section files are: ownership_structure.json, entities_vessels.json, key_controllers.json, adverse_media_screening.json, sanction_blacklist_screening.json, purpose_of_relationship.json, beneficial_ownership_tree.json.
-              Read each file individually using `mcp-filesystem-read-file`. If a file does not exist, skip it.
+              Read each file individually using `filesystem-mcp-server-read-file`. If a file does not exist, skip it.
 
               Merge the base profile with all profile sections into a single consolidated KYC profile JSON.
               Preserve ALL data — do not summarize or truncate. Include every entry from each section file.
@@ -125,7 +125,7 @@ spec:
               }
 
               CRITICAL: Ensure the output JSON is valid. Every { must have a matching }. Every [ must have a matching ].
-              You MUST use the `mcp-filesystem-write-file` tool to save the merged profile to: {{ "{{inputs.parameters.output-profile-json}}" }}
+              You MUST use the `filesystem-mcp-server-write-file` tool to save the merged profile to: {{ "{{inputs.parameters.output-profile-json}}" }}
               Do NOT add /data or any other prefix to the path.
     - name: profile-json-to-markdown-query
       retryStrategy:
@@ -158,7 +158,7 @@ spec:
               You will create a comprehensive KYC Markdown report by reading individual profile section files.
               Do NOT add /data or any other prefix to file paths when using MCP tools.
 
-              Read these files one by one using `mcp-filesystem-read-file`:
+              Read these files one by one using `filesystem-mcp-server-read-file`:
               1. Base profile: source_code_files/2-customer-due-diligence/input/kyc_profile.json
               2. Key controllers: source_code_files/2-customer-due-diligence/profile_sections/key_controllers.json
               3. Screening: source_code_files/2-customer-due-diligence/profile_sections/sanction_blacklist_screening.json
@@ -219,7 +219,7 @@ spec:
 
               Include ALL data from the JSON — do not summarize or omit entries. Include source attributions and credibility scores where available.
 
-              CRITICAL: You MUST save the file using `mcp-filesystem-write-file`. The task is NOT complete until the file is written.
+              CRITICAL: You MUST save the file using `filesystem-mcp-server-write-file`. The task is NOT complete until the file is written.
               Save to: {{ "{{inputs.parameters.profile-md}}" }}
               Do NOT add /data or any other prefix to the path.
 {{- end }}

@@ -420,7 +420,7 @@ spec:
             generateName: doc-extract-
           spec:
             input: |
-              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use mcp-filesystem-read-file on the PDF — it is too large.**
+              **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use filesystem-mcp-server-read-file on the PDF — it is too large.**
 
               Step 1 — Scout: Use pdf-extraction-mcp-scout-pdf-for-ownership to find ownership-relevant pages in the PDF at: {{ "{{inputs.parameters.document-file}}" }}
               Use search terms: ["owner", "ownership", "beneficial", "shareholder", "stake", "voting rights", "substantial", "major interest", "Wittington", "Garfield Weston", "share capital"]
@@ -430,7 +430,7 @@ spec:
               Step 3 — Answer this question using the extracted data:
               {{ "{{inputs.parameters.prompt}}" }}
 
-              Step 3 — Save the extracted information as a JSON file. Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
+              Step 3 — Save the extracted information as a JSON file. Use filesystem-mcp-server-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
 
               The JSON MUST follow this exact LegacyX subsection format:
@@ -575,7 +575,7 @@ spec:
               Company: {{ "{{inputs.parameters.company-name}}" }}
               Company Number: {{ "{{inputs.parameters.company-number}}" }}
 
-              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+              **Path convention:** Use the paths below exactly as given with filesystem-mcp-server-read-file and filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
               Read the ownership structure data from: {{ "{{inputs.parameters.input-file}}" }}
 
@@ -641,7 +641,7 @@ spec:
             input: |
               Owner information: {{ "{{inputs.parameters.owner-json}}" }}
 
-              **Path convention:** Use the path below exactly as given with mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+              **Path convention:** Use the path below exactly as given with filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
               **Logic (LegacyX-aligned):** If the owner is an individual (type "individual"), save a minimal JSON with owner_name and empty indirect_owners. If the owner is a company/entity, use perplexity-ask to research beneficial owners, then structure and save the JSON to the path below.
 
@@ -706,7 +706,7 @@ spec:
             generateName: bo-tree-
           spec:
             input: |
-              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+              **Path convention:** Use the paths below exactly as given with filesystem-mcp-server-read-file and filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
               STEP 1: Read the direct beneficial owners from: {{ "{{inputs.parameters.direct-owners-file}}" }}
               STEP 2: Read the indirect beneficial owners from: {{ "{{inputs.parameters.indirect-owners-file}}" }}
@@ -798,7 +798,7 @@ spec:
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
 
-              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+              **Path convention:** Use the paths below exactly as given with filesystem-mcp-server-read-file and filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
               Read the unconsolidated ownership data from: {{ "{{inputs.parameters.input-file}}" }}
 
@@ -889,7 +889,7 @@ spec:
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
 
-              **Path convention:** Use the paths below exactly as given with mcp-filesystem-read-file and mcp-filesystem-write-file. Do NOT add /data or any other prefix.
+              **Path convention:** Use the paths below exactly as given with filesystem-mcp-server-read-file and filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
               Read the beneficial ownership tree from: {{ "{{inputs.parameters.input-file}}" }}
 

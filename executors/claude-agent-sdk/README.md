@@ -148,6 +148,14 @@ spec:
 
 The executor maps each MCPServer's resolved connection info (url, transport, headers) into the Claude Agent SDK's native `mcp_servers` option. Built-in tools (Read, Write, Edit, Bash, Grep, Glob) remain available.
 
+## Agent Prompt
+
+The `spec.prompt` field from the Agent CRD is passed to the Claude subprocess as appended system instructions. The SDK's built-in system prompt (tool instructions, safety guidelines) is preserved — the agent prompt is appended after it using the `claude_code` preset.
+
+If no prompt is set on the Agent CRD, the executor uses the SDK's default system prompt.
+
+Parameter templating (e.g., `{language}` replaced by a query parameter value) is resolved upstream by the ark-sdk before reaching the executor.
+
 ## Configuration
 
 Model name and API key are configured via the Model CRD (see [Prerequisites](#prerequisites)). The following environment variables are available for optional configuration:

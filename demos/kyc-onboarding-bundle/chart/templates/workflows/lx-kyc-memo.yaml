@@ -89,7 +89,7 @@ spec:
             timeout: 15m
             ttl: 24h
             input: |
-              Read these files using `mcp-filesystem-read-file` (skip any that don't exist):
+              Read these files using `filesystem-mcp-server-read-file` (skip any that don't exist):
               1. Base profile: source_code_files/2-customer-due-diligence/input/kyc_profile.json
               2. Key controllers: source_code_files/2-customer-due-diligence/profile_sections/key_controllers.json
               3. Screening: source_code_files/2-customer-due-diligence/profile_sections/sanction_blacklist_screening.json
@@ -151,9 +151,9 @@ spec:
               For screening results, summarize per-person in tables rather than repeating full justifications.
               Keep the memo under 15,000 characters to ensure it can be saved.
 
-              CRITICAL: You MUST save the file using `mcp-filesystem-write-file` to: {{ "{{inputs.parameters.output-memo}}" }}
+              CRITICAL: You MUST save the file using `filesystem-mcp-server-write-file` to: {{ "{{inputs.parameters.output-memo}}" }}
               Do NOT add /data or any other prefix to the path. The task is NOT complete until the file is written.
-              After writing, verify by reading the file back with `mcp-filesystem-read-file` to confirm it was saved.
+              After writing, verify by reading the file back with `filesystem-mcp-server-read-file` to confirm it was saved.
       outputs:
         parameters:
           - name: response

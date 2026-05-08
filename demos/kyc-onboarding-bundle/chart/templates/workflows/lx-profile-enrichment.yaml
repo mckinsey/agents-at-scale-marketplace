@@ -93,15 +93,15 @@ spec:
             timeout: 15m
             ttl: 24h
             input: |
-              **CRITICAL: You MUST save your output using mcp-filesystem-write-file. Do NOT just respond with text.**
+              **CRITICAL: You MUST save your output using filesystem-mcp-server-write-file. Do NOT just respond with text.**
 
               Create an initial profile JSON for the company "{{ "{{inputs.parameters.company-name}}" }}". Include: company overview and description, industry and sector, key products/services, recent news or developments, basic financial or operational highlights. Use your knowledge, reasoning, or any available tools to populate the JSON. Structure it per your standard web research output format (business_overview, key_people, sources_consulted, research_status, etc.).
               
               You MUST then save the JSON file:
-              Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/web_data_initial_profile.json and content: your full JSON object.
+              Use filesystem-mcp-server-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/web_data_initial_profile.json and content: your full JSON object.
               
               OUTPUT FILE PATH (use this exact path): {{ "{{inputs.parameters.output-dir}}" }}/web_data_initial_profile.json
-              Do NOT use /data or /mnt/output prefix. You must actually call mcp-filesystem-write-file—do not just respond with text.
+              Do NOT use /data or /mnt/output prefix. You must actually call filesystem-mcp-server-write-file—do not just respond with text.
     - name: enrich-government-query
       inputs:
         parameters:
@@ -124,13 +124,13 @@ spec:
             timeout: 15m
             ttl: 24h
             input: |
-              **CRITICAL: You MUST save your output using mcp-filesystem-write-file. Do NOT just respond with text.**
+              **CRITICAL: You MUST save your output using filesystem-mcp-server-write-file. Do NOT just respond with text.**
               
               Create a Companies House style JSON for UK company number {{ "{{inputs.parameters.company-number}}" }} (ASSOCIATED BRITISH FOODS PLC). Include: company name and status, registered address, company type, incorporation date, **full list of active officers** (all directors and secretaries — do NOT include only one; include every officer with name, position, appointed_on, nationality, date_of_birth, country_of_residence), SIC codes. Structure it per your standard output (retrieval_metadata, company_profile, officers / current_officers / active_officers array with all entries, persons_with_significant_control, filing_history, kyc_insights, data_quality). Use reasoning and typical Companies House data structure if you do not have live API data; for mock data, generate a complete officers list (e.g. 10+ entries for a large company).
               
               You MUST then save the JSON file:
-              Use mcp-filesystem-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/government_data_initial_profile.json and content: your full JSON object.
+              Use filesystem-mcp-server-write-file with path: {{ "{{inputs.parameters.output-dir}}" }}/government_data_initial_profile.json and content: your full JSON object.
               
               OUTPUT FILE PATH (use this exact path): {{ "{{inputs.parameters.output-dir}}" }}/government_data_initial_profile.json
-              Do NOT use /data or /mnt/output prefix. You must actually call mcp-filesystem-write-file—do not just respond with text.
+              Do NOT use /data or /mnt/output prefix. You must actually call filesystem-mcp-server-write-file—do not just respond with text.
 {{- end }}
