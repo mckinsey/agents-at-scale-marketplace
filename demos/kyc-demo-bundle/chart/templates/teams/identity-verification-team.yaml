@@ -26,5 +26,8 @@ spec:
     - name: {{ .Values.agents.documentVerifier.name }}
       type: agent
   strategy: {{ .Values.teams.identityVerificationTeam.strategy }}
+  {{- if .Values.teams.identityVerificationTeam.loops }}
+  loops: {{ .Values.teams.identityVerificationTeam.loops }}
   maxTurns: {{ .Values.teams.identityVerificationTeam.maxTurns }}
+  {{- end }}
 {{- end }}

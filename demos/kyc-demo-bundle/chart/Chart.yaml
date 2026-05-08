@@ -23,5 +23,5 @@ annotations:
   ark.mckinsey.com/marketplace-item-name: "demo/kyc-demo-bundle"
 dependencies:
   - name: file-gateway
-    version: 0.1.6
+    version: 0.1.8
     repository: oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts

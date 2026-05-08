@@ -40,5 +40,8 @@ spec:
     - name: {{ .Values.agents.complianceReporter.name }}
       type: agent
   strategy: {{ .Values.teams.riskAssessmentTeam.strategy }}
+  {{- if .Values.teams.riskAssessmentTeam.loops }}
+  loops: {{ .Values.teams.riskAssessmentTeam.loops }}
   maxTurns: {{ .Values.teams.riskAssessmentTeam.maxTurns }}
+  {{- end }}
 {{- end }}

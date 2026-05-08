@@ -29,5 +29,8 @@ spec:
     - name: {{ .Values.agents.sanctionsScreener.name }}
       type: agent
   strategy: {{ .Values.teams.complianceScreeningTeam.strategy }}
+  {{- if .Values.teams.complianceScreeningTeam.loops }}
+  loops: {{ .Values.teams.complianceScreeningTeam.loops }}
   maxTurns: {{ .Values.teams.complianceScreeningTeam.maxTurns }}
+  {{- end }}
 {{- end }}

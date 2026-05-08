@@ -25,6 +25,6 @@ annotations:
   ark.mckinsey.com/workflows: "12"
 dependencies:
   - name: file-gateway
-    version: 0.1.6
+    version: 0.1.8
     repository: oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts
 
