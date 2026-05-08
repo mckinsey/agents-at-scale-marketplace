@@ -93,6 +93,8 @@ build-pdf-mcp:
 		--namespace $(NAMESPACE) \
 		--set image.repository=pdf-extraction-mcp \
 		--set image.pullPolicy=IfNotPresent \
+		--set dataVolume.enabled=true \
+		--set dataVolume.claimName=file-gateway-storage \
 		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
