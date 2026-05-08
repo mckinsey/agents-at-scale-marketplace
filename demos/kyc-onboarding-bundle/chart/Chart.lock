@@ -1,6 +1,0 @@
-dependencies:
-- name: file-gateway
-  repository: oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts
-  version: 0.1.6
-digest: sha256:b33feb487cf72e7f7e931f38bd25f6177c0e4dec3152baaad5ee5886a9977357
-generated: "2026-04-28T10:16:19.104403+01:00"
