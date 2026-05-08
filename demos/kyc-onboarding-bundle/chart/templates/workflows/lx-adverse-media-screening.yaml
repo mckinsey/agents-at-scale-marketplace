@@ -276,6 +276,8 @@ spec:
           metadata:
             generateName: web-data-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: team
               name: web-research-team
@@ -391,6 +393,8 @@ spec:
           metadata:
             generateName: relevance-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: relevance-classification-agent
@@ -488,6 +492,8 @@ spec:
           metadata:
             generateName: summarize-ams-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
