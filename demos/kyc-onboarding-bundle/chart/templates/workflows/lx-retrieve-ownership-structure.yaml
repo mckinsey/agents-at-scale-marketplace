@@ -419,6 +419,8 @@ spec:
           metadata:
             generateName: doc-extract-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use filesystem-mcp-server-read-file on the PDF — it is too large.**
 
@@ -571,6 +573,8 @@ spec:
           metadata:
             generateName: direct-bo-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
               Company Number: {{ "{{inputs.parameters.company-number}}" }}
@@ -638,6 +642,8 @@ spec:
           metadata:
             generateName: indirect-bo-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               Owner information: {{ "{{inputs.parameters.owner-json}}" }}
 
@@ -705,6 +711,8 @@ spec:
           metadata:
             generateName: bo-tree-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               **Path convention:** Use the paths below exactly as given with filesystem-mcp-server-read-file and filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
@@ -791,6 +799,8 @@ spec:
           metadata:
             generateName: consolidate-ownership-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
@@ -886,6 +896,8 @@ spec:
           metadata:
             generateName: diagram-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
 
