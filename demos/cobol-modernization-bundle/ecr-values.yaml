@@ -1,0 +1,37 @@
+# ECR image configuration and pod affinity fix
+speech-mcp-server:
+  image:
+    repository: 527814729980.dkr.ecr.us-east-1.amazonaws.com/speech-mcp-server
+    tag: latest
+    pullPolicy: Always
+  # Schedule on same node as filesystem-mcp to share RWO volume
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - filesystem-mcp
+        topologyKey: kubernetes.io/hostname
+
+dataSeeder:
+  image:
+    repository: 527814729980.dkr.ecr.us-east-1.amazonaws.com/cobol-demo-data-seeder
+    tag: latest
+    pullPolicy: Always
+
+# Add same affinity to file-gateway components to ensure they're co-located
+file-gateway:
+  versitygw:
+    affinity:
+      podAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - filesystem-mcp
+          topologyKey: kubernetes.io/hostname
