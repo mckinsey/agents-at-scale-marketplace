@@ -14,21 +14,38 @@ Minimal replacement for ubo-pdf-tools with ~200 lines of code.
 # Build Docker image
 docker build -t pdf-extraction-mcp:latest .
 
+# Create secret with LLM API key
+kubectl create secret generic ai-gateway-azure-openai \
+  --from-literal=token=YOUR_KEY
+
 # Deploy to Kubernetes
-kubectl apply -f k8s-deployment.yaml
+helm install pdf-extraction-mcp ./chart -n default --create-namespace
 
 # Verify
 kubectl get mcpserver pdf-extraction-mcp
-kubectl get pods -l app=pdf-extraction-mcp
+kubectl get pods -l app.kubernetes.io/name=pdf-extraction-mcp
 ```
 
 ## Configuration
 
-Set via Kubernetes Secret `ai-gateway-azure-openai`:
-- `LLM_PROVIDER`: openai or anthropic (default: openai)
-- `LLM_MODEL`: Model name (default: gpt-4)
-- `LLM_BASE_URL`: API base URL (optional)
-- `LLM_API_KEY`: API key (required)
+LLM credentials are read from a Kubernetes Secret (default name `ai-gateway-azure-openai`, key `token`). Override the secret name and key via `llm.apiKeySecret.name` / `llm.apiKeySecret.key` in `values.yaml`.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LLM_PROVIDER` | `openai` or `anthropic` | `openai` |
+| `LLM_MODEL` | Model name | `gpt-4o` |
+| `LLM_BASE_URL` | API base URL | _(Azure AI gateway)_ |
+| `LLM_API_KEY` | API key (from secret above) | _(required)_ |
+
+### Storage
+
+By default the chart deploys without a data volume — the MCP server runs but tools that read files from `/data` will only see what's already in the container. To share storage with `file-gateway` (recommended when running the KYC bundle):
+
+```bash
+helm install pdf-extraction-mcp ./chart \
+  --set dataVolume.enabled=true \
+  --set dataVolume.claimName=file-gateway-storage
+```
 
 ## Dependencies
 
