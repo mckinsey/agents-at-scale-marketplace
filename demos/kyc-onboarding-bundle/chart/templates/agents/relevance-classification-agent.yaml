@@ -1,10 +1,8 @@
+{{- if .Values.agents.relevanceClassificationAgent.enabled }}
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
-  name: relevance-classification-agent
-  annotations:
-    helm.sh/hook: pre-install,pre-upgrade
-    helm.sh/hook-weight: "-1"
+  name: {{ .Values.agents.relevanceClassificationAgent.name | default "relevance-classification-agent" }}
   labels:
     project: kyc-onboarding
     {{- with .Values.commonLabels }}
@@ -247,3 +245,4 @@ spec:
       name: filesystem-mcp-server-write-file
     - type: built-in
       name: terminate
+{{- end }}

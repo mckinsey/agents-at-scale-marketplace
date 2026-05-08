@@ -1,10 +1,8 @@
+{{- if .Values.agents.summaryAssessmentAgent.enabled }}
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
-  name: summary-assessment-agent
-  annotations:
-    helm.sh/hook: pre-install,pre-upgrade
-    helm.sh/hook-weight: "-1"
+  name: {{ .Values.agents.summaryAssessmentAgent.name | default "summary-assessment-agent" }}
   labels:
     project: kyc-onboarding
     {{- with .Values.commonLabels }}
@@ -289,3 +287,4 @@ spec:
       name: filesystem-mcp-server-write-file
     - type: built-in
       name: terminate
+{{- end }}
