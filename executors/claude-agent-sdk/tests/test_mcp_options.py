@@ -1,4 +1,4 @@
-"""Tests for MCP server option mapping and Model CRD config in ClaudeAgentExecutor."""
+"""Tests for MCP server option mapping, Model CRD config, and agent prompt in ClaudeAgentExecutor."""
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -136,6 +136,7 @@ class TestExecuteAgentMcpIntegration:
         request.conversationId = "test-conv"
         request.userInput.content = "hello"
         request.agent.name = "test-agent"
+        request.agent.prompt = ""
         request.agent.model = _model_config()
         request.mcpServers = [
             _server(name="github-mcp", url="http://github:8080", headers={"Auth": "Bearer x"}, tools=["search"]),
@@ -177,6 +178,7 @@ class TestExecuteAgentMcpIntegration:
         request.conversationId = "test-conv-2"
         request.userInput.content = "hello"
         request.agent.name = "test-agent"
+        request.agent.prompt = ""
         request.agent.model = _model_config()
         request.mcpServers = []
 
@@ -207,3 +209,87 @@ class TestExecuteAgentMcpIntegration:
         opts = captured_options["options"]
         assert not hasattr(opts, "mcp_servers") or opts.mcp_servers is None
         assert not hasattr(opts, "allowed_tools") or opts.allowed_tools is None
+
+
+class TestExecuteAgentPrompt:
+    @pytest.mark.asyncio
+    async def test_prompt_passed_as_system_prompt_append(self, tmp_path):
+        executor = ClaudeAgentExecutor.__new__(ClaudeAgentExecutor)
+
+        request = MagicMock()
+        request.conversationId = "test-conv-prompt"
+        request.userInput.content = "hello"
+        request.agent.name = "test-agent"
+        request.agent.prompt = "You are a security auditor. Review code for vulnerabilities."
+        request.agent.model = _model_config()
+        request.mcpServers = []
+
+        captured_options = {}
+
+        class FakeClient:
+            def __init__(self, options=None):
+                captured_options["options"] = options
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def query(self, prompt):
+                pass
+
+            async def receive_response(self):
+                msg = MagicMock()
+                msg.result = "done"
+                yield msg
+
+        with patch("claude_agent_executor.executor.SESSIONS_DIR", tmp_path), \
+             patch("claude_agent_executor.executor.ClaudeSDKClient", FakeClient):
+            await executor.execute_agent(request)
+
+        opts = captured_options["options"]
+        assert opts.system_prompt == {
+            "type": "preset",
+            "preset": "claude_code",
+            "append": "You are a security auditor. Review code for vulnerabilities.",
+        }
+
+    @pytest.mark.asyncio
+    async def test_empty_prompt_no_system_prompt(self, tmp_path):
+        executor = ClaudeAgentExecutor.__new__(ClaudeAgentExecutor)
+
+        request = MagicMock()
+        request.conversationId = "test-conv-no-prompt"
+        request.userInput.content = "hello"
+        request.agent.name = "test-agent"
+        request.agent.prompt = ""
+        request.agent.model = _model_config()
+        request.mcpServers = []
+
+        captured_options = {}
+
+        class FakeClient:
+            def __init__(self, options=None):
+                captured_options["options"] = options
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def query(self, prompt):
+                pass
+
+            async def receive_response(self):
+                msg = MagicMock()
+                msg.result = "done"
+                yield msg
+
+        with patch("claude_agent_executor.executor.SESSIONS_DIR", tmp_path), \
+             patch("claude_agent_executor.executor.ClaudeSDKClient", FakeClient):
+            await executor.execute_agent(request)
+
+        opts = captured_options["options"]
+        assert not hasattr(opts, "system_prompt") or opts.system_prompt is None

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.9...executor-claude-agent-sdk-v0.1.10) (2026-04-24)
+
+
+### Features
+
+* **demos:** add onboarding-guide-bundle ([#238](https://github.com/mckinsey/agents-at-scale-marketplace/issues/238)) ([2259bb0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/2259bb0763465c66213c8cc0721ef58e0860ee1c))
+* **executors:** add broker streaming support to LangChain and Claude… ([#246](https://github.com/mckinsey/agents-at-scale-marketplace/issues/246)) ([7f88c67](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7f88c675e49f93a8820b14af61e8e276fa9f3c79))
+
 ## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.8...executor-claude-agent-sdk-v0.1.9) (2026-04-21)
 
 
