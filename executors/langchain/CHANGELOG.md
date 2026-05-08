@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.6...executor-langchain-v0.1.7) (2026-04-24)
+
+
+### Features
+
+* **executors:** add broker streaming support to LangChain and Claude… ([#246](https://github.com/mckinsey/agents-at-scale-marketplace/issues/246)) ([7f88c67](https://github.com/mckinsey/agents-at-scale-marketplace/commit/7f88c675e49f93a8820b14af61e8e276fa9f3c79))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.5...executor-langchain-v0.1.6) (2026-04-21)
 
 

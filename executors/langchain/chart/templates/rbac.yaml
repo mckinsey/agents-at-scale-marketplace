@@ -13,10 +13,10 @@ metadata:
     {{- end }}
 rules:
   - apiGroups: ["ark.mckinsey.com"]
-    resources: ["queries", "agents", "models", "tools"]
+    resources: ["queries", "agents", "models", "tools", "mcpservers", "executionengines"]
     verbs: ["get"]
   - apiGroups: [""]
-    resources: ["secrets"]
+    resources: ["secrets", "configmaps", "services"]
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

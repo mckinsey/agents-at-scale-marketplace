@@ -31,8 +31,8 @@ spec:
     
     Workflow:
     1. Planner creates consolidation mission plan with merge logic
-    2. File Manager reads all source files (mcp-filesystem-read-file)
-    3. Analyst consolidates data per merge rules AND writes the output (mcp-filesystem-write-file)
+    2. File Manager reads all source files (filesystem-mcp-server-read-file)
+    3. Analyst consolidates data per merge rules AND writes the output (filesystem-mcp-server-write-file)
     4. Critic validates completeness and consistency
     
     Capabilities: Analyze different sources of information on different topics and consolidate the output.

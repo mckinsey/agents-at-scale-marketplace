@@ -377,9 +377,9 @@ verify-mcp:
 	@kubectl get pods -n $(NAMESPACE) -l app=web-research-mcp 2>/dev/null || true
 
 wait-for-tools:
-	@echo "Waiting for Tool mcp-filesystem-read-file..."
+	@echo "Waiting for Tool filesystem-mcp-server-read-file..."
 	@for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24; do \
-		if kubectl get tools -n $(NAMESPACE) --request-timeout=5s 2>/dev/null | grep -q mcp-filesystem-read-file; then \
+		if kubectl get tools -n $(NAMESPACE) --request-timeout=5s 2>/dev/null | grep -q filesystem-mcp-server-read-file; then \
 			echo "Found."; \
 			exit 0; \
 		fi; \

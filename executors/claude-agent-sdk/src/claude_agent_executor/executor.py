@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from ark_sdk.executor import BaseExecutor, MCPServerConfig, Message
 from ark_sdk.executor_app import is_otel_enabled
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, list_sessions
+from claude_agent_sdk.types import AssistantMessage, TextBlock
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,11 @@ class ClaudeAgentExecutor(BaseExecutor):
         if base_url:
             env["ANTHROPIC_BASE_URL"] = base_url
 
+        prompt_kwargs: Dict = {}
+        agent_prompt = getattr(request.agent, "prompt", "") or ""
+        if agent_prompt:
+            prompt_kwargs["system_prompt"] = {"type": "preset", "preset": "claude_code", "append": agent_prompt}
+
         resume_kwargs: Dict = {}
         if previous_session_id:
             resume_kwargs["resume"] = previous_session_id
@@ -127,6 +133,7 @@ class ClaudeAgentExecutor(BaseExecutor):
             permission_mode="bypassPermissions",
             env=env,
             **mcp_kwargs,
+            **prompt_kwargs,
             **resume_kwargs,
         )
         logger.info(f"{'Resuming session ' + previous_session_id if previous_session_id else 'Starting new session'} for conversation {conversation_id}")
@@ -136,6 +143,10 @@ class ClaudeAgentExecutor(BaseExecutor):
             async with ClaudeSDKClient(options=options) as client:
                 await client.query(user_input)
                 async for message in client.receive_response():
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock) and block.text:
+                                await self.stream_chunk(block.text)
                     if hasattr(message, "result") and message.result:
                         result_text = message.result
 
