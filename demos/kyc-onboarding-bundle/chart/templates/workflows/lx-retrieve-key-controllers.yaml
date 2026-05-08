@@ -357,6 +357,8 @@ spec:
           metadata:
             generateName: doc-extract-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: rag-agent
@@ -442,6 +444,8 @@ spec:
           metadata:
             generateName: web-data-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: team
               name: web-research-team
@@ -673,6 +677,8 @@ spec:
           metadata:
             generateName: consolidate-kc-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent

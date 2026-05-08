@@ -97,6 +97,8 @@ spec:
           metadata:
             generateName: initial-risk-consolidate-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
@@ -162,6 +164,8 @@ spec:
           metadata:
             generateName: initial-risk-json2md-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
@@ -217,6 +221,8 @@ spec:
           metadata:
             generateName: initial-risk-summary-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: summary-assessment-agent
