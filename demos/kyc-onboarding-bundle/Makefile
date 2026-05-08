@@ -2,6 +2,7 @@
 
 NAMESPACE ?= $(or $(K8S_NAMESPACE),default)
 MCP_SOURCE_NAMESPACE ?= $(or $(MCP_NAMESPACE),default)
+ARGO_NAMESPACE ?= argo
 RELEASE_NAME ?= kyc-onboarding-bundle
 FILESYSTEM_MCP_IMAGE ?= filesystem-mcp-server:latest
 PDF_EXTRACTION_MCP_IMAGE ?= pdf-extraction-mcp:latest
@@ -375,10 +376,17 @@ build-data-seeder:
 # ── Cluster prerequisites ────────────────────────────────────────────
 
 fix-argo-artifact-config:
-	@echo "Patching workflow-controller-configmap to disable broken artifact plugin driver..."
-	@kubectl patch configmap workflow-controller-configmap -n argo \
-		--type merge -p '{"data":{"artifactRepository":"archiveLogs: false\n"}}'
-	@echo "Done. Workflows will no longer fail with 'artifact driver test not found'."
+	@if ! kubectl get cm workflow-controller-configmap -n $(ARGO_NAMESPACE) >/dev/null 2>&1; then \
+		echo "Error: workflow-controller-configmap not found in namespace '$(ARGO_NAMESPACE)'."; \
+		echo "Set ARGO_NAMESPACE=<your-argo-namespace> if Argo Workflows is installed elsewhere."; \
+		exit 1; \
+	elif kubectl get cm workflow-controller-configmap -n $(ARGO_NAMESPACE) -o jsonpath='{.data.artifactRepository}' 2>/dev/null | grep -q 'plugin.name: test'; then \
+		echo "Patching workflow-controller-configmap in namespace '$(ARGO_NAMESPACE)' to disable broken artifact plugin driver..."; \
+		kubectl patch configmap workflow-controller-configmap -n $(ARGO_NAMESPACE) --type merge -p '{"data":{"artifactRepository":"archiveLogs: false\n"}}'; \
+		echo "Done. Workflows will no longer fail with 'artifact driver test not found'."; \
+	else \
+		echo "artifactRepository in namespace '$(ARGO_NAMESPACE)' is already configured (no 'plugin.name: test' detected) — skipping."; \
+	fi
 
 # ── Verify & Debug ──────────────────────────────────────────────────
 
