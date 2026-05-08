@@ -19,7 +19,7 @@ kubectl create secret generic web-search-credentials \
   --from-literal=tavily-api-key=YOUR_KEY
 
 # Deploy to Kubernetes
-kubectl apply -f k8s-deployment.yaml
+helm install web-research-mcp ./chart
 
 # Verify
 kubectl get mcpserver web-research-mcp

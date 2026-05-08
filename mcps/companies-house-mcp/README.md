@@ -14,7 +14,7 @@ UK Companies House API integration for company search and beneficial ownership (
 docker build -t companies-house-mcp:latest .
 
 # Deploy to Kubernetes
-kubectl apply -f k8s-deployment.yaml
+helm install companies-house-mcp ./chart
 
 # Verify
 kubectl get mcpserver companies-house

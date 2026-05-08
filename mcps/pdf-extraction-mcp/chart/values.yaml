@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: pdf-extraction-mcp
-  tag: v2
+  tag: latest
   pullPolicy: IfNotPresent
 
 nameOverride: ""
