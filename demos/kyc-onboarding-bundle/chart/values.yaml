@@ -185,8 +185,8 @@ dataSeeder:
     repository: kyc-demo-data-seeder
     tag: latest
     pullPolicy: IfNotPresent
-# Filesystem MCP deployment name (must match file-gateway subchart's fullnameOverride + "-filesystem-mcp")
-filesystemMcpDeployment: "file-gateway-filesystem-mcp"
+# Filesystem MCP deployment name (must match the standalone mcp-filesystem chart's deployment name)
+filesystemMcpDeployment: "mcp-filesystem-filesystem-mcp-server"
 
 # File Gateway (installed with bundle; provides file-gateway-api and file-gateway-filesystem-mcp)
 file-gateway:
