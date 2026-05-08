@@ -7,7 +7,14 @@ from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
 from ark_sdk.executor_app import is_otel_enabled
 
 from .config import config
-from .models import ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_output_schema
+from .models import (
+    ModelConfig,
+    ResponsesCreateParams,
+    resolve_built_in_tools,
+    resolve_file_ids,
+    resolve_output_schema,
+    resolve_reasoning,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +30,10 @@ if is_otel_enabled():
 class OpenAIFileInputsExecutor(BaseExecutor):
     """Executes agents via the OpenAI Responses API with file input support.
 
-    Reads file_ids from the request and builds input_file content parts
-    for the Responses API. Supports streaming and conversation threading.
+    Reads OpenAI file IDs from the annotation cascade
+    (executor-openai-file-inputs.ark.mckinsey.com/file-ids on Query, Agent, or
+    ExecutionEngine; Query wins) and builds input_file content parts for the
+    Responses API. Supports streaming and conversation threading.
     """
 
     def __init__(self) -> None:
@@ -66,7 +75,7 @@ class OpenAIFileInputsExecutor(BaseExecutor):
 
     async def execute_agent(self, request: ExecutionEngineRequest) -> list[Message]:
         conversation_id = getattr(request, "conversationId", None) or request.agent.name
-        file_ids = getattr(request.userInput, "file_ids", None) or []
+        file_ids = resolve_file_ids(request)
 
         model_config = ModelConfig.from_request(request)
         instructions = self._resolve_prompt(request.agent)

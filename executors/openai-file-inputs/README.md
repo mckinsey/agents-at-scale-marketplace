@@ -5,9 +5,14 @@ OpenAI Responses API executor with file attachment support. Exposes an OpenAI-co
 ## Flow
 
 1. UI uploads file via `POST /v1/files` → receives OpenAI `file_id`
-2. `file_id` sent with user message in `userInput.file_ids`
-3. Executor builds multimodal input: `[{type: "input_file", file_id: "..."}, {type: "input_text", text: "..."}]`
+2. UI submits a Query CR with `file_id`s on the annotation
+   `executor-openai-file-inputs.ark.mckinsey.com/file-ids` (JSON-encoded array, e.g. `["file-abc","file-def"]`)
+3. Executor reads the annotation via the cascade (Query > Agent > ExecutionEngine) and builds multimodal input:
+   `[{type: "input_file", file_id: "..."}, {type: "input_text", text: "..."}]`
 4. Calls OpenAI Responses API with streaming
+
+The annotation cascade matches the pattern used for `tools`, `reasoning`, and `output-schema` —
+Query annotations override Agent annotations override ExecutionEngine annotations.
 
 ## File API Endpoints
 

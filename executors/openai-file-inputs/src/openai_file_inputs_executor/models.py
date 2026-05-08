@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/tools"
 REASONING_ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/reasoning"
 OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/output-schema"
+FILE_IDS_ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/file-ids"
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +147,32 @@ def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str,
     return None
 
 
+def resolve_file_ids(request: ExecutionEngineRequest) -> list[str]:
+    """Resolve OpenAI file IDs from the annotation cascade.
+
+    Priority (highest wins): Query annotations > Agent annotations > ExecutionEngine annotations.
+    Annotation value is a JSON-encoded array of strings (e.g. ``["file-abc","file-def"]``).
+    """
+    for source in [
+        request.query_annotations,
+        (getattr(request.agent, "annotations", None) or {}),
+        request.execution_engine_annotations,
+    ]:
+        raw = source.get(FILE_IDS_ANNOTATION_KEY, "")
+        if not raw:
+            continue
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            logger.warning("Failed to parse file-ids annotation: %s", exc)
+            continue
+        if not isinstance(value, list):
+            logger.warning("file-ids annotation must be a JSON array, got %s", type(value).__name__)
+            continue
+        return [fid for fid in value if isinstance(fid, str) and fid]
+    return []
+
+
 # ---------------------------------------------------------------------------
 # Input building — multimodal with file support
 # ---------------------------------------------------------------------------
@@ -194,7 +221,7 @@ class ResponsesCreateParams(BaseModel):
         reasoning: Optional[dict[str, Any]] = None,
         text: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
-        file_ids = getattr(request.userInput, "file_ids", None) or []
+        file_ids = resolve_file_ids(request)
 
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
