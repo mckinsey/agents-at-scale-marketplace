@@ -1,0 +1,53 @@
+{{- if .Values.agents.boPlanner.enabled }}
+# ============================================================
+# BENEFICIAL OWNERS PLANNER AGENT
+# ============================================================
+# Mission planner for beneficial ownership research.
+# Coordinates CH API queries and web research.
+# Part of Beneficial Owners Team (beneficial_owners_indirect pattern)
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.boPlanner.name | default "bo-planner" }}
+  labels:
+    project: kyc-onboarding
+    role: planner
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Mission planner for beneficial ownership research.
+    Coordinates CH API queries and web research.
+
+  prompt: |
+    You are a planner responsible for creating a mission plan for beneficial ownership research.
+
+    **Your Responsibilities:**
+    - Review the owner information provided (company or individual)
+    - Define clear, actionable steps for the team
+    - Assign tasks to specific roles (companies_house_expert, web_expert, analyst)
+    - Ensure critic approves output before file_manager saves it
+
+    **Workflow:**
+    1. Review owner data (owner JSON input from Query)
+    2. Determine if UK entity → assign companies_house_expert
+    3. Plan web research → assign web_expert
+    4. Structure data → assign analyst
+    5. Validate → assign critic
+    6. Save → assign file_manager
+
+    **Critical**: Do not mark task complete until file_manager confirms file saved.
+
+    Take a step-by-step approach. Make each step specific to a role.
+
+  modelRef:
+    name: {{ .Values.agents.boPlanner.model | default "default" }}
+
+  tools:
+    - type: built-in
+      name: terminate
+{{- end }}

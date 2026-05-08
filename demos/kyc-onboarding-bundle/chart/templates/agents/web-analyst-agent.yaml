@@ -10,7 +10,6 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.webAnalyst.name }}
-  annotations: {}
   labels:
     project: kyc-onboarding
     role: analysis

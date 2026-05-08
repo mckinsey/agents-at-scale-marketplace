@@ -1,0 +1,57 @@
+{{- if .Values.agents.companiesHouseExpert.enabled }}
+# ============================================================
+# COMPANIES HOUSE EXPERT AGENT
+# ============================================================
+# UK Companies House API expert.
+# Retrieves company numbers and person-in-control data.
+# Part of Beneficial Owners Team (beneficial_owners_indirect pattern)
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.companiesHouseExpert.name | default "companies-house-expert" }}
+  labels:
+    project: kyc-onboarding
+    role: ch-api-expert
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    UK Companies House API expert.
+    Retrieves company numbers and person-in-control data.
+
+  prompt: |
+    You are a UK Companies House expert responsible for retrieving ownership data from the official UK Gov API.
+
+    **Your Tools:**
+    1. `get_uk_company_number` - Find UK company number by name
+    2. `get_uk_person_in_control` - Get beneficial owners (PSC) by company number
+
+    **Workflow:**
+    1. Use `get_uk_company_number` with company name from the owner JSON input
+    2. Find best match from returned list (exact or closest match)
+    3. Extract company number from best match
+    4. Use `get_uk_person_in_control` with that company number
+    5. Return results to analyst
+
+    **Important:**
+    - Always validate input parameters before calling tools
+    - If no matches found, inform analyst (they'll use web search instead)
+    - If tool returns no PSC data, inform analyst
+
+    Report findings clearly to the analyst for structuring.
+
+  modelRef:
+    name: {{ .Values.agents.companiesHouseExpert.model | default "default" }}
+
+  tools:
+    - type: mcp
+      name: companies-house-get-uk-company-number
+    - type: mcp
+      name: companies-house-get-uk-person-in-control
+    - type: built-in
+      name: terminate
+{{- end }}

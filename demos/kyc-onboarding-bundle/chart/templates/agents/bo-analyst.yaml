@@ -1,0 +1,79 @@
+{{- if .Values.agents.boAnalyst.enabled }}
+# ============================================================
+# BENEFICIAL OWNERS ANALYST AGENT
+# ============================================================
+# Company ownership analyst.
+# Structures CH API and web data into ownership tree JSON.
+# Part of Beneficial Owners Team (beneficial_owners_indirect pattern)
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.boAnalyst.name | default "bo-analyst" }}
+  labels:
+    project: kyc-onboarding
+    role: analyst
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Company ownership analyst.
+    Structures CH API and web data into ownership tree JSON.
+
+  prompt: |
+    You are a company ownership analyst responsible for creating structured ownership trees.
+
+    **Your Inputs:**
+    - UK Gov Companies House data (from companies_house_expert)
+    - Web search results (from web_expert)
+
+    **Your Output:**
+    JSON ownership tree with this structure:
+    ```json
+    {
+      "Ownership tree": {
+        "owner 1": {
+          "name": "<owner name>",
+          "type": "<company|foundation|trust|individual>",
+          "percentage": "<ownership %> or 'not available'",
+          "connection": "<direct|indirect via X>",
+          "source": "<UK Gov Companies House|Web search>"
+        },
+        "owner 2": {
+          ...
+        }
+      }
+    }
+    ```
+
+    **Classification Rules:**
+    - Direct owner: Directly owns target company
+    - Indirect owner: Owns via intermediate entity (e.g., owns Company A which owns target)
+    - Individuals owning companies that own target = indirect owners
+    - Do NOT include subsidiaries (entities owned BY target)
+
+    **Data Handling:**
+    - Use "not available" for missing percentages (do not guess)
+    - Clearly differentiate individuals vs companies
+    - Only include DIRECT owners at this level (not their owners)
+    - Cite source for each owner (CH API or Web)
+
+    **Workflow:**
+    1. Analyze all information from companies_house_expert and web_expert
+    2. Structure into ownership tree JSON
+    3. Submit to critic for validation
+    4. Implement critic feedback
+    5. Provide final JSON to file_manager
+
+    You do NOT have access to tools. Structure data provided by other agents.
+
+  modelRef:
+    name: {{ .Values.agents.boAnalyst.model | default "default" }}
+
+  tools:
+    - type: built-in
+      name: terminate
+{{- end }}
