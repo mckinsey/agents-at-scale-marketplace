@@ -1,7 +1,8 @@
 """Provider-agnostic Files API.
 
-Exposes /v1/files endpoints that delegate to the configured file provider
-(OpenAI, Anthropic, etc.). The provider is selected via FILE_PROVIDER env var.
+Exposes /v1/files endpoints that delegate to the configured file providers.
+Multiple providers can be registered (OpenAI, S3, Anthropic, etc.) and the
+client selects which one to use via the ?provider= query param.
 """
 
 import logging
@@ -12,7 +13,12 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Route
 
 from .config import config
-from .providers import FileProvider, create_provider
+from .providers import (
+    create_provider,
+    get_provider,
+    list_providers,
+    register_provider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,26 +33,45 @@ ALLOWED_EXTENSIONS = {
     ".xls", ".xlsx", ".tsv",
 }
 
-_provider: FileProvider | None = None
+_initialized = False
 
 
-def _get_provider() -> FileProvider:
-    global _provider
-    if _provider is None:
-        if not config.openai_api_key:
-            raise ValueError("No API key configured. Set OPENAI_API_KEY env var.")
-        _provider = create_provider(
-            provider=config.file_provider,
-            api_key=config.openai_api_key,
-            base_url=config.openai_base_url or None,
-        )
-    return _provider
+def _ensure_providers():
+    global _initialized
+    if _initialized:
+        return
+    _initialized = True
+
+    if config.openai_api_key:
+        p = create_provider("openai", api_key=config.openai_api_key, base_url=config.openai_base_url or None)
+        register_provider(p)
+        logger.info("Registered OpenAI file provider")
+
+    if config.s3_gateway_url:
+        p = create_provider("s3", gateway_url=config.s3_gateway_url)
+        register_provider(p)
+        logger.info("Registered S3 file provider")
+
+
+def _resolve_provider(request: Request):
+    _ensure_providers()
+    provider_name = request.query_params.get("provider", config.file_provider)
+    return get_provider(provider_name)
+
+
+async def list_providers_endpoint(request: Request) -> JSONResponse:
+    _ensure_providers()
+    return JSONResponse({
+        "providers": list_providers(),
+        "default": config.file_provider,
+    })
 
 
 async def upload_file(request: Request) -> JSONResponse:
     form = await request.form()
     upload = form.get("file")
     purpose = form.get("purpose", "user_data")
+    provider_name = form.get("provider", None)
 
     if not upload:
         return JSONResponse({"error": "No file provided"}, status_code=400)
@@ -60,28 +85,31 @@ async def upload_file(request: Request) -> JSONResponse:
         )
 
     content = await upload.read()
-    provider = _get_provider()
+
+    _ensure_providers()
+    name = provider_name or request.query_params.get("provider", config.file_provider)
+    provider = get_provider(name)
     result = await provider.upload(filename, content, purpose)
     return JSONResponse(result.to_dict(), status_code=201)
 
 
 async def list_files(request: Request) -> JSONResponse:
     purpose = request.query_params.get("purpose")
-    provider = _get_provider()
+    provider = _resolve_provider(request)
     files = await provider.list_files(purpose=purpose)
     return JSONResponse({"data": [f.to_dict() for f in files], "object": "list"})
 
 
 async def get_file(request: Request) -> JSONResponse:
     file_id = request.path_params["file_id"]
-    provider = _get_provider()
+    provider = _resolve_provider(request)
     result = await provider.get(file_id)
     return JSONResponse(result.to_dict())
 
 
 async def delete_file(request: Request) -> JSONResponse:
     file_id = request.path_params["file_id"]
-    provider = _get_provider()
+    provider = _resolve_provider(request)
     result = await provider.delete(file_id)
     return JSONResponse(result.to_dict())
 
@@ -106,6 +134,8 @@ UI_HTML = """\
   .drop-zone { border: 2px dashed #3a3d47; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s; }
   .drop-zone:hover, .drop-zone.dragover { border-color: #6366f1; }
   .drop-zone input { display: none; }
+  .toolbar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+  select { background: #1a1d27; color: #e0e0e0; border: 1px solid #2a2d37; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.85rem; }
   button { background: #6366f1; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
   button:hover { background: #5558e6; }
   button.danger { background: #dc2626; }
@@ -116,7 +146,6 @@ UI_HTML = """\
   .id { font-family: monospace; font-size: 0.8rem; color: #6366f1; }
   .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
   .status.processed { background: #064e3b; color: #6ee7b7; }
-  .status.pending { background: #78350f; color: #fbbf24; }
   .empty { text-align: center; padding: 2rem; color: #555; }
   .toast { position: fixed; bottom: 1rem; right: 1rem; background: #1e40af; color: #fff; padding: 0.75rem 1.25rem; border-radius: 6px; font-size: 0.85rem; display: none; z-index: 100; }
   .toast.error { background: #991b1b; }
@@ -124,9 +153,13 @@ UI_HTML = """\
 </style>
 </head>
 <body>
-<h1>Ark File Manager <span class="provider-badge" id="providerBadge"></span></h1>
+<h1>Ark File Manager</h1>
 
 <div class="card">
+  <div class="toolbar">
+    <label style="font-size:0.85rem;color:#aaa;">Provider:</label>
+    <select id="providerSelect" onchange="loadFiles()"></select>
+  </div>
   <h2>Upload</h2>
   <div class="drop-zone" id="dropZone">
     <p>Drop files here or click to browse</p>
@@ -135,7 +168,7 @@ UI_HTML = """\
 </div>
 
 <div class="card">
-  <h2>Files</h2>
+  <h2>Files <span class="provider-badge" id="providerBadge"></span></h2>
   <div id="fileList"><div class="empty">Loading...</div></div>
 </div>
 
@@ -146,12 +179,26 @@ const API = '/v1/files';
 const drop = document.getElementById('dropZone');
 const input = document.getElementById('fileInput');
 const toast = document.getElementById('toast');
+const providerSelect = document.getElementById('providerSelect');
 
 function showToast(msg, isError) {
   toast.textContent = msg;
   toast.className = 'toast' + (isError ? ' error' : '');
   toast.style.display = 'block';
   setTimeout(() => toast.style.display = 'none', 3000);
+}
+
+async function initProviders() {
+  try {
+    const res = await fetch('/v1/providers');
+    const data = await res.json();
+    providerSelect.innerHTML = data.providers.map(p =>
+      '<option value="' + p + '"' + (p === data.default ? ' selected' : '') + '>' + p.toUpperCase() + '</option>'
+    ).join('');
+  } catch (e) {
+    providerSelect.innerHTML = '<option value="openai">OPENAI</option>';
+  }
+  loadFiles();
 }
 
 drop.addEventListener('click', () => input.click());
@@ -165,15 +212,17 @@ drop.addEventListener('drop', e => {
 input.addEventListener('change', () => { uploadFiles(input.files); input.value = ''; });
 
 async function uploadFiles(files) {
+  const provider = providerSelect.value;
   for (const file of files) {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('purpose', 'user_data');
+    fd.append('provider', provider);
     try {
-      const res = await fetch(API, { method: 'POST', body: fd });
+      const res = await fetch(API + '?provider=' + provider, { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) { showToast(data.error || 'Upload failed', true); continue; }
-      showToast(`Uploaded: ${data.filename} → ${data.id}`, false);
+      showToast('Uploaded: ' + data.filename + ' \\u2192 ' + data.id, false);
     } catch (e) { showToast('Upload error: ' + e.message, true); }
   }
   loadFiles();
@@ -181,9 +230,10 @@ async function uploadFiles(files) {
 
 async function deleteFile(id) {
   if (!confirm('Delete ' + id + '?')) return;
+  const provider = providerSelect.value;
   try {
-    await fetch(API + '/' + id, { method: 'DELETE' });
-    showToast('Deleted ' + id, false);
+    await fetch(API + '/' + encodeURIComponent(id) + '?provider=' + provider, { method: 'DELETE' });
+    showToast('Deleted', false);
     loadFiles();
   } catch (e) { showToast('Delete error: ' + e.message, true); }
 }
@@ -195,38 +245,36 @@ function formatBytes(b) {
 }
 
 function formatDate(ts) {
+  if (!ts) return '-';
   return new Date(ts * 1000).toLocaleString();
 }
 
 async function loadFiles() {
   const el = document.getElementById('fileList');
+  const provider = providerSelect.value;
+  document.getElementById('providerBadge').textContent = provider;
   try {
-    const res = await fetch(API);
+    const res = await fetch(API + '?provider=' + provider);
     const data = await res.json();
     if (!data.data || data.data.length === 0) {
       el.innerHTML = '<div class="empty">No files uploaded</div>';
-      if (data.data && data.data.length === 0) {
-        document.getElementById('providerBadge').textContent = '';
-      }
       return;
     }
-    const provider = data.data[0].provider || 'unknown';
-    document.getElementById('providerBadge').textContent = provider;
     el.innerHTML = '<table><thead><tr><th>ID</th><th>Filename</th><th>Size</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>' +
-      data.data.map(f => `<tr>
-        <td class="id">${f.id}</td>
-        <td>${f.filename}</td>
-        <td>${formatBytes(f.bytes)}</td>
-        <td>${formatDate(f.created_at)}</td>
-        <td><span class="status ${f.status}">${f.status}</span></td>
-        <td><button class="danger" onclick="deleteFile('${f.id}')">Delete</button></td>
-      </tr>`).join('') + '</tbody></table>';
+      data.data.map(f => '<tr>' +
+        '<td class="id">' + f.id + '</td>' +
+        '<td>' + f.filename + '</td>' +
+        '<td>' + formatBytes(f.bytes) + '</td>' +
+        '<td>' + formatDate(f.created_at) + '</td>' +
+        '<td><span class="status ' + f.status + '">' + f.status + '</span></td>' +
+        '<td><button class="danger" onclick="deleteFile(\\'' + f.id.replace(/'/g, "\\\\'") + '\\')">Delete</button></td>' +
+      '</tr>').join('') + '</tbody></table>';
   } catch (e) {
     el.innerHTML = '<div class="empty">Error loading files</div>';
   }
 }
 
-loadFiles();
+initProviders();
 </script>
 </body>
 </html>
@@ -235,8 +283,9 @@ loadFiles();
 
 file_api_routes = [
     Route("/files", file_ui, methods=["GET"]),
+    Route("/v1/providers", list_providers_endpoint, methods=["GET"]),
     Route("/v1/files", upload_file, methods=["POST"]),
     Route("/v1/files", list_files, methods=["GET"]),
-    Route("/v1/files/{file_id}", get_file, methods=["GET"]),
-    Route("/v1/files/{file_id}", delete_file, methods=["DELETE"]),
+    Route("/v1/files/{file_id:path}", get_file, methods=["GET"]),
+    Route("/v1/files/{file_id:path}", delete_file, methods=["DELETE"]),
 ]
