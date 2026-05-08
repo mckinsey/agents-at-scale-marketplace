@@ -14,7 +14,6 @@ class ExecutorConfig(BaseSettings):
     file_provider: str = Field(default="openai", validation_alias="FILE_PROVIDER")
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
     openai_base_url: str = Field(default="", validation_alias="OPENAI_BASE_URL")
-    s3_gateway_url: str = Field(default="", validation_alias="S3_GATEWAY_URL")
 
 
 config = ExecutorConfig()
