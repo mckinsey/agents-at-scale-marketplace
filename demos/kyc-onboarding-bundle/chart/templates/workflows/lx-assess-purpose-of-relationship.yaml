@@ -100,6 +100,8 @@ spec:
           metadata:
             generateName: purpose-relationship-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent

@@ -92,6 +92,8 @@ spec:
           metadata:
             generateName: profile-finalize-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
@@ -148,6 +150,8 @@ spec:
           metadata:
             generateName: profile-json2md-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: summary-assessment-agent
