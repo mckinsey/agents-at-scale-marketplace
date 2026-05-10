@@ -252,7 +252,7 @@ spec:
     # ARK Query: Create screening list from multiple sources
     - name: create-screening-list-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -423,7 +423,7 @@ spec:
     # ARK Query: Screen name in document (uses filesystem read, not PDF tools)
     - name: screening-in-document-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"

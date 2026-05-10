@@ -81,7 +81,7 @@ spec:
     # ARK Query: Assess purpose of relationship
     - name: assess-purpose-of-relationship-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
