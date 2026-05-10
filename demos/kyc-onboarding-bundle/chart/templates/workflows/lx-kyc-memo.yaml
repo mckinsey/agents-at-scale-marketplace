@@ -65,7 +65,7 @@ spec:
 
     - name: kyc-memo-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
       inputs:
         parameters:

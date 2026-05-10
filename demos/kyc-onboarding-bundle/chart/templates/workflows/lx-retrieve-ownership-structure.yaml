@@ -320,8 +320,6 @@ spec:
       steps:
         - - name: process-prompt
             template: doc-extract-query
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -344,8 +342,6 @@ spec:
       steps:
         - - name: process-all-prompts
             template: doc-extract-query
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -398,7 +394,7 @@ spec:
     # ARK Query: Extract information from document using Scout-RAG team
     - name: doc-extract-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -552,7 +548,7 @@ spec:
     # ARK Query: Determine direct beneficial owners
     - name: determine-direct-beneficial-owners-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -623,7 +619,7 @@ spec:
     # ARK Query: Determine indirect beneficial owners
     - name: determine-indirect-beneficial-owners-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -691,7 +687,7 @@ spec:
     # ARK Query: Create beneficial owner tree
     - name: create-beneficial-owner-tree-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -779,7 +775,7 @@ spec:
     # ARK Query: Consolidate ownership structure into LegacyX format
     - name: consolidate-ownership-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -876,7 +872,7 @@ spec:
     # ARK Query: Draw diagram
     - name: draw-diagram-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"

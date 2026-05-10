@@ -411,8 +411,6 @@ spec:
       steps:
         - - name: process-prompt
             template: query-rag-agent
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -472,8 +470,6 @@ spec:
       steps:
         - - name: process-each-prompt
             template: query-rag-agent
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -496,8 +492,6 @@ spec:
       steps:
         - - name: process-web-prompt
             template: query-web-enricher
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -557,8 +551,6 @@ spec:
       steps:
         - - name: process-each-prompt
             template: query-web-enricher
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -574,7 +566,7 @@ spec:
     # Template: Query RAG agent for document extraction
     - name: query-rag-agent
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -632,7 +624,7 @@ spec:
     # Template: Query web enricher agent
     - name: query-web-enricher
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -758,7 +750,7 @@ spec:
     # Template: Query consolidation team (ARK Query with retry — kept for other workflows)
     - name: query-consolidation-team
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"

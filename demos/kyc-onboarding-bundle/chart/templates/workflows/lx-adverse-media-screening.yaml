@@ -107,8 +107,6 @@ spec:
 
         # Step 5: Determine relevance for each file
         - - name: determine-relevance
-            continueOn:
-              failed: true
             template: relevance-classification-query
             arguments:
               parameters:
@@ -376,7 +374,7 @@ spec:
     # ARK Query: Classify relevance of adverse media findings
     - name: relevance-classification-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
       inputs:
         parameters:

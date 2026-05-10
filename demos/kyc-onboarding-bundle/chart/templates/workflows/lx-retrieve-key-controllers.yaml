@@ -235,8 +235,6 @@ spec:
       steps:
         - - name: process-prompt
             template: doc-extract-query
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -262,8 +260,6 @@ spec:
       steps:
         - - name: process-all-prompts
             template: doc-extract-query
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -289,8 +285,6 @@ spec:
       steps:
         - - name: process-web-prompt
             template: web-data-query
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -316,8 +310,6 @@ spec:
       steps:
         - - name: process-all-web-prompts
             template: web-data-query
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -335,7 +327,7 @@ spec:
     # ARK Query: Extract information from document using RAG agent
     - name: doc-extract-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -422,7 +414,7 @@ spec:
     # ARK Query: Collect web data using web enricher agent
     - name: web-data-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -656,7 +648,7 @@ spec:
     # ARK Query: Consolidate key controllers information (ACTIVE — used by Step 7)
     - name: consolidate-key-controllers-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"

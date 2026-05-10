@@ -72,7 +72,7 @@ spec:
 
     - name: merge-profile-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -131,7 +131,7 @@ spec:
               Do NOT add /data or any other prefix to the path.
     - name: profile-json-to-markdown-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
