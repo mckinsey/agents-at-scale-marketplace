@@ -16,6 +16,12 @@ logger = logging.getLogger(__name__)
 ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
 REASONING_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/reasoning"
 OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/output-schema"
+# Shared with executor-openai-file-inputs: a paired file-assistant agent uploads
+# files via that executor and the dashboard passes the resulting file IDs to
+# whichever agent the user chats with. Both executors honour the same key so
+# files attach uniformly whether the chat target is the file-inputs agent or a
+# regular responses agent paired with one.
+FILE_IDS_ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/file-ids"
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +164,35 @@ def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str,
     return None
 
 
+def resolve_file_ids(request: ExecutionEngineRequest) -> list[str]:
+    """Resolve OpenAI file IDs from the annotation cascade.
+
+    Priority (highest wins): Query > Agent > ExecutionEngine annotations.
+    Annotation value is a JSON-encoded array of strings (e.g. ``["file-abc"]``).
+    """
+    for source in [
+        request.query_annotations,
+        (getattr(request.agent, "annotations", None) or {}),
+        request.execution_engine_annotations,
+    ]:
+        raw = source.get(FILE_IDS_ANNOTATION_KEY, "")
+        if not raw:
+            continue
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            logger.warning("Failed to parse file-ids annotation: %s", exc)
+            continue
+        if not isinstance(value, list):
+            logger.warning(
+                "file-ids annotation must be a JSON array, got %s",
+                type(value).__name__,
+            )
+            continue
+        return [fid for fid in value if isinstance(fid, str) and fid]
+    return []
+
+
 # ---------------------------------------------------------------------------
 # Function tool
 # ---------------------------------------------------------------------------
@@ -217,7 +252,7 @@ class ResponsesCreateParams(BaseModel):
         reasoning: Optional[dict[str, Any]] = None,
         text: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
-        file_ids = getattr(request.userInput, "file_ids", None) or []
+        file_ids = resolve_file_ids(request)
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
         ] + [cls._build_user_message(request.userInput.content, file_ids)]
