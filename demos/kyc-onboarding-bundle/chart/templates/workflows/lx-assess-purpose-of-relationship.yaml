@@ -81,7 +81,7 @@ spec:
     # ARK Query: Assess purpose of relationship
     - name: assess-purpose-of-relationship-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -100,6 +100,8 @@ spec:
           metadata:
             generateName: purpose-relationship-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent

@@ -107,8 +107,6 @@ spec:
 
         # Step 5: Determine relevance for each file
         - - name: determine-relevance
-            continueOn:
-              failed: true
             template: relevance-classification-query
             arguments:
               parameters:
@@ -276,6 +274,8 @@ spec:
           metadata:
             generateName: web-data-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: team
               name: web-research-team
@@ -297,7 +297,7 @@ spec:
                  - high: Government/regulatory websites (SEC, FCA, Companies House), reputable news agencies (Reuters, Bloomberg, BBC, Financial Times, Law360), court records, audited corporate disclosures (annual reports, 10-K filings)
                  - medium: Industry-specific publications, NGO reports, law firm publications, unaudited corporate disclosures (press releases), social media from verified accounts
                  - low: Tabloid media, unverified social media, blogs, anonymous sources, outdated content
-              3. Save findings to a JSON file using the 'mcp-filesystem-write-file' tool
+              3. Save findings to a JSON file using the 'filesystem-mcp-server-write-file' tool
               4. Use the section name as part of the filename: {{ "{{inputs.parameters.output-dir}}" }}/{{ "{{inputs.parameters.section}}" }}.json
               Do NOT add /data or any other prefix to the path.
 
@@ -374,7 +374,7 @@ spec:
     # ARK Query: Classify relevance of adverse media findings
     - name: relevance-classification-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
       inputs:
         parameters:
@@ -391,6 +391,8 @@ spec:
           metadata:
             generateName: relevance-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: relevance-classification-agent
@@ -426,7 +428,7 @@ spec:
 
               The "confidence score" should be 1-10 indicating how confident you are in the classification.
 
-              Update the original file with the relevance classifications using the `mcp-filesystem-write-file` tool.
+              Update the original file with the relevance classifications using the `filesystem-mcp-server-write-file` tool.
               Write back to: {{ "{{inputs.parameters.file-path}}" }}
               Preserve the "subsection" field unchanged.
       outputs:
@@ -488,6 +490,8 @@ spec:
           metadata:
             generateName: summarize-ams-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent

@@ -1,7 +1,8 @@
-.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents
+.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents fix-argo-artifact-config
 
 NAMESPACE ?= $(or $(K8S_NAMESPACE),default)
 MCP_SOURCE_NAMESPACE ?= $(or $(MCP_NAMESPACE),default)
+ARGO_NAMESPACE ?= argo
 RELEASE_NAME ?= kyc-onboarding-bundle
 FILESYSTEM_MCP_IMAGE ?= filesystem-mcp-server:latest
 PDF_EXTRACTION_MCP_IMAGE ?= pdf-extraction-mcp:latest
@@ -51,8 +52,10 @@ help:
 	@echo "  make clean                  Remove workflow artifacts"
 	@echo "  make delete-data-seeder-job Delete data-seeder Job"
 	@echo ""
-	@echo "Quick Start A: make uninstall && make build-data-seeder && make install-with-argo && make build && make ready"
-	@echo "Quick Start B: make uninstall && make install-with-argo DATA_SEEDER_ENABLED=false && make build && make upload-data && make ready"
+	@echo "  make fix-argo-artifact-config Disable broken artifact driver in workflow-controller-configmap"
+	@echo ""
+	@echo "Quick Start A: make fix-argo-artifact-config && make uninstall && make build-data-seeder && make install-with-argo && make build && make ready"
+	@echo "Quick Start B: make fix-argo-artifact-config && make uninstall && make install-with-argo DATA_SEEDER_ENABLED=false && make build && make upload-data && make ready"
 
 build-filesystem:
 	@echo "Building filesystem MCP server image..."
@@ -89,7 +92,13 @@ build-pdf-mcp:
 		minikube image load $(PDF_EXTRACTION_MCP_IMAGE); \
 	fi
 	@echo "Deploying pdf-extraction MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/pdf-extraction-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template pdf-extraction-mcp ../../mcps/pdf-extraction-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=pdf-extraction-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		--set dataVolume.enabled=true \
+		--set dataVolume.claimName=file-gateway-storage \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build-companies-house-mcp:
@@ -100,7 +109,11 @@ build-companies-house-mcp:
 		minikube image load $(COMPANIES_HOUSE_MCP_IMAGE); \
 	fi
 	@echo "Deploying companies-house MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/companies-house-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template companies-house-mcp ../../mcps/companies-house-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=companies-house-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 	@echo "NOTE: Create API key secret with: kubectl create secret generic companies-house-api-key --from-literal=api-key=YOUR_KEY"
 
@@ -112,7 +125,11 @@ build-web-mcp:
 		minikube image load $(WEB_RESEARCH_MCP_IMAGE); \
 	fi
 	@echo "Deploying web-research MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/web-research-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template web-research-mcp ../../mcps/web-research-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=web-research-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build-perplexity-mcp:
@@ -123,7 +140,11 @@ build-perplexity-mcp:
 		minikube image load $(PERPLEXITY_ASK_MCP_IMAGE); \
 	fi
 	@echo "Deploying perplexity-ask MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/perplexity-ask-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template perplexity-ask-mcp ../../mcps/perplexity-ask-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=perplexity-ask-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build: build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp
@@ -352,6 +373,21 @@ build-data-seeder:
 	fi
 	@echo "Done. Image: $(DATA_SEEDER_IMAGE):latest"
 
+# ── Cluster prerequisites ────────────────────────────────────────────
+
+fix-argo-artifact-config:
+	@if ! kubectl get cm workflow-controller-configmap -n $(ARGO_NAMESPACE) >/dev/null 2>&1; then \
+		echo "Error: workflow-controller-configmap not found in namespace '$(ARGO_NAMESPACE)'."; \
+		echo "Set ARGO_NAMESPACE=<your-argo-namespace> if Argo Workflows is installed elsewhere."; \
+		exit 1; \
+	elif kubectl get cm workflow-controller-configmap -n $(ARGO_NAMESPACE) -o jsonpath='{.data.artifactRepository}' 2>/dev/null | grep -q 'plugin.name: test'; then \
+		echo "Patching workflow-controller-configmap in namespace '$(ARGO_NAMESPACE)' to disable broken artifact plugin driver..."; \
+		kubectl patch configmap workflow-controller-configmap -n $(ARGO_NAMESPACE) --type merge -p '{"data":{"artifactRepository":"archiveLogs: false\n"}}'; \
+		echo "Done. Workflows will no longer fail with 'artifact driver test not found'."; \
+	else \
+		echo "artifactRepository in namespace '$(ARGO_NAMESPACE)' is already configured (no 'plugin.name: test' detected) — skipping."; \
+	fi
+
 # ── Verify & Debug ──────────────────────────────────────────────────
 
 clean:
@@ -377,9 +413,9 @@ verify-mcp:
 	@kubectl get pods -n $(NAMESPACE) -l app=web-research-mcp 2>/dev/null || true
 
 wait-for-tools:
-	@echo "Waiting for Tool mcp-filesystem-read-file..."
+	@echo "Waiting for Tool filesystem-mcp-server-read-file..."
 	@for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24; do \
-		if kubectl get tools -n $(NAMESPACE) --request-timeout=5s 2>/dev/null | grep -q mcp-filesystem-read-file; then \
+		if kubectl get tools -n $(NAMESPACE) --request-timeout=5s 2>/dev/null | grep -q filesystem-mcp-server-read-file; then \
 			echo "Found."; \
 			exit 0; \
 		fi; \

@@ -5,14 +5,10 @@
 # Universal quality reviewer used across all teams
 # Reviews outputs for completeness, correctness, and format
 # ============================================================
-# Hook: ensure this agent exists before any Team is applied (admission webhook validates agent refs).
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.critic.name }}
-  annotations:
-    helm.sh/hook: pre-install
-    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: quality-review

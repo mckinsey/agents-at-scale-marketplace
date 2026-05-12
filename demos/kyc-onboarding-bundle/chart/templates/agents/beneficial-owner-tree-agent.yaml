@@ -1,7 +1,8 @@
+{{- if .Values.agents.beneficialOwnerTreeAgent.enabled }}
 apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
-  name: beneficial-owner-tree-agent
+  name: {{ .Values.agents.beneficialOwnerTreeAgent.name | default "beneficial-owner-tree-agent" }}
   labels:
     project: kyc-onboarding
     {{- with .Values.commonLabels }}
@@ -214,10 +215,11 @@ spec:
   
   tools:
     - type: mcp
-      name: mcp-filesystem-read-file
+      name: filesystem-mcp-server-read-file
     - type: mcp
-      name: mcp-filesystem-write-file
+      name: filesystem-mcp-server-write-file
     - type: mcp
       name: perplexity-ask
     - type: built-in
       name: terminate
+{{- end }}

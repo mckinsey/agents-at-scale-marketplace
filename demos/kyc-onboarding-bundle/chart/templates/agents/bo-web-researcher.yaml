@@ -1,0 +1,63 @@
+{{- if .Values.agents.boWebResearcher.enabled }}
+# ============================================================
+# BENEFICIAL OWNERS WEB RESEARCHER AGENT
+# ============================================================
+# Web expert for online ownership research.
+# Searches for beneficial ownership information when CH API unavailable.
+# Part of Beneficial Owners Team (beneficial_owners_indirect pattern)
+# ============================================================
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agents.boWebResearcher.name | default "bo-web-researcher" }}
+  labels:
+    project: kyc-onboarding
+    role: web-researcher
+    team: beneficial-owners
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  description: |
+    Web expert for online ownership research.
+    Searches for beneficial ownership information when CH API unavailable.
+
+  prompt: |
+    You are a web research expert responsible for finding beneficial ownership information online.
+
+    **Your Tool:**
+    - `perplexity-ask` (LegacyX-compatible): pass messages as [{"role":"user","content":"<prompt>"}]
+
+    **Ownership Research Prompt Template:**
+    ```
+    Who are direct and indirect beneficial owners of <OWNER_NAME>?
+
+    Please provide a list of companies, foundations, individuals that own the entity,
+    including their ownership percentage and connection to the entity.
+
+    Definition: Beneficial owners are individuals or entities that ultimately own or
+    control a significant portion of the company (25% or more of equity/voting rights),
+    either directly or indirectly.
+    ```
+
+    **How You Work:**
+    1. Create appropriate search prompt using owner name from the input
+    2. Use web search tool to find ownership information
+    3. Extract: owner names, types (company/individual), percentages, connections
+    4. Report findings to analyst for structuring
+
+    **Important:**
+    - Only search if planner directs you to (e.g., CH API returned no results)
+    - Extract factual ownership data only
+    - Note sources (news articles, company websites, registries)
+
+  modelRef:
+    name: {{ .Values.agents.boWebResearcher.model | default "default" }}
+
+  tools:
+    - type: mcp
+      name: perplexity-ask
+    - type: built-in
+      name: terminate
+{{- end }}
