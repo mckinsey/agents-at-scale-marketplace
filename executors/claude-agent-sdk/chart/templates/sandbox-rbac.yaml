@@ -25,7 +25,7 @@ metadata:
     {{- end }}
 rules:
   - apiGroups: ["ark.mckinsey.com"]
-    resources: ["queries", "agents", "models", "tools", "mcpservers"]
+    resources: ["queries", "agents", "models", "tools", "mcpservers", "executionengines"]
     verbs: ["get"]
   # Namespace-wide secret access is required because Model CRD API keys reference
   # dynamically-named secrets. Cannot scope with resourceNames since secret names
