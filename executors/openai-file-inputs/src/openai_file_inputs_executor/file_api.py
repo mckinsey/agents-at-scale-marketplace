@@ -13,6 +13,7 @@ from starlette.routing import Route
 
 from .agent_credentials import parse_agent_ref, resolve_agent_openai_credentials
 from .config import config
+from .file_index import get_index
 from .providers import FileProvider, create_provider
 
 logger = logging.getLogger(__name__)
@@ -106,9 +107,41 @@ async def upload_file(request: Request) -> JSONResponse:
             status_code=400,
         )
 
+def _agent_param(request: Request) -> tuple[str, str] | None:
+    raw = request.query_params.get("agent")
+    if not raw:
+        return None
+    return parse_agent_ref(raw)
+
+
+async def upload_file(request: Request) -> JSONResponse:
+    form = await request.form()
+    upload = form.get("file")
+    purpose = form.get("purpose", "user_data")
+
+    if not upload:
+        return JSONResponse({"error": "No file provided"}, status_code=400)
+
+    filename = getattr(upload, "filename", "upload")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return JSONResponse(
+            {"error": f"File type '{ext}' is not supported. Accepted: PDF, text/code, documents, presentations, spreadsheets."},
+            status_code=400,
+        )
+
     content = await upload.read()
     provider = await _get_provider_for_request(request)
     result = await provider.upload(filename, content, purpose)
+
+    agent = _agent_param(request)
+    if agent is not None:
+        _, name = agent
+        try:
+            get_index(config.sessions_dir).add(name, result.id)
+        except Exception as e:
+            logger.warning("file_index add failed for %s/%s: %s", name, result.id, e)
+
     return JSONResponse(result.to_dict(), status_code=201)
 
 
@@ -116,6 +149,14 @@ async def list_files(request: Request) -> JSONResponse:
     purpose = request.query_params.get("purpose")
     provider = await _get_provider_for_request(request)
     files = await provider.list_files(purpose=purpose)
+
+    agent = _agent_param(request)
+    if agent is not None:
+        _, name = agent
+        known_ids = {f.id for f in files}
+        survivors = set(get_index(config.sessions_dir).prune_to(name, known_ids))
+        files = [f for f in files if f.id in survivors]
+
     return JSONResponse({"data": [f.to_dict() for f in files], "object": "list"})
 
 
@@ -130,6 +171,15 @@ async def delete_file(request: Request) -> JSONResponse:
     file_id = request.path_params["file_id"]
     provider = await _get_provider_for_request(request)
     result = await provider.delete(file_id)
+
+    agent = _agent_param(request)
+    if agent is not None:
+        _, name = agent
+        try:
+            get_index(config.sessions_dir).remove(name, file_id)
+        except Exception as e:
+            logger.warning("file_index remove failed for %s/%s: %s", name, file_id, e)
+
     return JSONResponse(result.to_dict())
 
 
