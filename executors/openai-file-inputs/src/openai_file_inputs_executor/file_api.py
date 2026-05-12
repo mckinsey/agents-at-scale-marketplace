@@ -11,6 +11,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Route
 
+from .agent_credentials import parse_agent_ref, resolve_agent_openai_credentials
 from .config import config
 from .providers import FileProvider, create_provider
 
@@ -27,20 +28,66 @@ ALLOWED_EXTENSIONS = {
     ".xls", ".xlsx", ".tsv",
 }
 
-_provider: FileProvider | None = None
+_env_provider: FileProvider | None = None
+_agent_provider_cache: dict[tuple[str, str], FileProvider] = {}
 
 
-def _get_provider() -> FileProvider:
-    global _provider
-    if _provider is None:
+def _get_env_provider() -> FileProvider:
+    """Fallback provider built from cluster-wide env vars."""
+    global _env_provider
+    if _env_provider is None:
         if not config.openai_api_key:
-            raise ValueError("No API key configured. Set OPENAI_API_KEY env var.")
-        _provider = create_provider(
+            raise ValueError(
+                "No API key configured. Either pass ?agent=<name> on the request "
+                "or set OPENAI_API_KEY env var on the executor.",
+            )
+        _env_provider = create_provider(
             provider=config.file_provider,
             api_key=config.openai_api_key,
             base_url=config.openai_base_url or None,
         )
-    return _provider
+    return _env_provider
+
+
+async def _get_provider_for_request(request: Request) -> FileProvider:
+    """Pick the provider whose credentials match the requested agent's Model.
+
+    Resolution chain:
+        1. ``?agent=<namespace>/<name>`` (or just ``<name>``) → look up Agent
+           CR → its modelRef → resolve apiKey/baseUrl from the Model's Secret
+           or ConfigMap references → cache.
+        2. Otherwise fall back to the cluster-wide env var provider.
+
+    Without (1) the executor uploads under whichever account the env var
+    points at, which silently breaks file_id resolution when the agent's
+    Responses call hits a different OpenAI project. The agent-scoped path
+    guarantees the credentials used for uploads match the credentials the
+    Responses call will use.
+    """
+    raw = request.query_params.get("agent")
+    if not raw:
+        return _get_env_provider()
+
+    namespace, name = parse_agent_ref(raw)
+    cache_key = (namespace, name)
+    cached = _agent_provider_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    creds = await resolve_agent_openai_credentials(name, namespace)
+    if creds is None:
+        logger.warning(
+            "Could not resolve OpenAI credentials for agent %s/%s; "
+            "falling back to env var provider.",
+            namespace,
+            name,
+        )
+        return _get_env_provider()
+
+    api_key, base_url = creds
+    provider = create_provider(provider="openai", api_key=api_key, base_url=base_url)
+    _agent_provider_cache[cache_key] = provider
+    return provider
 
 
 async def upload_file(request: Request) -> JSONResponse:
@@ -60,28 +107,28 @@ async def upload_file(request: Request) -> JSONResponse:
         )
 
     content = await upload.read()
-    provider = _get_provider()
+    provider = await _get_provider_for_request(request)
     result = await provider.upload(filename, content, purpose)
     return JSONResponse(result.to_dict(), status_code=201)
 
 
 async def list_files(request: Request) -> JSONResponse:
     purpose = request.query_params.get("purpose")
-    provider = _get_provider()
+    provider = await _get_provider_for_request(request)
     files = await provider.list_files(purpose=purpose)
     return JSONResponse({"data": [f.to_dict() for f in files], "object": "list"})
 
 
 async def get_file(request: Request) -> JSONResponse:
     file_id = request.path_params["file_id"]
-    provider = _get_provider()
+    provider = await _get_provider_for_request(request)
     result = await provider.get(file_id)
     return JSONResponse(result.to_dict())
 
 
 async def delete_file(request: Request) -> JSONResponse:
     file_id = request.path_params["file_id"]
-    provider = _get_provider()
+    provider = await _get_provider_for_request(request)
     result = await provider.delete(file_id)
     return JSONResponse(result.to_dict())
 
