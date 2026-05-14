@@ -7,6 +7,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+from .chat_api import chat_api_routes
 from .executor import OpenAIResponsesExecutor
 from .file_api import file_api_routes
 
@@ -43,5 +44,7 @@ def create_app() -> Starlette:
     app = app_instance.create_app()
     app.routes.insert(0, Route("/execute", _execute, methods=["POST"]))
     for route in file_api_routes:
+        app.routes.insert(0, route)
+    for route in chat_api_routes:
         app.routes.insert(0, route)
     return app

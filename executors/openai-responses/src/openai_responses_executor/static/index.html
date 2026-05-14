@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ark · File Manager</title>
+<title>Ark · File Assistant</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -18,6 +18,8 @@
     --danger-hover: #dc2626;
     --ok: #10b981;
     --warn: #f59e0b;
+    --user-bubble: #1e2538;
+    --assistant-bubble: #1a1d27;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -26,53 +28,43 @@
     background: var(--bg);
     color: var(--text);
     font-size: 14px;
-    line-height: 1.45;
-    padding: 2rem;
+    line-height: 1.5;
+    overflow: hidden;
   }
-  .wrap { max-width: 960px; margin: 0 auto; }
-  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; }
-  h1 { font-size: 1.25rem; font-weight: 600; }
-  h1 small { color: var(--muted); font-weight: 400; margin-left: 0.5rem; }
-  .panel {
+  .app { display: flex; flex-direction: column; height: 100vh; }
+  header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
     background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1.25rem;
-    margin-bottom: 1.25rem;
+    gap: 1rem;
   }
-  .panel-title {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    margin-bottom: 0.75rem;
+  header .brand { display: flex; align-items: baseline; gap: 0.5rem; }
+  header h1 { font-size: 1rem; font-weight: 600; }
+  header h1 small { color: var(--muted); font-weight: 400; }
+  header .agent {
+    flex: 1 1 0;
+    max-width: 480px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
-  .agent-row { display: flex; gap: 0.5rem; align-items: center; }
-  .agent-row label { color: var(--muted); font-size: 0.85rem; min-width: 4rem; }
-  input[type="text"] {
-    flex: 1;
+  header .agent label { color: var(--muted); font-size: 0.8rem; }
+  input[type="text"], textarea {
     background: var(--panel-2);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     color: var(--text);
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    width: 100%;
   }
-  input[type="text"]:focus { outline: none; border-color: var(--accent); }
-  .agent-hint { color: var(--muted); font-size: 0.75rem; margin-top: 0.5rem; }
-  .drop {
-    border: 1.5px dashed var(--border);
-    border-radius: 10px;
-    padding: 2rem 1rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-    color: var(--muted);
-  }
-  .drop:hover, .drop.over { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); color: var(--text); }
-  .drop strong { color: var(--text); }
-  .drop input { display: none; }
+  input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: none; line-height: 1.4; }
   button {
     background: var(--accent);
     color: #fff;
@@ -82,75 +74,225 @@
     cursor: pointer;
     font-size: 0.8rem;
     font-family: inherit;
+    white-space: nowrap;
   }
   button:hover { background: var(--accent-hover); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
   button.ghost:hover { color: var(--text); border-color: var(--accent); background: transparent; }
   button.danger { background: var(--danger); }
   button.danger:hover { background: var(--danger-hover); }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th { text-align: left; padding: 0.6rem 0.5rem; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
-  td { padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--panel-2); vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  td.id { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.8rem; color: var(--accent); }
-  .pill {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 99px;
-    font-size: 0.7rem;
-    background: var(--panel-2);
+  button.icon { padding: 0.3rem 0.5rem; font-size: 0.75rem; }
+
+  main { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px; overflow: hidden; }
+
+  /* CHAT */
+  .chat { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--border); }
+  .chat-toolbar {
+    flex: 0 0 auto;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
     color: var(--muted);
   }
-  .pill.ok { background: rgba(16, 185, 129, 0.15); color: var(--ok); }
-  .pill.warn { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
-  .empty { color: var(--muted); padding: 1.5rem; text-align: center; }
+  .chat-toolbar .spacer { flex: 1; }
+  .chat-toolbar .badge {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .messages {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .msg { display: flex; flex-direction: column; max-width: 80%; }
+  .msg.user { align-self: flex-end; }
+  .msg.assistant { align-self: flex-start; }
+  .msg .who { font-size: 0.7rem; color: var(--muted); margin: 0 0.5rem 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .msg.user .who { text-align: right; }
+  .msg .body {
+    background: var(--assistant-bubble);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.user .body { background: var(--user-bubble); }
+  .msg .attachments {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .msg .attachment {
+    font-size: 0.7rem;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 2px 8px;
+    color: var(--muted);
+  }
+  .msg.error .body { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: #fecaca; }
+  .typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); opacity: 0.4; animation: blink 1.4s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+  .empty-chat {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 2rem;
+  }
+  .composer {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+  }
+  .composer textarea { min-height: 38px; max-height: 200px; }
+  .attached-hint {
+    flex: 0 0 auto;
+    padding: 0.3rem 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--panel);
+  }
+
+  /* FILES */
+  .files { display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
+  .files-header {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .files-header h2 { font-size: 0.85rem; font-weight: 600; }
+  .files-header h2 small { color: var(--muted); font-weight: 400; margin-left: 0.4rem; }
+  .drop {
+    margin: 0.75rem 1rem 0.5rem;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); color: var(--text); }
+  .drop input { display: none; }
+  .files-list {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.25rem 0.5rem 0.75rem;
+  }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+  .file-row:hover { background: var(--panel-2); }
+  .file-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-row .meta { color: var(--muted); font-size: 0.7rem; flex: 0 0 auto; }
+  .file-row .id { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.65rem; color: var(--accent); display: block; }
+  .files-empty { padding: 1.5rem 1rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
+
+  /* TOAST */
   .toast {
     position: fixed;
-    bottom: 1.25rem;
-    right: 1.25rem;
+    bottom: 1rem;
+    right: 1rem;
     background: var(--panel);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 0.6rem 1rem;
+    padding: 0.55rem 0.9rem;
     border-radius: 8px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     display: none;
-    max-width: 400px;
+    max-width: 420px;
   }
   .toast.ok { border-color: var(--ok); }
   .toast.err { border-color: var(--danger); color: #fecaca; }
-  .row-actions { text-align: right; }
+
+  @media (max-width: 720px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+    .chat { border-right: none; border-bottom: 1px solid var(--border); }
+    .files { max-height: 40vh; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="app">
   <header>
-    <h1>Ark · File Manager <small id="scope-hint">no agent selected</small></h1>
-    <button class="ghost" id="refresh">Refresh</button>
+    <div class="brand">
+      <h1>Ark · File Assistant</h1>
+      <small id="scope">no agent</small>
+    </div>
+    <div class="agent">
+      <label for="agent-input">Agent</label>
+      <input id="agent-input" type="text" placeholder="namespace/name — leave blank for local fallback" autocomplete="off">
+    </div>
   </header>
 
-  <section class="panel">
-    <div class="panel-title">Agent scope</div>
-    <div class="agent-row">
-      <label for="agent">Agent</label>
-      <input id="agent" type="text" placeholder="namespace/name (e.g. default/my-agent) — leave blank for cluster-wide" autocomplete="off">
-    </div>
-    <div class="agent-hint">Uploads use credentials from this agent's Model and are listed only for this agent. Leave blank to use the executor's <code>OPENAI_API_KEY</code>.</div>
-  </section>
+  <main>
+    <section class="chat">
+      <div class="chat-toolbar">
+        <span id="model-badge" class="badge">model: —</span>
+        <span class="spacer"></span>
+        <button class="ghost icon" id="reset">Reset chat</button>
+      </div>
+      <div class="messages" id="messages">
+        <div class="empty-chat">
+          Drop files on the right, then ask a question.<br>
+          Files attached to this agent are sent with your first message.
+        </div>
+      </div>
+      <div class="attached-hint" id="attached-hint" hidden></div>
+      <form class="composer" id="composer">
+        <textarea id="input" rows="1" placeholder="Ask about your files…"></textarea>
+        <button id="send" type="submit">Send</button>
+      </form>
+    </section>
 
-  <section class="panel">
-    <div class="panel-title">Upload</div>
-    <label class="drop" id="drop">
-      <p><strong>Drop files here</strong> or click to browse</p>
-      <input type="file" id="file" multiple>
-    </label>
-  </section>
-
-  <section class="panel">
-    <div class="panel-title">Files</div>
-    <div id="list"><div class="empty">Loading…</div></div>
-  </section>
+    <aside class="files">
+      <div class="files-header">
+        <h2>Files <small id="files-scope">—</small></h2>
+        <button class="ghost icon" id="refresh-files">Refresh</button>
+      </div>
+      <label class="drop" id="drop">
+        <span><strong>Drop</strong> or click to upload</span>
+        <input type="file" id="file-input" multiple>
+      </label>
+      <div class="files-list" id="files-list"><div class="files-empty">No files yet.</div></div>
+    </aside>
+  </main>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -158,43 +300,87 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const drop = $("drop");
-  const fileInput = $("file");
-  const list = $("list");
-  const toast = $("toast");
-  const agentInput = $("agent");
-  const scopeHint = $("scope-hint");
-  const refresh = $("refresh");
+  const els = {
+    agent: $("agent-input"),
+    scope: $("scope"),
+    filesScope: $("files-scope"),
+    modelBadge: $("model-badge"),
+    messages: $("messages"),
+    composer: $("composer"),
+    input: $("input"),
+    send: $("send"),
+    reset: $("reset"),
+    drop: $("drop"),
+    fileInput: $("file-input"),
+    filesList: $("files-list"),
+    refreshFiles: $("refresh-files"),
+    attachedHint: $("attached-hint"),
+    toast: $("toast"),
+  };
+
+  const state = {
+    files: [],
+    messages: [],
+    streaming: false,
+    conversationId: null,
+    firstTurnFileIds: null,
+  };
+
+  // Persistent per-agent conversation IDs so reloads keep threading.
+  const CONV_STORAGE = "ark-file-assistant.conversations";
+  const loadConv = () => {
+    try { return JSON.parse(localStorage.getItem(CONV_STORAGE) || "{}"); }
+    catch { return {}; }
+  };
+  const saveConv = (map) => localStorage.setItem(CONV_STORAGE, JSON.stringify(map));
+  const conversationKey = () => "agent:" + (agent() || "__env__");
+  function ensureConversationId() {
+    const map = loadConv();
+    const key = conversationKey();
+    if (!map[key]) {
+      map[key] = "conv-" + Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
+      saveConv(map);
+    }
+    state.conversationId = map[key];
+    return state.conversationId;
+  }
+  function newConversationId() {
+    const map = loadConv();
+    delete map[conversationKey()];
+    saveConv(map);
+    return ensureConversationId();
+  }
 
   const initial = new URLSearchParams(location.search).get("agent");
-  if (initial) agentInput.value = initial;
+  if (initial) els.agent.value = initial;
 
-  function agent() {
-    return agentInput.value.trim();
+  function agent() { return els.agent.value.trim(); }
+
+  function apiUrl(path) {
+    const a = agent();
+    const qs = a ? "?agent=" + encodeURIComponent(a) : "";
+    return path + qs;
   }
 
-  function apiUrl(path = "", extra = {}) {
-    const params = new URLSearchParams();
+  function refreshScope() {
     const a = agent();
-    if (a) params.set("agent", a);
-    for (const [k, v] of Object.entries(extra)) {
-      if (v != null) params.set(k, v);
-    }
-    const qs = params.toString();
-    return "/v1/files" + path + (qs ? "?" + qs : "");
-  }
-
-  function updateScopeHint() {
-    const a = agent();
-    scopeHint.textContent = a ? `agent: ${a}` : "no agent selected";
+    els.scope.textContent = a ? "agent: " + a : "no agent (env fallback)";
+    els.filesScope.textContent = a ? a : "all org files";
+    ensureConversationId();
   }
 
   function showToast(msg, kind = "ok") {
-    toast.textContent = msg;
-    toast.className = "toast " + kind;
-    toast.style.display = "block";
+    els.toast.textContent = msg;
+    els.toast.className = "toast " + kind;
+    els.toast.style.display = "block";
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => (toast.style.display = "none"), 3500);
+    showToast._t = setTimeout(() => (els.toast.style.display = "none"), 3500);
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    })[c]);
   }
 
   function fmtBytes(b) {
@@ -205,20 +391,55 @@
     return (b / 1073741824).toFixed(2) + " GB";
   }
 
-  function fmtDate(ts) {
-    if (!ts) return "—";
-    return new Date(ts * 1000).toLocaleString();
+  function renderFiles() {
+    if (!state.files.length) {
+      els.filesList.innerHTML = '<div class="files-empty">No files yet.</div>';
+      els.attachedHint.hidden = true;
+      return;
+    }
+    els.filesList.innerHTML = state.files.map((f) => `
+      <div class="file-row" data-id="${escapeHtml(f.id)}">
+        <div style="min-width:0;flex:1;">
+          <div class="name" title="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</div>
+          <span class="id">${escapeHtml(f.id)}</span>
+        </div>
+        <span class="meta">${fmtBytes(f.bytes)}</span>
+        <button class="ghost icon" data-action="delete" data-id="${escapeHtml(f.id)}" data-name="${escapeHtml(f.filename)}">Delete</button>
+      </div>`).join("");
+    els.filesList.querySelectorAll('[data-action="delete"]').forEach((b) => {
+      b.addEventListener("click", () => deleteFile(b.dataset.id, b.dataset.name));
+    });
+    updateAttachedHint();
   }
 
-  function statusPill(s) {
-    const cls = s === "processed" ? "ok" : s === "error" ? "err" : "warn";
-    return `<span class="pill ${cls}">${s || "?"}</span>`;
+  function updateAttachedHint() {
+    if (!state.files.length) { els.attachedHint.hidden = true; return; }
+    if (state.messages.length === 0) {
+      els.attachedHint.hidden = false;
+      els.attachedHint.textContent =
+        `${state.files.length} file${state.files.length === 1 ? "" : "s"} will be attached to your first message.`;
+    } else {
+      els.attachedHint.hidden = false;
+      els.attachedHint.textContent =
+        "Files were attached on the first turn. New uploads apply to a fresh conversation — use Reset to start one.";
+    }
   }
 
-  function escapeHtml(s) {
-    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-    })[c]);
+  async function loadFiles() {
+    try {
+      const res = await fetch(apiUrl("/v1/files"));
+      const data = await res.json();
+      if (!res.ok) {
+        state.files = [];
+        renderFiles();
+        showToast(data.error || ("Failed to load files (" + res.status + ")"), "err");
+        return;
+      }
+      state.files = data.data || [];
+      renderFiles();
+    } catch (e) {
+      showToast("Files error: " + e.message, "err");
+    }
   }
 
   async function uploadFiles(files) {
@@ -228,13 +449,13 @@
       fd.append("file", file);
       fd.append("purpose", "user_data");
       try {
-        const res = await fetch(apiUrl(), { method: "POST", body: fd });
+        const res = await fetch(apiUrl("/v1/files"), { method: "POST", body: fd });
         const data = await res.json();
         if (!res.ok) {
-          showToast(data.error || `Upload failed (${res.status})`, "err");
+          showToast(data.error || ("Upload failed (" + res.status + ")"), "err");
           continue;
         }
-        showToast(`Uploaded ${data.filename}`, "ok");
+        showToast("Uploaded " + data.filename, "ok");
       } catch (e) {
         showToast("Upload error: " + e.message, "err");
       }
@@ -243,81 +464,214 @@
   }
 
   async function deleteFile(id, filename) {
-    if (!confirm(`Delete ${filename || id}?`)) return;
+    if (!confirm("Delete " + (filename || id) + "?")) return;
     try {
-      const res = await fetch(apiUrl("/" + encodeURIComponent(id)), { method: "DELETE" });
+      const res = await fetch(apiUrl("/v1/files/" + encodeURIComponent(id)), { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        showToast(data.error || `Delete failed (${res.status})`, "err");
+        showToast(data.error || ("Delete failed (" + res.status + ")"), "err");
         return;
       }
-      showToast(`Deleted ${filename || id}`, "ok");
+      showToast("Deleted " + (filename || id), "ok");
       loadFiles();
     } catch (e) {
       showToast("Delete error: " + e.message, "err");
     }
   }
 
-  function renderRows(files) {
-    if (!files.length) {
-      list.innerHTML = '<div class="empty">No files uploaded yet.</div>';
-      return;
-    }
-    const rows = files.map((f) => `
-      <tr>
-        <td class="id">${escapeHtml(f.id)}</td>
-        <td>${escapeHtml(f.filename)}</td>
-        <td>${fmtBytes(f.bytes)}</td>
-        <td>${fmtDate(f.created_at)}</td>
-        <td>${statusPill(f.status)}</td>
-        <td class="row-actions">
-          <button class="danger" data-id="${escapeHtml(f.id)}" data-name="${escapeHtml(f.filename)}">Delete</button>
-        </td>
-      </tr>`).join("");
-    list.innerHTML = `
-      <table>
-        <thead>
-          <tr><th>ID</th><th>Filename</th><th>Size</th><th>Created</th><th>Status</th><th></th></tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-    list.querySelectorAll("button.danger").forEach((btn) => {
-      btn.addEventListener("click", () => deleteFile(btn.dataset.id, btn.dataset.name));
-    });
+  function clearEmptyMessage() {
+    const empty = els.messages.querySelector(".empty-chat");
+    if (empty) empty.remove();
   }
 
-  async function loadFiles() {
-    list.innerHTML = '<div class="empty">Loading…</div>';
+  function appendMessage(role, content, opts = {}) {
+    clearEmptyMessage();
+    const msg = document.createElement("div");
+    msg.className = "msg " + role + (opts.error ? " error" : "");
+    const who = role === "user" ? "You" : role === "assistant" ? "Assistant" : "Error";
+    msg.innerHTML = `<div class="who">${who}</div><div class="body"></div>`;
+    msg.querySelector(".body").textContent = content;
+    if (opts.fileIds && opts.fileIds.length) {
+      const wrap = document.createElement("div");
+      wrap.className = "attachments";
+      for (const fid of opts.fileIds) {
+        const f = state.files.find((x) => x.id === fid);
+        const span = document.createElement("span");
+        span.className = "attachment";
+        span.textContent = "📎 " + (f ? f.filename : fid);
+        wrap.appendChild(span);
+      }
+      msg.appendChild(wrap);
+    }
+    els.messages.appendChild(msg);
+    els.messages.scrollTop = els.messages.scrollHeight;
+    state.messages.push({ role, content });
+    updateAttachedHint();
+    return msg;
+  }
+
+  function appendTyping() {
+    clearEmptyMessage();
+    const msg = document.createElement("div");
+    msg.className = "msg assistant";
+    msg.innerHTML = `<div class="who">Assistant</div><div class="body"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    els.messages.appendChild(msg);
+    els.messages.scrollTop = els.messages.scrollHeight;
+    return msg;
+  }
+
+  function setSending(sending) {
+    state.streaming = sending;
+    els.send.disabled = sending;
+    els.input.disabled = sending;
+  }
+
+  async function sendMessage(text) {
+    if (!text.trim() || state.streaming) return;
+    const isFirstTurn = state.messages.length === 0;
+    const fileIdsForUI = isFirstTurn ? state.files.map((f) => f.id) : [];
+    appendMessage("user", text, { fileIds: fileIdsForUI });
+    const typing = appendTyping();
+    setSending(true);
+
+    let assistantText = "";
+    let updatedBody = typing.querySelector(".body");
+
     try {
-      const res = await fetch(apiUrl());
-      const data = await res.json();
-      if (!res.ok) {
-        list.innerHTML = `<div class="empty">${escapeHtml(data.error || "Failed to load files")}</div>`;
+      const res = await fetch(apiUrl("/chat"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, conversationId: ensureConversationId() }),
+      });
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        typing.remove();
+        appendMessage("error", data.error || ("Request failed (" + res.status + ")"), { error: true });
+        setSending(false);
         return;
       }
-      renderRows(data.data || []);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const flush = () => {
+        let nl;
+        while ((nl = buffer.indexOf("\n\n")) !== -1) {
+          const chunk = buffer.slice(0, nl);
+          buffer = buffer.slice(nl + 2);
+          const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+          if (!line) continue;
+          let payload;
+          try { payload = JSON.parse(line.slice(6)); }
+          catch { continue; }
+          handleEvent(payload);
+        }
+      };
+
+      const handleEvent = (ev) => {
+        if (ev.type === "start") {
+          els.modelBadge.textContent = "model: " + ev.model;
+        } else if (ev.type === "delta") {
+          if (typing.parentNode) typing.remove();
+          if (!updatedBody.dataset.committed) {
+            const msg = appendMessage("assistant", "");
+            updatedBody = msg.querySelector(".body");
+            updatedBody.dataset.committed = "1";
+            // remove the placeholder push we did via appendMessage
+            state.messages.pop();
+          }
+          assistantText += ev.text;
+          updatedBody.textContent = assistantText;
+          els.messages.scrollTop = els.messages.scrollHeight;
+        } else if (ev.type === "error") {
+          if (typing.parentNode) typing.remove();
+          appendMessage("error", ev.error, { error: true });
+        } else if (ev.type === "done") {
+          if (typing.parentNode) typing.remove();
+          if (assistantText) {
+            state.messages.push({ role: "assistant", content: assistantText });
+          }
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        flush();
+      }
+      buffer += decoder.decode();
+      flush();
     } catch (e) {
-      list.innerHTML = `<div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+      if (typing.parentNode) typing.remove();
+      appendMessage("error", "Network error: " + e.message, { error: true });
+    } finally {
+      setSending(false);
+      els.input.focus();
     }
   }
 
-  drop.addEventListener("click", () => fileInput.click());
-  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
-  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
-  drop.addEventListener("drop", (e) => {
+  async function resetChat() {
+    if (!confirm("Reset this conversation? Server-side response state is dropped.")) return;
+    try {
+      await fetch("/chat/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: ensureConversationId() }),
+      });
+    } catch (e) { /* ignore */ }
+    newConversationId();
+    state.messages = [];
+    els.messages.innerHTML = '<div class="empty-chat">Conversation reset. Files re-attach on your next message.</div>';
+    updateAttachedHint();
+    showToast("Chat reset", "ok");
+  }
+
+  // Wire events
+  els.drop.addEventListener("click", () => els.fileInput.click());
+  els.drop.addEventListener("dragover", (e) => { e.preventDefault(); els.drop.classList.add("over"); });
+  els.drop.addEventListener("dragleave", () => els.drop.classList.remove("over"));
+  els.drop.addEventListener("drop", (e) => {
     e.preventDefault();
-    drop.classList.remove("over");
+    els.drop.classList.remove("over");
     uploadFiles(e.dataTransfer.files);
   });
-  fileInput.addEventListener("change", () => {
-    uploadFiles(fileInput.files);
-    fileInput.value = "";
+  els.fileInput.addEventListener("change", () => {
+    uploadFiles(els.fileInput.files);
+    els.fileInput.value = "";
   });
-  agentInput.addEventListener("change", () => { updateScopeHint(); loadFiles(); });
-  refresh.addEventListener("click", loadFiles);
+  els.refreshFiles.addEventListener("click", loadFiles);
+  els.agent.addEventListener("change", () => {
+    refreshScope();
+    state.messages = [];
+    els.messages.innerHTML = '<div class="empty-chat">Switched agent. Files and conversation reloaded.</div>';
+    loadFiles();
+  });
+  els.composer.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = els.input.value;
+    els.input.value = "";
+    els.input.style.height = "auto";
+    sendMessage(text);
+  });
+  els.input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      els.composer.requestSubmit();
+    }
+  });
+  els.input.addEventListener("input", () => {
+    els.input.style.height = "auto";
+    els.input.style.height = Math.min(200, els.input.scrollHeight) + "px";
+  });
+  els.reset.addEventListener("click", resetChat);
 
-  updateScopeHint();
+  // Init
+  refreshScope();
   loadFiles();
+  setTimeout(() => els.input.focus(), 50);
 })();
 </script>
 </body>

@@ -20,5 +20,14 @@ class ExecutorConfig(BaseSettings):
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
     openai_base_url: str = Field(default="", validation_alias="OPENAI_BASE_URL")
 
+    # Defaults used by the /chat endpoint when no ?agent= is specified or the
+    # agent can't be resolved from k8s (e.g. local dev without a cluster). When
+    # ?agent= resolves successfully, the agent's Model + prompt override these.
+    default_chat_model: str = Field(default="gpt-4o-mini", validation_alias="DEFAULT_CHAT_MODEL")
+    default_chat_instructions: str = Field(
+        default="You are a helpful assistant. When the user attaches files, read them and answer based on their contents.",
+        validation_alias="DEFAULT_CHAT_INSTRUCTIONS",
+    )
+
 
 config = ExecutorConfig()

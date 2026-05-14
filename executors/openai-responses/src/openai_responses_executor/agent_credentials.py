@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+from dataclasses import dataclass
 from typing import Any
 
 from ark_sdk.client import V1_ALPHA1, with_ark_client
@@ -21,6 +22,21 @@ from kubernetes_asyncio import client as k8s_client
 from kubernetes_asyncio.client.api_client import ApiClient
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AgentContext:
+    """Everything needed to chat with an agent without going through Ark.
+
+    Filled in by ``resolve_agent_context``. Lets the executor's /chat
+    endpoint talk to the same OpenAI project / model / system prompt the
+    agent would use when invoked via a Query CR.
+    """
+
+    api_key: str
+    base_url: str | None
+    model_name: str
+    instructions: str  # the agent's spec.prompt
 
 
 def _attr_or_key(obj: Any, attr: str, key: str | None = None) -> Any:
@@ -104,6 +120,21 @@ async def resolve_agent_openai_credentials(
     Returns None if the agent has no model, the model isn't OpenAI, or the
     api key can't be resolved.
     """
+    ctx = await resolve_agent_context(agent_name, namespace)
+    if ctx is None:
+        return None
+    return ctx.api_key, ctx.base_url
+
+
+async def resolve_agent_context(
+    agent_name: str, namespace: str
+) -> AgentContext | None:
+    """Resolve the full chat context for an agent from k8s.
+
+    Reads the Agent CR's modelRef + prompt, then its Model CR's openai
+    config (apiKey, baseUrl). Returns None if anything along that chain
+    is missing — callers fall back to the executor's env-var creds.
+    """
     try:
         async with with_ark_client(namespace, V1_ALPHA1) as ark:
             agent = await ark.agents.a_get(agent_name, namespace)
@@ -111,18 +142,18 @@ async def resolve_agent_openai_credentials(
             if not model_ref:
                 logger.info("agent %s/%s has no modelRef", namespace, agent_name)
                 return None
-            model_name = _attr_or_key(model_ref, "name")
+            model_ref_name = _attr_or_key(model_ref, "name")
             model_ns = _attr_or_key(model_ref, "namespace") or namespace
-            if not model_name:
+            if not model_ref_name:
                 return None
-            model = await ark.models.a_get(model_name, model_ns)
+            model = await ark.models.a_get(model_ref_name, model_ns)
             cfg = _attr_or_key(model.spec, "config")
             openai_cfg = _attr_or_key(cfg, "openai")
             if not openai_cfg:
                 logger.info(
-                    "model %s/%s has no openai config; cannot resolve files credentials",
+                    "model %s/%s has no openai config; cannot resolve credentials",
                     model_ns,
-                    model_name,
+                    model_ref_name,
                 )
                 return None
             api_key_vs = _attr_or_key(openai_cfg, "api_key", "apiKey")
@@ -133,13 +164,20 @@ async def resolve_agent_openai_credentials(
                 logger.warning(
                     "model %s/%s openai apiKey resolution returned empty",
                     model_ns,
-                    model_name,
+                    model_ref_name,
                 )
                 return None
-            return api_key, base_url or None
+            instructions = _attr_or_key(agent.spec, "prompt") or ""
+            # The Model CR's name is the API-side model name (e.g. "gpt-4o").
+            return AgentContext(
+                api_key=api_key,
+                base_url=base_url or None,
+                model_name=model_ref_name,
+                instructions=instructions,
+            )
     except Exception as e:
         logger.warning(
-            "agent %s/%s credential resolution failed: %s",
+            "agent %s/%s context resolution failed: %s",
             namespace,
             agent_name,
             e,
