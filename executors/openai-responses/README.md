@@ -124,6 +124,26 @@ client.responses.create(
 # → https://adamgroomingatelier.com/
 ```
 
+## File uploads
+
+This executor also serves a file-management UI at `GET /files` and an OpenAI-compatible Files API at `/v1/files` (POST/GET/DELETE). Files uploaded here can be attached to queries via the `executor-openai-file-inputs.ark.mckinsey.com/file-ids` annotation — see the [`openai-file-inputs` executor](../openai-file-inputs/README.md) for the annotation cascade. The same annotation works whether the chat agent targets this executor or `openai-file-inputs`.
+
+### Scoping uploads to an agent
+
+All `/v1/files` endpoints accept `?agent=<namespace>/<name>` (or just `<name>`). When set:
+
+- Credentials come from the named agent's `modelRef.config.openai.{apiKey,baseUrl}`, so uploads land in the same OpenAI project the agent's Responses calls use.
+- `GET /v1/files` only returns files this agent uploaded (a per-agent index lives at `SESSIONS_DIR/file_index.json` on the executor's PVC).
+
+Without `?agent=`, the executor falls back to the cluster-wide `OPENAI_API_KEY` env var and `GET /v1/files` returns every file that key can see.
+
+| Env Var | Default | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | — | Cluster-wide fallback for Files API |
+| `OPENAI_BASE_URL` | — | Optional override for the fallback |
+| `FILE_PROVIDER` | `openai` | File backend (only `openai` today) |
+| `SESSIONS_DIR` | `/data/sessions` | Persistence for response IDs and the per-agent file index |
+
 ## Deployment
 
 ```bash

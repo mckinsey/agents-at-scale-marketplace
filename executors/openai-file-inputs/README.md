@@ -1,27 +1,18 @@
 # OpenAI File Inputs Executor
 
-OpenAI Responses API executor with file attachment support. Exposes an OpenAI-compatible Files API (`/v1/files`) for uploading files and passes file IDs as `input_file` content parts to the Responses API.
+OpenAI Responses API executor that attaches files to queries via the `input_file` content type. Reads OpenAI `file_id`s from a query annotation and passes them to the Responses API alongside the user text.
 
 ## Flow
 
-1. UI uploads file via `POST /v1/files` → receives OpenAI `file_id`
-2. UI submits a Query CR with `file_id`s on the annotation
-   `executor-openai-file-inputs.ark.mckinsey.com/file-ids` (JSON-encoded array, e.g. `["file-abc","file-def"]`)
-3. Executor reads the annotation via the cascade (Query > Agent > ExecutionEngine) and builds multimodal input:
-   `[{type: "input_file", file_id: "..."}, {type: "input_text", text: "..."}]`
-4. Calls OpenAI Responses API with streaming
+1. A user uploads a file somewhere that hits the OpenAI Files API (e.g. the upload UI on [`executor-openai-responses`](../openai-responses/README.md), or OpenAI directly) → receives a `file_id`.
+2. A Query CR carries those file IDs on the annotation `executor-openai-file-inputs.ark.mckinsey.com/file-ids` (JSON array of strings, e.g. `["file-abc","file-def"]`).
+3. This executor reads the annotation via the cascade (Query > Agent > ExecutionEngine) and builds multimodal input:
+   `[{type: "input_file", file_id: "..."}, {type: "input_text", text: "..."}]`.
+4. Calls the OpenAI Responses API with streaming.
 
-The annotation cascade matches the pattern used for `tools`, `reasoning`, and `output-schema` —
-Query annotations override Agent annotations override ExecutionEngine annotations.
+The annotation cascade matches the pattern used for `tools`, `reasoning`, and `output-schema` — Query overrides Agent overrides ExecutionEngine.
 
-## File API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/v1/files` | Upload file (multipart: `file` + `purpose`) |
-| GET | `/v1/files` | List files |
-| GET | `/v1/files/{file_id}` | Get file metadata |
-| DELETE | `/v1/files/{file_id}` | Delete file |
+The same `file-ids` annotation is honoured by [`executor-openai-responses`](../openai-responses/README.md). Use that executor if you also want a built-in upload UI; use this one when you want a dedicated execution engine whose only behaviour is file-attached Responses calls.
 
 ## Configuration
 
@@ -29,18 +20,16 @@ Query annotations override Agent annotations override ExecutionEngine annotation
 |---------|---------|-------------|
 | `HOST` | `0.0.0.0` | Bind address |
 | `PORT` | `8000` | Bind port |
-| `OPENAI_API_KEY` | — | API key for Files API proxy |
-| `SESSIONS_DIR` | `/data/sessions` | Session persistence directory |
-| `MAX_TOOL_ITERATIONS` | `10` | Max function call loop iterations |
+| `SESSIONS_DIR` | `/data/sessions` | Per-conversation `previous_response_id` storage |
 
-The model API key (for Responses API calls) comes from the Model CRD, same as other executors.
+The OpenAI API key for the Responses call comes from the agent's Model CR — there is no executor-level key.
 
 ## Local Development
 
 ```bash
 cd executors/openai-file-inputs
 uv sync
-OPENAI_API_KEY=sk-... uv run executor-openai-file-inputs
+uv run executor-openai-file-inputs
 ```
 
 ## Deployment

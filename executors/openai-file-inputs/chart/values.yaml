@@ -84,7 +84,7 @@ healthCheck:
 # ExecutionEngine CRD configuration
 executionEngine:
   enabled: true
-  description: "OpenAI File Inputs Executor - Responses API with file attachment support via OpenAI Files API"
+  description: "OpenAI File Inputs Executor - Responses API that attaches file_ids (from the file-ids annotation cascade) to queries. Uploads are handled by the openai-responses executor's /files UI or directly via the OpenAI Files API."
 
 # Persistent volume for session data (stores previous_response_id per conversation)
 persistence:

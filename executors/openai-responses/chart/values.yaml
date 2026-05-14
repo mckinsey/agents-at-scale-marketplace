@@ -84,7 +84,7 @@ healthCheck:
 # ExecutionEngine CRD configuration
 executionEngine:
   enabled: true
-  description: "OpenAI Responses API Executor - A2A server with built-in tool support and multi-turn threading"
+  description: "OpenAI Responses API Executor - A2A server with built-in tool support, multi-turn threading, and a /files upload UI backed by the OpenAI Files API"
 
 # Persistent volume for session data (stores previous_response_id per conversation)
 persistence:
