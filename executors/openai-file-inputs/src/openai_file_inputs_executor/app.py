@@ -8,7 +8,6 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from .executor import OpenAIFileInputsExecutor
-from .file_api import file_api_routes
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,4 @@ async def _execute(request: Request) -> JSONResponse:
 def create_app() -> Starlette:
     app = app_instance.create_app()
     app.routes.insert(0, Route("/execute", _execute, methods=["POST"]))
-    for route in file_api_routes:
-        app.routes.insert(0, route)
     return app
