@@ -1,7 +1,7 @@
-"""Provider-agnostic Files API + upload UI.
+"""Provider-agnostic Files API + responses executor UI.
 
 Exposes:
-    GET  /files              → upload UI (HTML)
+    GET  /                   → responses executor UI (HTML)
     POST /v1/files           → upload (multipart: file, purpose)
     GET  /v1/files           → list
     GET  /v1/files/{file_id} → metadata
@@ -98,7 +98,7 @@ async def _get_provider_for_request(request: Request) -> FileProvider:
     return provider
 
 
-async def file_ui(request: Request) -> HTMLResponse:
+async def executor_ui(request: Request) -> HTMLResponse:
     return HTMLResponse(_UI_HTML)
 
 
@@ -184,7 +184,7 @@ async def delete_file(request: Request) -> JSONResponse:
 
 
 file_api_routes = [
-    Route("/files", file_ui, methods=["GET"]),
+    Route("/", executor_ui, methods=["GET"]),
     Route("/v1/files", upload_file, methods=["POST"]),
     Route("/v1/files", list_files, methods=["GET"]),
     Route("/v1/files/{file_id}", get_file, methods=["GET"]),

@@ -124,9 +124,13 @@ client.responses.create(
 # → https://adamgroomingatelier.com/
 ```
 
-## File uploads
+## Executor UI
 
-This executor also serves a file-management UI at `GET /files` and an OpenAI-compatible Files API at `/v1/files` (POST/GET/DELETE). Files uploaded here can be attached to queries via the `executor-openai-file-inputs.ark.mckinsey.com/file-ids` annotation — see the [`openai-file-inputs` executor](../openai-file-inputs/README.md) for the annotation cascade. The same annotation works whether the chat agent targets this executor or `openai-file-inputs`.
+This executor serves a built-in chat + file-upload UI at `GET /` on the pod, backed by:
+
+- `POST /chat` — SSE stream of text deltas, with conversation threading via `previous_response_id` saved under `SESSIONS_DIR/<conversationId>/`.
+- `POST /chat/reset` — drop the saved `previous_response_id` for a conversation.
+- `/v1/files` (POST/GET/DELETE) — OpenAI-compatible Files API. Uploads here can be attached to queries via the `executor-openai-file-inputs.ark.mckinsey.com/file-ids` annotation — see the [`openai-file-inputs` executor](../openai-file-inputs/README.md) for the annotation cascade. The same annotation works whether the chat agent targets this executor or `openai-file-inputs`.
 
 ### Scoping uploads to an agent
 
