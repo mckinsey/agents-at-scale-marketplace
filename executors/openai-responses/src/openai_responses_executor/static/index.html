@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ark · File Manager</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #161924;
+    --panel-2: #1c2030;
+    --border: #262a39;
+    --text: #e5e7eb;
+    --muted: #8b93a7;
+    --accent: #6366f1;
+    --accent-hover: #5558e6;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --ok: #10b981;
+    --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    padding: 2rem;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; }
+  h1 { font-size: 1.25rem; font-weight: 600; }
+  h1 small { color: var(--muted); font-weight: 400; margin-left: 0.5rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .panel-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+  .agent-row { display: flex; gap: 0.5rem; align-items: center; }
+  .agent-row label { color: var(--muted); font-size: 0.85rem; min-width: 4rem; }
+  input[type="text"] {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  .agent-hint { color: var(--muted); font-size: 0.75rem; margin-top: 0.5rem; }
+  .drop {
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    color: var(--muted);
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); color: var(--text); }
+  .drop strong { color: var(--text); }
+  .drop input { display: none; }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: inherit;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); background: transparent; }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: var(--danger-hover); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; padding: 0.6rem 0.5rem; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+  td { padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--panel-2); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  td.id { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.8rem; color: var(--accent); }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    background: var(--panel-2);
+    color: var(--muted);
+  }
+  .pill.ok { background: rgba(16, 185, 129, 0.15); color: var(--ok); }
+  .pill.warn { background: rgba(245, 158, 11, 0.15); color: var(--warn); }
+  .empty { color: var(--muted); padding: 1.5rem; text-align: center; }
+  .toast {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    display: none;
+    max-width: 400px;
+  }
+  .toast.ok { border-color: var(--ok); }
+  .toast.err { border-color: var(--danger); color: #fecaca; }
+  .row-actions { text-align: right; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ark · File Manager <small id="scope-hint">no agent selected</small></h1>
+    <button class="ghost" id="refresh">Refresh</button>
+  </header>
+
+  <section class="panel">
+    <div class="panel-title">Agent scope</div>
+    <div class="agent-row">
+      <label for="agent">Agent</label>
+      <input id="agent" type="text" placeholder="namespace/name (e.g. default/my-agent) — leave blank for cluster-wide" autocomplete="off">
+    </div>
+    <div class="agent-hint">Uploads use credentials from this agent's Model and are listed only for this agent. Leave blank to use the executor's <code>OPENAI_API_KEY</code>.</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">Upload</div>
+    <label class="drop" id="drop">
+      <p><strong>Drop files here</strong> or click to browse</p>
+      <input type="file" id="file" multiple>
+    </label>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">Files</div>
+    <div id="list"><div class="empty">Loading…</div></div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const drop = $("drop");
+  const fileInput = $("file");
+  const list = $("list");
+  const toast = $("toast");
+  const agentInput = $("agent");
+  const scopeHint = $("scope-hint");
+  const refresh = $("refresh");
+
+  const initial = new URLSearchParams(location.search).get("agent");
+  if (initial) agentInput.value = initial;
+
+  function agent() {
+    return agentInput.value.trim();
+  }
+
+  function apiUrl(path = "", extra = {}) {
+    const params = new URLSearchParams();
+    const a = agent();
+    if (a) params.set("agent", a);
+    for (const [k, v] of Object.entries(extra)) {
+      if (v != null) params.set(k, v);
+    }
+    const qs = params.toString();
+    return "/v1/files" + path + (qs ? "?" + qs : "");
+  }
+
+  function updateScopeHint() {
+    const a = agent();
+    scopeHint.textContent = a ? `agent: ${a}` : "no agent selected";
+  }
+
+  function showToast(msg, kind = "ok") {
+    toast.textContent = msg;
+    toast.className = "toast " + kind;
+    toast.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => (toast.style.display = "none"), 3500);
+  }
+
+  function fmtBytes(b) {
+    if (b == null) return "—";
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    if (b < 1024 * 1024 * 1024) return (b / 1048576).toFixed(1) + " MB";
+    return (b / 1073741824).toFixed(2) + " GB";
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return "—";
+    return new Date(ts * 1000).toLocaleString();
+  }
+
+  function statusPill(s) {
+    const cls = s === "processed" ? "ok" : s === "error" ? "err" : "warn";
+    return `<span class="pill ${cls}">${s || "?"}</span>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    })[c]);
+  }
+
+  async function uploadFiles(files) {
+    if (!files || !files.length) return;
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("purpose", "user_data");
+      try {
+        const res = await fetch(apiUrl(), { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || `Upload failed (${res.status})`, "err");
+          continue;
+        }
+        showToast(`Uploaded ${data.filename}`, "ok");
+      } catch (e) {
+        showToast("Upload error: " + e.message, "err");
+      }
+    }
+    loadFiles();
+  }
+
+  async function deleteFile(id, filename) {
+    if (!confirm(`Delete ${filename || id}?`)) return;
+    try {
+      const res = await fetch(apiUrl("/" + encodeURIComponent(id)), { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || `Delete failed (${res.status})`, "err");
+        return;
+      }
+      showToast(`Deleted ${filename || id}`, "ok");
+      loadFiles();
+    } catch (e) {
+      showToast("Delete error: " + e.message, "err");
+    }
+  }
+
+  function renderRows(files) {
+    if (!files.length) {
+      list.innerHTML = '<div class="empty">No files uploaded yet.</div>';
+      return;
+    }
+    const rows = files.map((f) => `
+      <tr>
+        <td class="id">${escapeHtml(f.id)}</td>
+        <td>${escapeHtml(f.filename)}</td>
+        <td>${fmtBytes(f.bytes)}</td>
+        <td>${fmtDate(f.created_at)}</td>
+        <td>${statusPill(f.status)}</td>
+        <td class="row-actions">
+          <button class="danger" data-id="${escapeHtml(f.id)}" data-name="${escapeHtml(f.filename)}">Delete</button>
+        </td>
+      </tr>`).join("");
+    list.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Filename</th><th>Size</th><th>Created</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    list.querySelectorAll("button.danger").forEach((btn) => {
+      btn.addEventListener("click", () => deleteFile(btn.dataset.id, btn.dataset.name));
+    });
+  }
+
+  async function loadFiles() {
+    list.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const res = await fetch(apiUrl());
+      const data = await res.json();
+      if (!res.ok) {
+        list.innerHTML = `<div class="empty">${escapeHtml(data.error || "Failed to load files")}</div>`;
+        return;
+      }
+      renderRows(data.data || []);
+    } catch (e) {
+      list.innerHTML = `<div class="empty">Error: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  drop.addEventListener("click", () => fileInput.click());
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    drop.classList.remove("over");
+    uploadFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener("change", () => {
+    uploadFiles(fileInput.files);
+    fileInput.value = "";
+  });
+  agentInput.addEventListener("change", () => { updateScopeHint(); loadFiles(); });
+  refresh.addEventListener("click", loadFiles);
+
+  updateScopeHint();
+  loadFiles();
+})();
+</script>
+</body>
+</html>
