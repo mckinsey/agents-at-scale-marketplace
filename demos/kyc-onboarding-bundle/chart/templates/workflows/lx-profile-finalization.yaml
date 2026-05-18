@@ -46,6 +46,17 @@ spec:
                 - name: output-base-dir
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
 
+        - - name: merge-profile
+            template: merge-profile-query
+            arguments:
+              parameters:
+                - name: profile-sections-dir
+                  value: "{{ "{{inputs.parameters.profile-sections-dir}}" }}"
+                - name: base-profile
+                  value: "{{ "{{inputs.parameters.base-profile}}" }}"
+                - name: output-profile-json
+                  value: "{{ "{{inputs.parameters.output-profile-json}}" }}"
+
         - - name: profile-json-to-markdown
             template: profile-json-to-markdown-query
             arguments:
@@ -63,8 +74,16 @@ spec:
         image: alpine/k8s:1.28.13
         command: [bash]
         source: |
+          set -euo pipefail
           BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
           MCP_DATA="/data/aas-files"
+          DEP="{{ .Values.filesystemMcpDeployment }}"
+          if ! kubectl get deployment "$DEP" >/dev/null 2>&1; then
+            NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
+            echo "ERROR: deployment '$DEP' not found in namespace '${NS:-default}'" >&2
+            echo "Hint: set filesystemMcpDeployment in values.yaml or via --set to match your filesystem MCP deployment name." >&2
+            exit 1
+          fi
           for dir in "$BASE/output"; do
             kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
           done
