@@ -30,11 +30,6 @@ spec:
         value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: output-base-dir
         value: "source_code_files/2-customer-due-diligence"
-      - name: execution-mode
-        value: "sequential"
-        enum:
-          - sequential
-          - parallel
 
   templates:
     # ============================================================
@@ -49,8 +44,6 @@ spec:
             value: "{{ "{{workflow.parameters.document-file}}" }}"
           - name: output-base-dir
             value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
-          - name: execution-mode
-            value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
         # Step 0: Ensure output directories exist
         - - name: ensure-output-dirs
@@ -72,9 +65,8 @@ spec:
                 - name: prompts-file-path
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/prompts_key_controllers.yml"
 
-        # Step 3: Collect information from annual report (conditional execution)
-        - - name: collect-info-sequential
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+        # Step 3: Collect information from annual report
+        - - name: collect-info
             template: collect-info-sequential
             arguments:
               parameters:
@@ -87,38 +79,9 @@ spec:
                 - name: current-date
                   value: "{{ "{{steps.get-current-date.outputs.parameters.current-date}}" }}"
 
-          - name: collect-info-parallel
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
-            template: collect-info-parallel
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-key-controllers-prompts.outputs.parameters.prompts-list}}" }}"
-                - name: document-file
-                  value: "{{ "{{inputs.parameters.document-file}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/key_controllers"
-                - name: current-date
-                  value: "{{ "{{steps.get-current-date.outputs.parameters.current-date}}" }}"
-
-        # Step 4: Collect web data (conditional execution)
-        - - name: collect-web-data-sequential
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+        # Step 4: Collect web data
+        - - name: collect-web-data
             template: collect-web-data-sequential
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-key-controllers-prompts.outputs.parameters.prompts-list}}" }}"
-                - name: company-name
-                  value: "{{ "{{inputs.parameters.company-name}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/key_controllers"
-                - name: current-date
-                  value: "{{ "{{steps.get-current-date.outputs.parameters.current-date}}" }}"
-
-          - name: collect-web-data-parallel
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
-            template: collect-web-data-parallel
             arguments:
               parameters:
                 - name: prompts-json
@@ -257,31 +220,6 @@ spec:
                   value: "{{ "{{inputs.parameters.current-date}}" }}"
             withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
 
-    # Collect information in parallel
-    - name: collect-info-parallel
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: document-file
-          - name: output-dir
-          - name: current-date
-      steps:
-        - - name: process-all-prompts
-            template: doc-extract-query
-            arguments:
-              parameters:
-                - name: prompt
-                  value: "{{ "{{item.prompt}}" }}"
-                - name: section
-                  value: "{{ "{{item.section}}" }}"
-                - name: document-file
-                  value: "{{ "{{inputs.parameters.document-file}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
-                - name: current-date
-                  value: "{{ "{{inputs.parameters.current-date}}" }}"
-            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
     # Collect web data sequentially
     - name: collect-web-data-sequential
       inputs:
@@ -292,31 +230,6 @@ spec:
           - name: current-date
       steps:
         - - name: process-web-prompt
-            template: web-data-query
-            arguments:
-              parameters:
-                - name: prompt
-                  value: "{{ "{{item.prompt}}" }}"
-                - name: section
-                  value: "{{ "{{item.section}}" }}"
-                - name: company-name
-                  value: "{{ "{{inputs.parameters.company-name}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
-                - name: current-date
-                  value: "{{ "{{inputs.parameters.current-date}}" }}"
-            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
-    # Collect web data in parallel
-    - name: collect-web-data-parallel
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: company-name
-          - name: output-dir
-          - name: current-date
-      steps:
-        - - name: process-all-web-prompts
             template: web-data-query
             arguments:
               parameters:

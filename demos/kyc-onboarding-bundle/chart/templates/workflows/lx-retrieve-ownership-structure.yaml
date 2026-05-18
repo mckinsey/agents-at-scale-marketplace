@@ -39,12 +39,6 @@ spec:
         value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: output-base-dir
         value: "source_code_files/2-customer-due-diligence"
-      - name: execution-mode
-        value: "sequential"  # Options: sequential, parallel, fake (for testing)
-        enum:
-          - sequential
-          - parallel
-          - fake
 
   templates:
     # ============================================================
@@ -65,8 +59,6 @@ spec:
             value: "{{ "{{workflow.parameters.document-file-mount}}" }}"
           - name: output-base-dir
             value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
-          - name: execution-mode
-            value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
         # Step 0: Set document file path based on file-access-mode
         - - name: set-document-file
@@ -97,8 +89,7 @@ spec:
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/prompts_ownership_structure.yml"
 
         # Step 2: Collect information from annual report
-        - - name: collect-info-sequential
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+        - - name: collect-info
             template: collect-info-sequential
             arguments:
               parameters:
@@ -106,28 +97,6 @@ spec:
                   value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
                 - name: document-file
                   value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
-
-          - name: collect-info-parallel
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
-            template: collect-info-parallel
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
-                - name: document-file
-                  value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
-
-          - name: collect-info-fake
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == fake"
-            template: collect-info-fake
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
                 - name: output-dir
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
 
@@ -339,65 +308,6 @@ spec:
                 - name: output-dir
                   value: "{{ "{{inputs.parameters.output-dir}}" }}"
             withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
-    # Collect information in parallel
-    - name: collect-info-parallel
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: document-file
-          - name: output-dir
-      steps:
-        - - name: process-all-prompts
-            template: doc-extract-query
-            arguments:
-              parameters:
-                - name: prompt
-                  value: "{{ "{{item.prompt}}" }}"
-                - name: section
-                  value: "{{ "{{item.section}}" }}"
-                - name: document-file
-                  value: "{{ "{{inputs.parameters.document-file}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
-            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
-    # Collect information in fake mode (for testing)
-    - name: collect-info-fake
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: output-dir
-        artifacts:
-          - name: prompts-data
-            path: /tmp/prompts-input.json
-            raw:
-              data: "{{ "{{inputs.parameters.prompts-json}}" }}"
-      script:
-        image: alpine/k8s:1.28.13
-        command: [bash]
-        source: |
-          set -eux
-
-          OUTPUT_DIR='{{ "{{inputs.parameters.output-dir}}" }}'
-          MCP_DATA="/data/aas-files"
-
-          cat /tmp/prompts-input.json | jq -r '.[] | @json' | while IFS= read -r prompt_obj; do
-            PROMPT=$(echo "$prompt_obj" | jq -r '.prompt')
-            SECTION=$(echo "$prompt_obj" | jq -r '.section')
-            HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
-            OUTPUT_FILE="$MCP_DATA/$OUTPUT_DIR/${HASH}.json"
-
-            echo "Creating fake file for section: $SECTION"
-
-            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- sh -c "mkdir -p $MCP_DATA/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<FAKEOF
-          {"section": "$SECTION", "data": {"test_data": "fake ownership structure data", "shareholders": [{"name": "Test Shareholder 1", "ownership_pct": 35.5, "type": "direct"}, {"name": "Test Shareholder 2", "ownership_pct": 20.0, "type": "direct"}]}, "sources": [{"page": 1, "content": "Fake test data"}]}
-          FAKEOF
-
-            echo "Created: $OUTPUT_FILE"
-          done
-
-          echo "All fake files created"
 
     # ARK Query: Extract information from document using Scout-RAG team
     - name: doc-extract-query

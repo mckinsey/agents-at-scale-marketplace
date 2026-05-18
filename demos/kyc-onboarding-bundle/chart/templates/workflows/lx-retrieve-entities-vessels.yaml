@@ -40,12 +40,6 @@ spec:
         value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: output-base-dir
         value: "source_code_files/2-customer-due-diligence"
-      - name: execution-mode
-        value: "sequential"  # Options: sequential (default for local), parallel (for production), fake (for testing)
-        enum:
-          - sequential
-          - parallel
-          - fake
 
   templates:
     # ============================================================
@@ -68,8 +62,6 @@ spec:
             value: "{{ "{{workflow.parameters.document-file-mount}}" }}"
           - name: output-base-dir
             value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
-          - name: execution-mode
-            value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
         # Step 0: Ensure output directories exist
         - - name: ensure-output-dirs
@@ -103,9 +95,8 @@ spec:
                 - name: prompts-file-path
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/prompts_entities_vessels.yml"
 
-        # Step 3: Collect information from annual report (conditional execution)
-        - - name: collect-info-from-annual-report-sequential
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+        # Step 3: Collect information from annual report
+        - - name: collect-info-from-annual-report
             template: collect-info-sequential
             arguments:
               parameters:
@@ -116,31 +107,8 @@ spec:
                 - name: output-dir
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/entities_vessels"
 
-          - name: collect-info-from-annual-report-parallel
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
-            template: collect-info-parallel
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
-                - name: document-file
-                  value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
-                - name: output-dir
-                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/entities_vessels"
-
-          - name: collect-info-from-annual-report-fake
-            when: "{{ "{{workflow.parameters.execution-mode}}" }} == fake"
-            template: collect-info-fake
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
-                - name: output-dir
-                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate/entities_vessels"
-
-        # Step 4: Collect web data (conditional execution)
-        - - name: collect-web-data-sequential
-            when: "{{ "{{workflow.parameters.execution-mode}}" }} == sequential"
+        # Step 4: Collect web data
+        - - name: collect-web-data
             template: collect-web-data-sequential
             arguments:
               parameters:
@@ -148,28 +116,6 @@ spec:
                   value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
                 - name: company-name
                   value: "{{ "{{workflow.parameters.company-name}}" }}"
-                - name: output-dir
-                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate"
-
-          - name: collect-web-data-parallel
-            when: "{{ "{{workflow.parameters.execution-mode}}" }} == parallel"
-            template: collect-web-data-parallel
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
-                - name: company-name
-                  value: "{{ "{{workflow.parameters.company-name}}" }}"
-                - name: output-dir
-                  value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate"
-
-          - name: collect-web-data-fake
-            when: "{{ "{{workflow.parameters.execution-mode}}" }} == fake"
-            template: collect-web-data-fake
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-entities-vessels-prompts.outputs.parameters.prompts-list}}" }}"
                 - name: output-dir
                   value: "{{ "{{workflow.parameters.output-base-dir}}" }}/intermediate"
 
@@ -431,65 +377,6 @@ spec:
                   value: "{{ "{{inputs.parameters.output-dir}}" }}"
             withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
 
-    # Template: Collect info from document - Fake (for testing)
-    - name: collect-info-fake
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: output-dir
-        artifacts:
-          - name: prompts-data
-            path: /tmp/prompts-input.json
-            raw:
-              data: "{{ "{{inputs.parameters.prompts-json}}" }}"
-      script:
-        image: alpine/k8s:1.28.13
-        command: [bash]
-        source: |
-          set -eux
-
-          OUTPUT_DIR='{{ "{{inputs.parameters.output-dir}}" }}'
-          MCP_DATA="/data/aas-files"
-
-          cat /tmp/prompts-input.json | jq -r '.[] | @json' | while IFS= read -r prompt_obj; do
-            PROMPT=$(echo "$prompt_obj" | jq -r '.prompt')
-            SECTION=$(echo "$prompt_obj" | jq -r '.section')
-            PROMPT_HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
-            OUTPUT_FILE="$MCP_DATA/$OUTPUT_DIR/${PROMPT_HASH}.json"
-
-            echo "Creating fake file for section: $SECTION"
-
-            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- sh -c "mkdir -p $MCP_DATA/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<FAKEOF
-          {"section": "$SECTION", "data": {"extraction_status": "fake_test_data", "subsidiaries": [{"legal_name": "Test Subsidiary 1", "jurisdiction": "UK", "ownership_pct": 100}, {"legal_name": "Test Subsidiary 2", "jurisdiction": "US", "ownership_pct": 75}], "vessels": [{"name": "Test Vessel 1", "imo": "1234567", "flag": "UK"}, {"name": "Test Vessel 2", "imo": "7654321", "flag": "US"}]}, "sources": [{"page": 1, "content": "Fake test data"}]}
-          FAKEOF
-
-            echo "Created: $OUTPUT_FILE"
-          done
-
-          echo "All fake files created"
-
-    # Template: Collect info from document - Parallel
-    - name: collect-info-parallel
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: document-file
-          - name: output-dir
-      steps:
-        - - name: process-each-prompt
-            template: query-rag-agent
-            arguments:
-              parameters:
-                - name: prompt
-                  value: "{{ "{{item.prompt}}" }}"
-                - name: section
-                  value: "{{ "{{item.section}}" }}"
-                - name: document-file
-                  value: "{{ "{{inputs.parameters.document-file}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
-            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
     # Template: Collect web data - Sequential
     - name: collect-web-data-sequential
       inputs:
@@ -499,65 +386,6 @@ spec:
           - name: output-dir
       steps:
         - - name: process-web-prompt
-            template: query-web-enricher
-            arguments:
-              parameters:
-                - name: prompt
-                  value: "{{ "{{item.prompt}}" }}"
-                - name: section
-                  value: "{{ "{{item.section}}" }}"
-                - name: company-name
-                  value: "{{ "{{inputs.parameters.company-name}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
-            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
-    # Template: Collect web data - Fake (for testing)
-    - name: collect-web-data-fake
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: output-dir
-        artifacts:
-          - name: prompts-data
-            path: /tmp/prompts-input.json
-            raw:
-              data: "{{ "{{inputs.parameters.prompts-json}}" }}"
-      script:
-        image: alpine/k8s:1.28.13
-        command: [bash]
-        source: |
-          set -eux
-
-          OUTPUT_DIR='{{ "{{inputs.parameters.output-dir}}" }}'
-          MCP_DATA="/data/aas-files"
-
-          cat /tmp/prompts-input.json | jq -r '.[] | @json' | while IFS= read -r prompt_obj; do
-            PROMPT=$(echo "$prompt_obj" | jq -r '.prompt')
-            SECTION=$(echo "$prompt_obj" | jq -r '.section')
-            PROMPT_HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
-            OUTPUT_FILE="$MCP_DATA/$OUTPUT_DIR/web_${PROMPT_HASH}.json"
-
-            echo "Creating fake web data for section: $SECTION"
-
-            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- sh -c "mkdir -p $MCP_DATA/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<FAKEOF
-          {"section": "$SECTION", "data": {"research_status": "fake_test_data", "findings": [{"source": "test.com", "info": "Fake web finding 1"}, {"source": "example.org", "info": "Fake web finding 2"}]}, "sources": [{"url": "https://test.com", "title": "Fake source"}]}
-          FAKEOF
-
-            echo "Created: $OUTPUT_FILE"
-          done
-
-          echo "All fake web files created"
-
-    # Template: Collect web data - Parallel
-    - name: collect-web-data-parallel
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: company-name
-          - name: output-dir
-      steps:
-        - - name: process-each-prompt
             template: query-web-enricher
             arguments:
               parameters:
