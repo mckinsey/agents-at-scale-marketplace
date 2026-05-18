@@ -1,4 +1,4 @@
-.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents fix-argo-artifact-config
+.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents fix-argo-artifact-config fix-model
 
 NAMESPACE ?= $(or $(K8S_NAMESPACE),default)
 MCP_SOURCE_NAMESPACE ?= $(or $(MCP_NAMESPACE),default)
@@ -395,6 +395,29 @@ fix-argo-artifact-config:
 		echo "Done. Workflows will no longer fail with 'artifact driver test not found'."; \
 	else \
 		echo "artifactRepository in namespace '$(ARGO_NAMESPACE)' is already configured (no 'plugin.name: test' detected) — skipping."; \
+	fi
+
+# Patch Model/$(MODEL_NAME) to a non-deprecated Azure OpenAI deployment.
+# Use when agent queries fail with 410 Gone / ModelDeprecated from the AI Gateway.
+# The chart's templates/models/default-model.yaml only creates the Model when
+# modelRef.create=true; this target updates an externally-managed Model in place.
+# Override with: make fix-model MODEL_NAME=default MODEL_DEPLOYMENT=gpt-4.1-mini
+MODEL_NAME ?= $(or $(MODEL_REF_NAME),default)
+MODEL_DEPLOYMENT ?= gpt-4.1
+fix-model:
+	@if ! kubectl get model $(MODEL_NAME) -n $(NAMESPACE) >/dev/null 2>&1; then \
+		echo "Error: Model/$(MODEL_NAME) not found in namespace '$(NAMESPACE)'."; \
+		echo "Set MODEL_NAME=<name> and NAMESPACE=<ns> if the Model lives elsewhere."; \
+		exit 1; \
+	fi
+	@CURRENT=$$(kubectl get model $(MODEL_NAME) -n $(NAMESPACE) -o jsonpath='{.spec.model.value}'); \
+	if [ "$$CURRENT" = "$(MODEL_DEPLOYMENT)" ]; then \
+		echo "Model/$(MODEL_NAME) already set to '$(MODEL_DEPLOYMENT)' — skipping."; \
+	else \
+		echo "Patching Model/$(MODEL_NAME) deployment: $$CURRENT -> $(MODEL_DEPLOYMENT)"; \
+		kubectl patch model $(MODEL_NAME) -n $(NAMESPACE) --type=merge \
+			-p '{"spec":{"model":{"value":"$(MODEL_DEPLOYMENT)"}}}' >/dev/null; \
+		echo "Done. Agent queries will use '$(MODEL_DEPLOYMENT)' on the next call."; \
 	fi
 
 # ── Verify & Debug ──────────────────────────────────────────────────
