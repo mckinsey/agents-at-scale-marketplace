@@ -46,6 +46,17 @@ spec:
                 - name: output-base-dir
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}"
 
+        - - name: merge-profile
+            template: merge-profile-query
+            arguments:
+              parameters:
+                - name: profile-sections-dir
+                  value: "{{ "{{inputs.parameters.profile-sections-dir}}" }}"
+                - name: base-profile
+                  value: "{{ "{{inputs.parameters.base-profile}}" }}"
+                - name: output-profile-json
+                  value: "{{ "{{inputs.parameters.output-profile-json}}" }}"
+
         - - name: profile-json-to-markdown
             template: profile-json-to-markdown-query
             arguments:
