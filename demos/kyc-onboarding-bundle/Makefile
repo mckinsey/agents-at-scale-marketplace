@@ -184,7 +184,9 @@ install-with-argo:
 	@echo "Installing KYC Onboarding Bundle into namespace: $(NAMESPACE)"
 	@if [ "$(SKIP_DEP_BUILD)" = "1" ]; then echo "Skipping helm dependency build"; else helm dependency build chart/; fi
 	@SKIP="$(FILE_GATEWAY_SKIP)"; \
-	if [ -z "$$SKIP" ] && kubectl get serviceaccount file-gateway-file-api -n $(NAMESPACE) --request-timeout=10s 2>/dev/null | grep -q file-gateway-file-api; then \
+	if [ -z "$$SKIP" ] \
+		&& kubectl get serviceaccount file-gateway-file-api -n $(NAMESPACE) --request-timeout=10s 2>/dev/null | grep -q file-gateway-file-api \
+		&& [ "$$(kubectl get pvc file-gateway-storage -n $(NAMESPACE) -o jsonpath='{.status.phase}' --request-timeout=10s 2>/dev/null)" = "Bound" ]; then \
 		SKIP="$(FILE_GATEWAY_SKIP_FLAGS)"; \
 		NO_HOOKS="--no-hooks"; \
 		echo "Detected existing file-gateway — skipping (run make upload-data for sample data)"; \
@@ -266,6 +268,13 @@ uninstall:
 	@sleep 3
 	@kubectl delete pvc file-gateway-storage -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete pvc -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@# Wait for the PVC to actually go away. Without this, pvc-protection finalizer can
+	@# keep it in Terminating; the next install then binds new pods to the dying PVC and
+	@# the cycle deadlocks. Strip the finalizer as a last resort so re-install is clean.
+	@if kubectl get pvc file-gateway-storage -n $(NAMESPACE) --request-timeout=5s 2>/dev/null | grep -q file-gateway-storage; then \
+		kubectl wait --for=delete pvc/file-gateway-storage -n $(NAMESPACE) --timeout=30s 2>/dev/null || \
+		kubectl patch pvc file-gateway-storage -n $(NAMESPACE) -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true; \
+	fi
 	@kubectl delete job data-seeder -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@echo "Done."
 
