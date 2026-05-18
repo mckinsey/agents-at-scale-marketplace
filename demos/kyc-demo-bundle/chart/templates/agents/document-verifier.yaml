@@ -15,11 +15,11 @@ spec:
     name: {{ .Values.modelRef.name }}
   maxCompletionTokens: 2048
   tools:
-  - name: file-gateway-mcpserver-read-file
+  - name: file-gateway-read-file
     type: mcp
-  - name: file-gateway-mcpserver-write-file
+  - name: file-gateway-write-file
     type: mcp
-  - name: file-gateway-mcpserver-list-directory
+  - name: file-gateway-list-directory
     type: mcp
   prompt: |
     You are a KYC document verification specialist who analyzes identity documents and validates their authenticity.

@@ -206,14 +206,14 @@ spec:
           BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
           MCP_DATA="/data/aas-files"
           DEP="{{ .Values.filesystemMcpDeployment }}"
-          if ! kubectl get deployment "$DEP" >/dev/null 2>&1; then
-            NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
-            echo "ERROR: deployment '$DEP' not found in namespace '${NS:-default}'" >&2
+          NAMESPACE="{{ .Release.Namespace }}"
+          if ! kubectl get deployment "$DEP" -n "$NAMESPACE" >/dev/null 2>&1; then
+            echo "ERROR: deployment '$DEP' not found in namespace '$NAMESPACE'" >&2
             echo "Hint: set filesystemMcpDeployment in values.yaml or via --set to match your filesystem MCP deployment name." >&2
             exit 1
           fi
           for dir in "$BASE/downloads" "$BASE/tmp" "$BASE/screening/blacklist_report" "$BASE/screening/sanction_report" "$BASE/profile_sections" "$BASE/output"; do
-            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
+            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n "$NAMESPACE" -- mkdir -p "$MCP_DATA/$dir"
           done
           echo "Created output directories"
 
@@ -246,7 +246,7 @@ spec:
           OUTPUT_FILE="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
 
           # Create output directory
-          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTPUT_FILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n "$NAMESPACE" -- mkdir -p "$(dirname $OUTPUT_FILE)"
 
           # Download UK sanctions list
           curl -L "https://www.gov.uk/government/publications/financial-sanctions-consolidated-list-of-targets/consolidated-list-of-targets" \
@@ -547,7 +547,7 @@ spec:
           WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
 
           # Create output directory
-          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$(dirname $OUTFILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n "$NAMESPACE" -- mkdir -p "$(dirname $OUTFILE)"
 
           # Combine all JSON files using kubectl exec
           COMBINED="[]"

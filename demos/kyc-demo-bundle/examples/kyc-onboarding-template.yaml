@@ -61,7 +61,7 @@ spec:
 
                     Generate a comprehensive UBO extraction report with JSON-formatted list of individuals for screening.
 
-                    CRITICAL: You MUST use the file-gateway-mcpserver-write-file tool to save your report to: {{workflow.parameters.ubo-extraction-file}}
+                    CRITICAL: You MUST use the file-gateway-write-file tool to save your report to: {{workflow.parameters.ubo-extraction-file}}
 
                     Even if the customer file contains only personal information (individual account) with no corporate ownership structure, you MUST still write a report file explaining this. Example: "This is an individual customer account with no corporate structure. Customer: [name]. No UBOs to extract as this is a personal account." Then list the individual for sanctions screening in JSON format.
 
@@ -85,7 +85,7 @@ spec:
 
                     Generate a comprehensive sanctions and PEP screening report with risk classification.
 
-                    CRITICAL: You MUST use the file-gateway-mcpserver-write-file tool to save your report to: {{workflow.parameters.sanctions-screening-file}}
+                    CRITICAL: You MUST use the file-gateway-write-file tool to save your report to: {{workflow.parameters.sanctions-screening-file}}
 
                     Even if there are no sanctions matches or PEP hits, you MUST still write a complete screening report showing all checks performed and "Clear" results.
 
