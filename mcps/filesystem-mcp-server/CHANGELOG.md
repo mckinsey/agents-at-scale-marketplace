@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.57](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.56...filesystem-mcp-server-v0.1.57) (2026-05-12)
+
+
+### Bug Fixes
+
+* **kyc-onboarding-bundle:** resolve pdf-extraction-mcp image tag mismatch between Helm chart and raw manifest ([#254](https://github.com/mckinsey/agents-at-scale-marketplace/issues/254)) ([5f1a220](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5f1a220b6913efe551bd9309c7839eb8b3bd79de))
+
 ## [0.1.56](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.55...filesystem-mcp-server-v0.1.56) (2026-04-21)
 
 

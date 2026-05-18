@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.37](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.36...v0.1.37) (2026-05-12)
+
+
+### Features
+
+* **kyc-onboarding-bundle:** add session and conversation IDs to workflow queries ([#265](https://github.com/mckinsey/agents-at-scale-marketplace/issues/265)) ([03002ae](https://github.com/mckinsey/agents-at-scale-marketplace/commit/03002ae98e474cdb47fdc1744692b36ad49e6593))
+
+
+### Bug Fixes
+
+* claude sdk proxy context id properly ([#257](https://github.com/mckinsey/agents-at-scale-marketplace/issues/257)) ([69b6303](https://github.com/mckinsey/agents-at-scale-marketplace/commit/69b630303f4add9e133419a52bde89102337c4d3))
+* **executors/claude-agent-sdk:** pass Agent CRD prompt to Claude subprocess ([#232](https://github.com/mckinsey/agents-at-scale-marketplace/issues/232)) ([860db08](https://github.com/mckinsey/agents-at-scale-marketplace/commit/860db08a94a79db767366e34ec49ad407aa70c12))
+* **kyc-onboarding-bundle:** add pre-upgrade to agent helm hook annotations ([#251](https://github.com/mckinsey/agents-at-scale-marketplace/issues/251)) ([4169d6f](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4169d6f68df3ec687c4645fa6f545fb30ffcde20))
+* **kyc-onboarding-bundle:** correct filesystem MCP deployment name and add argo artifact config fix ([#252](https://github.com/mckinsey/agents-at-scale-marketplace/issues/252)) ([360e96b](https://github.com/mckinsey/agents-at-scale-marketplace/commit/360e96b3d316558872e0c7c1e7395f8bdaf8a7ec))
+* **kyc-onboarding-bundle:** correct filesystem MCP tool name prefix in agent and workflow templates ([#250](https://github.com/mckinsey/agents-at-scale-marketplace/issues/250)) ([97ef2fa](https://github.com/mckinsey/agents-at-scale-marketplace/commit/97ef2fa88b87114d292287f947ccedc16670fc47))
+* **kyc-onboarding-bundle:** resolve pdf-extraction-mcp image tag mismatch between Helm chart and raw manifest ([#254](https://github.com/mckinsey/agents-at-scale-marketplace/issues/254)) ([5f1a220](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5f1a220b6913efe551bd9309c7839eb8b3bd79de))
+* Update retry strategy limit ([#269](https://github.com/mckinsey/agents-at-scale-marketplace/issues/269)) ([0aa819d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0aa819dfada8d8636e445398b64ca10fa401efe0))
+
 ## [0.1.36](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.35...v0.1.36) (2026-04-24)
 
 
