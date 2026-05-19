@@ -246,14 +246,14 @@ spec:
           OUTPUT_FILE="$MCP_DATA/{{ "{{inputs.parameters.output-file}}" }}"
 
           # Create output directory
-          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n "$NAMESPACE" -- mkdir -p "$(dirname $OUTPUT_FILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- mkdir -p "$(dirname $OUTPUT_FILE)"
 
           # Download UK sanctions list
           curl -L "https://www.gov.uk/government/publications/financial-sanctions-consolidated-list-of-targets/consolidated-list-of-targets" \
             -o /tmp/uk_sanctions_list.txt
 
           # Use kubectl to copy to mcp-filesystem
-          kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTPUT_FILE" < /tmp/uk_sanctions_list.txt > /dev/null
+          kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- tee "$OUTPUT_FILE" < /tmp/uk_sanctions_list.txt > /dev/null
 
           echo "Downloaded UK sanctions list to $OUTPUT_FILE"
 
@@ -547,12 +547,12 @@ spec:
           WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
 
           # Create output directory
-          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n "$NAMESPACE" -- mkdir -p "$(dirname $OUTFILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- mkdir -p "$(dirname $OUTFILE)"
 
           # Combine all JSON files using kubectl exec
           COMBINED="[]"
           for file in $(echo "$FILE_PATHS" | jq -r '.[]'); do
-            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
+            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
             COMBINED=$(echo "$COMBINED" | jq ". += [$CONTENT]")
           done
 
@@ -562,7 +562,7 @@ spec:
           fi
 
           # Write combined JSON
-          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTFILE" > /dev/null
+          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- tee "$OUTFILE" > /dev/null
 
           echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
 

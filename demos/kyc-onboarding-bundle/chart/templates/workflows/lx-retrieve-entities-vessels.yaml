@@ -332,12 +332,12 @@ spec:
           WRAPPER_KEY='{{ "{{inputs.parameters.wrapper-key}}" }}'
 
           # Create output directory
-          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n "$NAMESPACE" -- mkdir -p "$(dirname $OUTFILE)"
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- mkdir -p "$(dirname $OUTFILE)"
 
           # Combine all JSON files using kubectl exec
           COMBINED="[]"
           for file in $(echo "$FILE_PATHS" | jq -r '.[]'); do
-            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
+            CONTENT=$(kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- cat "$MCP_DATA/$file" 2>/dev/null || echo '{}')
             COMBINED=$(echo "$COMBINED" | jq ". += [$CONTENT]")
           done
 
@@ -347,7 +347,7 @@ spec:
           fi
 
           # Write combined JSON
-          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTFILE" > /dev/null
+          echo "$COMBINED" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- tee "$OUTFILE" > /dev/null
 
           echo "Combined $(echo $FILE_PATHS | jq 'length') files into $OUTFILE"
 
@@ -578,8 +578,8 @@ spec:
             }')
 
           # Write to output
-          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n "$NAMESPACE" -- mkdir -p "$(dirname $OUTPUT)"
-          echo "$FINAL" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -- tee "$OUTPUT" > /dev/null
+          kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- mkdir -p "$(dirname $OUTPUT)"
+          echo "$FINAL" | kubectl exec -i deployment/{{ .Values.filesystemMcpDeployment }} -n {{ .Release.Namespace }} -- tee "$OUTPUT" > /dev/null
 
           echo "Consolidated $SUB_COUNT subsidiaries to $OUTPUT"
 
