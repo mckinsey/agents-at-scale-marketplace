@@ -161,5 +161,127 @@ def get_uk_person_in_control(
         }
 
 
+@mcp.tool()
+def get_uk_company_info(
+    company_number: str,
+    subpage: Optional[str] = ""
+) -> Dict[str, Any]:
+    """
+    Get UK company information from Companies House.
+
+    Args:
+        company_number: The Companies House company number (e.g., "00293262")
+        subpage: Optional subpage for specific data. Common values:
+            "" (empty) — general company profile
+            "officers" — directors and secretaries
+            "filing-history" — recent filings
+            "registers" — statutory registers
+            "charges" — secured debts
+
+    Returns:
+        Dictionary with company data for the requested subpage
+    """
+    if not company_number:
+        return {"error": "company_number is required"}
+
+    endpoint = f"/company/{company_number}"
+    if subpage:
+        endpoint = f"{endpoint}/{subpage.strip('/')}"
+
+    try:
+        result = _make_request(endpoint)
+        return {
+            "company_number": company_number,
+            "subpage": subpage or "profile",
+            "data": result,
+        }
+    except httpx.HTTPStatusError as e:
+        return {
+            "company_number": company_number,
+            "subpage": subpage or "profile",
+            "data": {},
+            "error": f"API error: {e.response.status_code} - {e.response.text[:200]}",
+        }
+    except Exception as e:
+        return {
+            "company_number": company_number,
+            "subpage": subpage or "profile",
+            "data": {},
+            "error": str(e),
+        }
+
+
+@mcp.tool()
+def get_uk_financial_data(
+    company_number: str,
+    financial_year: Optional[str] = None,
+    items_per_page: Optional[int] = 10
+) -> Dict[str, Any]:
+    """
+    Get UK company financial filings metadata from Companies House.
+
+    Returns the filing-history accounts entries. Optionally filters by
+    financial year. Does NOT download PDFs — returns metadata with
+    document_metadata links the caller can fetch separately.
+
+    Args:
+        company_number: The Companies House company number (e.g., "00293262")
+        financial_year: Optional year filter (e.g., "2024"). When set, only
+            filings whose date contains this year are returned.
+        items_per_page: Max filings to return (default: 10)
+
+    Returns:
+        Dictionary with filings list (date, description, type, links)
+    """
+    if not company_number:
+        return {"error": "company_number is required"}
+
+    endpoint = (
+        f"/company/{company_number}/filing-history"
+        f"?category=accounts&items_per_page={items_per_page}"
+    )
+
+    try:
+        result = _make_request(endpoint)
+        items = result.get("items", [])
+
+        if financial_year:
+            items = [i for i in items if financial_year in str(i.get("date", ""))]
+
+        filings = [
+            {
+                "date": item.get("date", ""),
+                "description": item.get("description", ""),
+                "type": item.get("type", ""),
+                "action_date": item.get("action_date", ""),
+                "document_metadata": item.get("links", {}).get("document_metadata", ""),
+            }
+            for item in items
+        ]
+
+        return {
+            "company_number": company_number,
+            "financial_year": financial_year,
+            "total_results": len(filings),
+            "filings": filings,
+        }
+    except httpx.HTTPStatusError as e:
+        return {
+            "company_number": company_number,
+            "financial_year": financial_year,
+            "total_results": 0,
+            "filings": [],
+            "error": f"API error: {e.response.status_code} - {e.response.text[:200]}",
+        }
+    except Exception as e:
+        return {
+            "company_number": company_number,
+            "financial_year": financial_year,
+            "total_results": 0,
+            "filings": [],
+            "error": str(e),
+        }
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")

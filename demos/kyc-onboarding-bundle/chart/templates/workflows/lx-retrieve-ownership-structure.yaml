@@ -39,12 +39,6 @@ spec:
         value: "/data/aas-files/source_code_files/2-customer-due-diligence/input/abf-annual-report-2024.pdf"
       - name: output-base-dir
         value: "source_code_files/2-customer-due-diligence"
-      - name: execution-mode
-        value: "sequential"  # Options: sequential, parallel, fake (for testing)
-        enum:
-          - sequential
-          - parallel
-          - fake
 
   templates:
     # ============================================================
@@ -65,8 +59,6 @@ spec:
             value: "{{ "{{workflow.parameters.document-file-mount}}" }}"
           - name: output-base-dir
             value: "{{ "{{workflow.parameters.output-base-dir}}" }}"
-          - name: execution-mode
-            value: "{{ "{{workflow.parameters.execution-mode}}" }}"
       steps:
         # Step 0: Set document file path based on file-access-mode
         - - name: set-document-file
@@ -97,8 +89,7 @@ spec:
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/input/prompts_ownership_structure.yml"
 
         # Step 2: Collect information from annual report
-        - - name: collect-info-sequential
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == sequential"
+        - - name: collect-info
             template: collect-info-sequential
             arguments:
               parameters:
@@ -106,28 +97,6 @@ spec:
                   value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
                 - name: document-file
                   value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
-
-          - name: collect-info-parallel
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == parallel"
-            template: collect-info-parallel
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
-                - name: document-file
-                  value: "{{ "{{steps.set-document-file.outputs.result}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
-
-          - name: collect-info-fake
-            when: "{{ "{{inputs.parameters.execution-mode}}" }} == fake"
-            template: collect-info-fake
-            arguments:
-              parameters:
-                - name: prompts-json
-                  value: "{{ "{{steps.get-ownership-prompts.outputs.parameters.prompts-list}}" }}"
                 - name: output-dir
                   value: "{{ "{{inputs.parameters.output-base-dir}}" }}/intermediate/ownership_structure"
 
@@ -253,8 +222,16 @@ spec:
         image: alpine/k8s:1.28.13
         command: [bash]
         source: |
+          set -euo pipefail
           BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
           MCP_DATA="/data/aas-files"
+          DEP="{{ .Values.filesystemMcpDeployment }}"
+          if ! kubectl get deployment "$DEP" >/dev/null 2>&1; then
+            NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
+            echo "ERROR: deployment '$DEP' not found in namespace '${NS:-default}'" >&2
+            echo "Hint: set filesystemMcpDeployment in values.yaml or via --set to match your filesystem MCP deployment name." >&2
+            exit 1
+          fi
           for dir in "$BASE/profile_sections" "$BASE/output" "$BASE/intermediate/ownership_structure" "$BASE/intermediate/ownership_tree" "$BASE/intermediate/ownership_tree/indirect_owners"; do
             kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
           done
@@ -320,8 +297,6 @@ spec:
       steps:
         - - name: process-prompt
             template: doc-extract-query
-            continueOn:
-              failed: true
             arguments:
               parameters:
                 - name: prompt
@@ -333,72 +308,11 @@ spec:
                 - name: output-dir
                   value: "{{ "{{inputs.parameters.output-dir}}" }}"
             withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
-    # Collect information in parallel
-    - name: collect-info-parallel
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: document-file
-          - name: output-dir
-      steps:
-        - - name: process-all-prompts
-            template: doc-extract-query
-            continueOn:
-              failed: true
-            arguments:
-              parameters:
-                - name: prompt
-                  value: "{{ "{{item.prompt}}" }}"
-                - name: section
-                  value: "{{ "{{item.section}}" }}"
-                - name: document-file
-                  value: "{{ "{{inputs.parameters.document-file}}" }}"
-                - name: output-dir
-                  value: "{{ "{{inputs.parameters.output-dir}}" }}"
-            withParam: "{{ "{{inputs.parameters.prompts-json}}" }}"
-
-    # Collect information in fake mode (for testing)
-    - name: collect-info-fake
-      inputs:
-        parameters:
-          - name: prompts-json
-          - name: output-dir
-        artifacts:
-          - name: prompts-data
-            path: /tmp/prompts-input.json
-            raw:
-              data: "{{ "{{inputs.parameters.prompts-json}}" }}"
-      script:
-        image: alpine/k8s:1.28.13
-        command: [bash]
-        source: |
-          set -eux
-
-          OUTPUT_DIR='{{ "{{inputs.parameters.output-dir}}" }}'
-          MCP_DATA="/data/aas-files"
-
-          cat /tmp/prompts-input.json | jq -r '.[] | @json' | while IFS= read -r prompt_obj; do
-            PROMPT=$(echo "$prompt_obj" | jq -r '.prompt')
-            SECTION=$(echo "$prompt_obj" | jq -r '.section')
-            HASH=$(echo "$PROMPT" | md5sum | cut -d' ' -f1)
-            OUTPUT_FILE="$MCP_DATA/$OUTPUT_DIR/${HASH}.json"
-
-            echo "Creating fake file for section: $SECTION"
-
-            kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- sh -c "mkdir -p $MCP_DATA/$OUTPUT_DIR && cat > $OUTPUT_FILE" <<FAKEOF
-          {"section": "$SECTION", "data": {"test_data": "fake ownership structure data", "shareholders": [{"name": "Test Shareholder 1", "ownership_pct": 35.5, "type": "direct"}, {"name": "Test Shareholder 2", "ownership_pct": 20.0, "type": "direct"}]}, "sources": [{"page": 1, "content": "Fake test data"}]}
-          FAKEOF
-
-            echo "Created: $OUTPUT_FILE"
-          done
-
-          echo "All fake files created"
 
     # ARK Query: Extract information from document using Scout-RAG team
     - name: doc-extract-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -419,6 +333,8 @@ spec:
           metadata:
             generateName: doc-extract-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               **CRITICAL: Use pdf-extraction-mcp tools to analyze the PDF. Do NOT use filesystem-mcp-server-read-file on the PDF — it is too large.**
 
@@ -550,7 +466,7 @@ spec:
     # ARK Query: Determine direct beneficial owners
     - name: determine-direct-beneficial-owners-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -571,6 +487,8 @@ spec:
           metadata:
             generateName: direct-bo-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
               Company Number: {{ "{{inputs.parameters.company-number}}" }}
@@ -619,7 +537,7 @@ spec:
     # ARK Query: Determine indirect beneficial owners
     - name: determine-indirect-beneficial-owners-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -638,6 +556,8 @@ spec:
           metadata:
             generateName: indirect-bo-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               Owner information: {{ "{{inputs.parameters.owner-json}}" }}
 
@@ -685,7 +605,7 @@ spec:
     # ARK Query: Create beneficial owner tree
     - name: create-beneficial-owner-tree-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -705,6 +625,8 @@ spec:
           metadata:
             generateName: bo-tree-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               **Path convention:** Use the paths below exactly as given with filesystem-mcp-server-read-file and filesystem-mcp-server-write-file. Do NOT add /data or any other prefix.
 
@@ -771,7 +693,7 @@ spec:
     # ARK Query: Consolidate ownership structure into LegacyX format
     - name: consolidate-ownership-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -791,6 +713,8 @@ spec:
           metadata:
             generateName: consolidate-ownership-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
@@ -866,7 +790,7 @@ spec:
     # ARK Query: Draw diagram
     - name: draw-diagram-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -886,6 +810,8 @@ spec:
           metadata:
             generateName: diagram-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             input: |
               Company: {{ "{{inputs.parameters.company-name}}" }}
 

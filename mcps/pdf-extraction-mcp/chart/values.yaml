@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: pdf-extraction-mcp
-  tag: v2
+  tag: latest
   pullPolicy: IfNotPresent
 
 nameOverride: ""
@@ -30,7 +30,9 @@ resources:
     cpu: "1000m"
 
 dataVolume:
-  enabled: true
+  # Disabled by default so a fresh `helm install` works in any namespace.
+  # Enable + set claimName when sharing storage with file-gateway (e.g. KYC bundle).
+  enabled: false
   claimName: file-gateway-storage
   readOnly: true
   mountPath: /data

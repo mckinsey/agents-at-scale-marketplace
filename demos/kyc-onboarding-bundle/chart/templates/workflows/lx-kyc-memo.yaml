@@ -65,7 +65,7 @@ spec:
 
     - name: kyc-memo-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
       inputs:
         parameters:
@@ -82,6 +82,8 @@ spec:
           metadata:
             generateName: kyc-memo-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: summary-assessment-agent

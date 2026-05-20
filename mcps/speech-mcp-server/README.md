@@ -19,7 +19,7 @@ helm install speech-mcp-server ./chart -n default --create-namespace
 
 # Verify
 kubectl get mcpserver speech-mcp-server
-kubectl get pods -l app=speech-mcp-server
+kubectl get pods -l app.kubernetes.io/name=speech-mcp-server
 ```
 
 ## Configuration

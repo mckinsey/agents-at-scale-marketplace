@@ -11,9 +11,6 @@ apiVersion: ark.mckinsey.com/v1alpha1
 kind: Agent
 metadata:
   name: {{ .Values.agents.ragAgent.name }}
-  annotations:
-    helm.sh/hook: pre-install
-    helm.sh/hook-weight: "-1"
   labels:
     project: kyc-onboarding
     role: extraction

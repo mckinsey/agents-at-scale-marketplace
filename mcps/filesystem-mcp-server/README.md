@@ -2,18 +2,30 @@
 
 MCP-compliant filesystem server with persistent session tracking and annotation-driven workspace configuration.
 
-## Quickstart
+## Quick Start
 
 ```bash
-# Show all available recipes.
-make help
+# Deploy with Helm (uses the published image from ghcr.io)
+helm install mcp-filesystem ./chart -n default --create-namespace
 
-# Install/uninstall - sets up your local machine or cluster.
-make install
-make uninstall
+# Verify
+kubectl get mcpserver filesystem-mcp-server
+kubectl get pods -l app.kubernetes.io/name=filesystem-mcp-server
+```
 
-# Run in development mode. May require extra tools and setup, check the README.
-make dev
+The chart creates its own 10Gi PVC by default. To share file-gateway's storage instead, set `persistence.existingClaim=file-gateway-storage` (and `podSecurityContext.runAsUser=1000`, `fsGroup=1000` to match VersityGW's file ownership — see comments in `chart/values.yaml`).
+
+### Local development
+
+```bash
+# Build a local image
+docker build -t filesystem-mcp-server:latest .
+
+# Install with the local image
+helm install mcp-filesystem ./chart \
+  --set image.repository=filesystem-mcp-server \
+  --set image.tag=latest \
+  --set image.pullPolicy=IfNotPresent
 ```
 
 ## Features

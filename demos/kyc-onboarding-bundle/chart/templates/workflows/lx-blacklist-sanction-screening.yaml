@@ -202,8 +202,16 @@ spec:
         image: alpine/k8s:1.28.13
         command: [bash]
         source: |
+          set -euo pipefail
           BASE="{{ "{{inputs.parameters.output-base-dir}}" }}"
           MCP_DATA="/data/aas-files"
+          DEP="{{ .Values.filesystemMcpDeployment }}"
+          if ! kubectl get deployment "$DEP" >/dev/null 2>&1; then
+            NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
+            echo "ERROR: deployment '$DEP' not found in namespace '${NS:-default}'" >&2
+            echo "Hint: set filesystemMcpDeployment in values.yaml or via --set to match your filesystem MCP deployment name." >&2
+            exit 1
+          fi
           for dir in "$BASE/downloads" "$BASE/tmp" "$BASE/screening/blacklist_report" "$BASE/screening/sanction_report" "$BASE/profile_sections" "$BASE/output"; do
             kubectl exec deployment/{{ .Values.filesystemMcpDeployment }} -- mkdir -p "$MCP_DATA/$dir"
           done
@@ -252,7 +260,7 @@ spec:
     # ARK Query: Create screening list from multiple sources
     - name: create-screening-list-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -273,6 +281,8 @@ spec:
           metadata:
             generateName: screening-list-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
@@ -421,7 +431,7 @@ spec:
     # ARK Query: Screen name in document (uses filesystem read, not PDF tools)
     - name: screening-in-document-query
       retryStrategy:
-        limit: 2
+        limit: 5
         retryPolicy: "Always"
         backoff:
           duration: "30s"
@@ -442,6 +452,8 @@ spec:
           metadata:
             generateName: screen-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent
@@ -573,6 +585,8 @@ spec:
           metadata:
             generateName: summarize-sanctions-
           spec:
+            sessionId: "{{ "session-{{workflow.uid}}" }}"
+            conversationId: "{{ "conversation-{{workflow.uid}}" }}"
             target:
               type: agent
               name: consolidation-analyst-agent

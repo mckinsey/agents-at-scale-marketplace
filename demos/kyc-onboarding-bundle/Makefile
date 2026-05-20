@@ -1,7 +1,8 @@
-.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents
+.PHONY: help build build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp build-mcps install install-with-argo upgrade uninstall submit-profile-init submit-profile-enrichment submit-requirements submit-initial-risk submit-ownership submit-entities submit-controllers submit-purpose submit-media submit-blacklist submit-profile-finalization submit-kyc-memo upload-data build-data-seeder delete-data-seeder-job clean verify-mcp wait-for-tools ready verify-agents fix-argo-artifact-config fix-model
 
 NAMESPACE ?= $(or $(K8S_NAMESPACE),default)
 MCP_SOURCE_NAMESPACE ?= $(or $(MCP_NAMESPACE),default)
+ARGO_NAMESPACE ?= argo
 RELEASE_NAME ?= kyc-onboarding-bundle
 FILESYSTEM_MCP_IMAGE ?= filesystem-mcp-server:latest
 PDF_EXTRACTION_MCP_IMAGE ?= pdf-extraction-mcp:latest
@@ -51,8 +52,10 @@ help:
 	@echo "  make clean                  Remove workflow artifacts"
 	@echo "  make delete-data-seeder-job Delete data-seeder Job"
 	@echo ""
-	@echo "Quick Start A: make uninstall && make build-data-seeder && make install-with-argo && make build && make ready"
-	@echo "Quick Start B: make uninstall && make install-with-argo DATA_SEEDER_ENABLED=false && make build && make upload-data && make ready"
+	@echo "  make fix-argo-artifact-config Disable broken artifact driver in workflow-controller-configmap"
+	@echo ""
+	@echo "Quick Start A: make fix-argo-artifact-config && make uninstall && make build-data-seeder && make install-with-argo && make build && make ready"
+	@echo "Quick Start B: make fix-argo-artifact-config && make uninstall && make install-with-argo DATA_SEEDER_ENABLED=false && make build && make upload-data && make ready"
 
 build-filesystem:
 	@echo "Building filesystem MCP server image..."
@@ -89,7 +92,13 @@ build-pdf-mcp:
 		minikube image load $(PDF_EXTRACTION_MCP_IMAGE); \
 	fi
 	@echo "Deploying pdf-extraction MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/pdf-extraction-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template pdf-extraction-mcp ../../mcps/pdf-extraction-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=pdf-extraction-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		--set dataVolume.enabled=true \
+		--set dataVolume.claimName=file-gateway-storage \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build-companies-house-mcp:
@@ -100,7 +109,11 @@ build-companies-house-mcp:
 		minikube image load $(COMPANIES_HOUSE_MCP_IMAGE); \
 	fi
 	@echo "Deploying companies-house MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/companies-house-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template companies-house-mcp ../../mcps/companies-house-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=companies-house-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 	@echo "NOTE: Create API key secret with: kubectl create secret generic companies-house-api-key --from-literal=api-key=YOUR_KEY"
 
@@ -112,7 +125,11 @@ build-web-mcp:
 		minikube image load $(WEB_RESEARCH_MCP_IMAGE); \
 	fi
 	@echo "Deploying web-research MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/web-research-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template web-research-mcp ../../mcps/web-research-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=web-research-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build-perplexity-mcp:
@@ -123,7 +140,11 @@ build-perplexity-mcp:
 		minikube image load $(PERPLEXITY_ASK_MCP_IMAGE); \
 	fi
 	@echo "Deploying perplexity-ask MCP..."
-	@sed 's/namespace: default/namespace: $(NAMESPACE)/g' ../../mcps/perplexity-ask-mcp/k8s-deployment.yaml | kubectl apply -f - -n $(NAMESPACE)
+	@helm template perplexity-ask-mcp ../../mcps/perplexity-ask-mcp/chart \
+		--namespace $(NAMESPACE) \
+		--set image.repository=perplexity-ask-mcp \
+		--set image.pullPolicy=IfNotPresent \
+		| kubectl apply -f - -n $(NAMESPACE)
 	@echo "Done."
 
 build: build-filesystem build-pdf-mcp build-web-mcp build-perplexity-mcp build-companies-house-mcp
@@ -163,7 +184,9 @@ install-with-argo:
 	@echo "Installing KYC Onboarding Bundle into namespace: $(NAMESPACE)"
 	@if [ "$(SKIP_DEP_BUILD)" = "1" ]; then echo "Skipping helm dependency build"; else helm dependency build chart/; fi
 	@SKIP="$(FILE_GATEWAY_SKIP)"; \
-	if [ -z "$$SKIP" ] && kubectl get serviceaccount file-gateway-file-api -n $(NAMESPACE) --request-timeout=10s 2>/dev/null | grep -q file-gateway-file-api; then \
+	if [ -z "$$SKIP" ] \
+		&& kubectl get serviceaccount file-gateway-file-api -n $(NAMESPACE) --request-timeout=10s 2>/dev/null | grep -q file-gateway-file-api \
+		&& [ "$$(kubectl get pvc file-gateway-storage -n $(NAMESPACE) -o jsonpath='{.status.phase}' --request-timeout=10s 2>/dev/null)" = "Bound" ]; then \
 		SKIP="$(FILE_GATEWAY_SKIP_FLAGS)"; \
 		NO_HOOKS="--no-hooks"; \
 		echo "Detected existing file-gateway — skipping (run make upload-data for sample data)"; \
@@ -245,6 +268,13 @@ uninstall:
 	@sleep 3
 	@kubectl delete pvc file-gateway-storage -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete pvc -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@# Wait for the PVC to actually go away. Without this, pvc-protection finalizer can
+	@# keep it in Terminating; the next install then binds new pods to the dying PVC and
+	@# the cycle deadlocks. Strip the finalizer as a last resort so re-install is clean.
+	@if kubectl get pvc file-gateway-storage -n $(NAMESPACE) --request-timeout=5s 2>/dev/null | grep -q file-gateway-storage; then \
+		kubectl wait --for=delete pvc/file-gateway-storage -n $(NAMESPACE) --timeout=30s 2>/dev/null || \
+		kubectl patch pvc file-gateway-storage -n $(NAMESPACE) -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true; \
+	fi
 	@kubectl delete job data-seeder -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@echo "Done."
 
@@ -351,6 +381,44 @@ build-data-seeder:
 		minikube image load $(DATA_SEEDER_IMAGE):latest; \
 	fi
 	@echo "Done. Image: $(DATA_SEEDER_IMAGE):latest"
+
+# ── Cluster prerequisites ────────────────────────────────────────────
+
+fix-argo-artifact-config:
+	@if ! kubectl get cm workflow-controller-configmap -n $(ARGO_NAMESPACE) >/dev/null 2>&1; then \
+		echo "Error: workflow-controller-configmap not found in namespace '$(ARGO_NAMESPACE)'."; \
+		echo "Set ARGO_NAMESPACE=<your-argo-namespace> if Argo Workflows is installed elsewhere."; \
+		exit 1; \
+	elif kubectl get cm workflow-controller-configmap -n $(ARGO_NAMESPACE) -o jsonpath='{.data.artifactRepository}' 2>/dev/null | grep -q 'plugin.name: test'; then \
+		echo "Patching workflow-controller-configmap in namespace '$(ARGO_NAMESPACE)' to disable broken artifact plugin driver..."; \
+		kubectl patch configmap workflow-controller-configmap -n $(ARGO_NAMESPACE) --type merge -p '{"data":{"artifactRepository":"archiveLogs: false\n"}}'; \
+		echo "Done. Workflows will no longer fail with 'artifact driver test not found'."; \
+	else \
+		echo "artifactRepository in namespace '$(ARGO_NAMESPACE)' is already configured (no 'plugin.name: test' detected) — skipping."; \
+	fi
+
+# Patch Model/$(MODEL_NAME) to a non-deprecated Azure OpenAI deployment.
+# Use when agent queries fail with 410 Gone / ModelDeprecated from the AI Gateway.
+# The chart's templates/models/default-model.yaml only creates the Model when
+# modelRef.create=true; this target updates an externally-managed Model in place.
+# Override with: make fix-model MODEL_NAME=default MODEL_DEPLOYMENT=gpt-4.1-mini
+MODEL_NAME ?= $(or $(MODEL_REF_NAME),default)
+MODEL_DEPLOYMENT ?= gpt-4.1
+fix-model:
+	@if ! kubectl get model $(MODEL_NAME) -n $(NAMESPACE) >/dev/null 2>&1; then \
+		echo "Error: Model/$(MODEL_NAME) not found in namespace '$(NAMESPACE)'."; \
+		echo "Set MODEL_NAME=<name> and NAMESPACE=<ns> if the Model lives elsewhere."; \
+		exit 1; \
+	fi
+	@CURRENT=$$(kubectl get model $(MODEL_NAME) -n $(NAMESPACE) -o jsonpath='{.spec.model.value}'); \
+	if [ "$$CURRENT" = "$(MODEL_DEPLOYMENT)" ]; then \
+		echo "Model/$(MODEL_NAME) already set to '$(MODEL_DEPLOYMENT)' — skipping."; \
+	else \
+		echo "Patching Model/$(MODEL_NAME) deployment: $$CURRENT -> $(MODEL_DEPLOYMENT)"; \
+		kubectl patch model $(MODEL_NAME) -n $(NAMESPACE) --type=merge \
+			-p '{"spec":{"model":{"value":"$(MODEL_DEPLOYMENT)"}}}' >/dev/null; \
+		echo "Done. Agent queries will use '$(MODEL_DEPLOYMENT)' on the next call."; \
+	fi
 
 # ── Verify & Debug ──────────────────────────────────────────────────
 
