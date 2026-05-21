@@ -53,12 +53,9 @@ COPY src/ ./src/
 # Set default port
 ENV PORT=8639
 
-# fastmcp >=2.10 removed stateless_http from the FastMCP() constructor.
-# Setting this env var restores stateless HTTP behaviour for the CLI runner.
-ENV FASTMCP_STATELESS_HTTP=true
-
 # Expose port
 EXPOSE ${PORT}
 
-# Run the MCP server with FastMCP CLI
-CMD ["sh", "-c", "uv run fastmcp run src/ark_runtime_mcp/server.py --transport http --port $PORT --host 0.0.0.0"]
+# Run the server directly via Python — stateless_http=True is passed in mcp.run()
+# so no env var shim is needed and the fix works without Docker rebuilds.
+CMD ["sh", "-c", "uv run python src/ark_runtime_mcp/server.py"]
