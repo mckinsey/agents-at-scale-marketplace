@@ -8,8 +8,7 @@ from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-# Create MCP server with stateless HTTP to avoid session ID issues
-mcp = FastMCP("ARK Runtime", stateless_http=True)
+mcp = FastMCP("ARK Runtime")
 
 # Get port from environment with default
 PORT = os.getenv("PORT", "8639")
@@ -244,15 +243,9 @@ async def ark_status() -> str:
 
 
 if __name__ == "__main__":
-    print("📦 MCP Server: ark-runtime", flush=True)
-    print(
-        "🔧 Dedicated Tools: kubectl, helm, python, ark-status, system-info",
-        flush=True,
+    mcp.run(
+        transport="http",
+        host="0.0.0.0",
+        port=int(PORT),
+        stateless_http=True,
     )
-    print("⚡ General Tool: bash (for utilities without dedicated tools)", flush=True)
-    print(
-        "🐍 Python: pandas, numpy, kubernetes, pyyaml, jinja2, requests, httpx, jsonpath-ng, dateutil",
-        flush=True,
-    )
-    print("💡 ALWAYS prefer dedicated tools over bash when available", flush=True)
-    mcp.run()
