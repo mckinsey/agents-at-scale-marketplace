@@ -53,6 +53,10 @@ COPY src/ ./src/
 # Set default port
 ENV PORT=8639
 
+# fastmcp >=2.10 removed stateless_http from the FastMCP() constructor.
+# Setting this env var restores stateless HTTP behaviour for the CLI runner.
+ENV FASTMCP_STATELESS_HTTP=true
+
 # Expose port
 EXPOSE ${PORT}
 

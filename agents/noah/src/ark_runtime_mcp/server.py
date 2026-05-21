@@ -8,8 +8,9 @@ from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-# Create MCP server with stateless HTTP to avoid session ID issues
-mcp = FastMCP("ARK Runtime", stateless_http=True)
+# Create MCP server — stateless HTTP is controlled via FASTMCP_STATELESS_HTTP env var
+# (fastmcp >=2.10 removed stateless_http from the constructor)
+mcp = FastMCP("ARK Runtime")
 
 # Get port from environment with default
 PORT = os.getenv("PORT", "8639")
