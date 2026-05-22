@@ -4,8 +4,18 @@ name: Marketplace Feature Tests
 # and endpoint checks — not just "is it deployed?" health checks.
 
 on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "tests/test_marketplace_features.py"
+      - "agents/**"
+      - "demos/**"
+      - "executors/**"
+      - "mcps/**"
+      - "services/**"
+      - ".github/workflows/marketplace-feature-tests.yaml"
   schedule:
-    # Nightly at 03:00 UTC (1 hour after the install-check job)
+    # Nightly at 03:00 UTC
     - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
@@ -23,14 +33,14 @@ on:
         default: ""
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   marketplace-feature-tests:
     name: Feature Tests - Marketplace Items
     runs-on: ubuntu-24.04
-    if: ${{ !github.event.repository.fork }}
+    if: ${{ !github.event.pull_request.head.repo.fork }}
 
     steps:
       - name: Checkout
