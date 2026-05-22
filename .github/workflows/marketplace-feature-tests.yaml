@@ -1,0 +1,296 @@
+name: Marketplace Feature Tests
+
+# Runs focused per-item feature tests: actual API calls, CRD validation,
+# and endpoint checks — not just "is it deployed?" health checks.
+
+on:
+  schedule:
+    # Nightly at 03:00 UTC (1 hour after the install-check job)
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      skip-items:
+        description: "Comma-separated item names to skip"
+        required: false
+        default: ""
+      helm-timeout:
+        description: "Helm install timeout (e.g. 5m)"
+        required: false
+        default: "5m"
+      test-filter:
+        description: "pytest -k expression to run a subset of tests"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  marketplace-feature-tests:
+    name: Feature Tests - Marketplace Items
+    runs-on: ubuntu-24.04
+    if: ${{ !github.event.repository.fork }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Cluster setup
+      # -----------------------------------------------------------------------
+
+      - name: Setup K3s cluster
+        uses: k3s-io/k3s-action@v1
+        with:
+          k3s-version: v1.32.3+k3s1
+          args: "--disable=traefik --disable=metrics-server"
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          sudo cat /etc/rancher/k3s/k3s.yaml \
+            | sed "s/127.0.0.1/$(hostname -I | awk '{print $1}')/g" \
+            > ~/.kube/config
+          kubectl get nodes
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io --force-update
+          helm upgrade --install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --set crds.enabled=true \
+            --wait --timeout=5m
+
+      - name: Install Gateway API CRDs
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+
+      # -----------------------------------------------------------------------
+      # Ark core — required for ExecutionEngine, Agent, Team, MCPServer CRDs
+      # -----------------------------------------------------------------------
+
+      - name: Install Ark core
+        run: |
+          helm upgrade --install ark-controller \
+            oci://ghcr.io/mckinsey/agents-at-scale-ark/charts/ark-controller \
+            --namespace ark-system \
+            --create-namespace \
+            --set rbac.enable=true \
+            --wait --timeout=5m
+
+          helm upgrade --install ark-tenant \
+            oci://ghcr.io/mckinsey/agents-at-scale-ark/charts/ark-tenant \
+            --wait --timeout=3m
+
+          helm upgrade --install ark-api \
+            oci://ghcr.io/mckinsey/agents-at-scale-ark/charts/ark-api \
+            --wait --timeout=5m
+
+      - name: Wait for Ark webhook
+        run: |
+          kubectl wait --for=condition=available \
+            -n ark-system deployment/ark-controller \
+            --timeout=180s
+
+      # -----------------------------------------------------------------------
+      # Stub Model CR (KYC/COBOL bundles reference spec.modelRef.name: "default")
+      # -----------------------------------------------------------------------
+
+      - name: Create stub Model CR
+        run: |
+          kubectl apply -f - <<'EOF'
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Model
+          metadata:
+            name: default
+            namespace: default
+          spec:
+            provider: openai
+            name: gpt-4o
+            config:
+              openai:
+                apiKey: "stub-for-crd-validation"
+          EOF
+
+      # -----------------------------------------------------------------------
+      # Python + test runner
+      # -----------------------------------------------------------------------
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: pip install pytest requests pytest-timeout pyyaml
+
+      # -----------------------------------------------------------------------
+      # Feature tests — grouped by item, each class installs its own item
+      # -----------------------------------------------------------------------
+
+      - name: Run file-gateway feature tests
+        if: ${{ !contains(inputs.skip-items, 'file-gateway') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestFileGateway \
+            -v --tb=short --timeout=300
+
+      - name: Run dev-tools feature tests
+        if: ${{ !contains(inputs.skip-items, 'a2a-inspector') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestDevTools \
+            -v --tb=short --timeout=300
+
+      - name: Run executor feature tests
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          SKIP_ITEMS: ${{ inputs.skip-items || '' }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestExecutors \
+            -v --tb=short --timeout=300
+
+      - name: Run kyc-demo-bundle feature tests
+        if: ${{ !contains(inputs.skip-items, 'kyc-demo-bundle') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestKYCDemoBundle \
+            -v --tb=short --timeout=360
+
+      - name: Run kyc-onboarding-bundle feature tests
+        if: ${{ !contains(inputs.skip-items, 'kyc-onboarding-bundle') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestKYCOnboardingBundle \
+            -v --tb=short --timeout=360
+
+      - name: Run cobol-modernization-bundle feature tests
+        if: ${{ !contains(inputs.skip-items, 'cobol-modernization-bundle') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestCOBOLBundle \
+            -v --tb=short --timeout=360
+
+      - name: Run filesystem-mcp-server feature tests
+        if: ${{ !contains(inputs.skip-items, 'filesystem-mcp-server') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestFilesystemMCP \
+            -v --tb=short --timeout=300
+
+      - name: Run mcp-servers feature tests (companies-house, pdf-extraction, perplexity, speech, web-research)
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          SKIP_ITEMS: ${{ inputs.skip-items || '' }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestMCPServers \
+            -v --tb=short --timeout=300
+
+      - name: Run ark-sandbox feature tests
+        if: ${{ !contains(inputs.skip-items, 'ark-sandbox') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestArkSandbox \
+            -v --tb=short --timeout=300
+
+      - name: Run langfuse feature tests
+        if: ${{ !contains(inputs.skip-items, 'langfuse') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestLangfuse \
+            -v --tb=short --timeout=600
+
+      - name: Run phoenix feature tests
+        if: ${{ !contains(inputs.skip-items, 'phoenix') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestPhoenix \
+            -v --tb=short --timeout=600
+
+      - name: Run noah feature tests
+        if: ${{ !contains(inputs.skip-items, 'noah') }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py::TestNoah \
+            -v --tb=short --timeout=600
+
+      # -----------------------------------------------------------------------
+      # Ad-hoc filter (workflow_dispatch only)
+      # -----------------------------------------------------------------------
+
+      - name: Run custom test filter
+        if: ${{ inputs.test-filter != '' }}
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          SKIP_ITEMS: ${{ inputs.skip-items || '' }}
+          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+        run: |
+          pytest tests/test_marketplace_features.py \
+            -k "${{ inputs.test-filter }}" \
+            -v --tb=short --timeout=600
+
+      # -----------------------------------------------------------------------
+      # Diagnostics on failure
+      # -----------------------------------------------------------------------
+
+      - name: Collect cluster state on failure
+        if: failure()
+        run: |
+          echo "=== All pods ==="
+          kubectl get pods --all-namespaces -o wide
+
+          echo "=== Ark CRDs ==="
+          kubectl get agent,team,executionengine,mcpserver --all-namespaces 2>/dev/null || true
+
+          echo "=== All Helm releases ==="
+          helm list --all-namespaces
+
+          echo "=== Failed pod logs ==="
+          kubectl get pods --all-namespaces \
+            --field-selector=status.phase!=Running,status.phase!=Succeeded \
+            -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' \
+          | while read ns pod; do
+              echo "--- $ns/$pod ---"
+              kubectl logs "$pod" -n "$ns" --tail=50 2>/dev/null || true
+            done
+
+          kubectl cluster-info dump \
+            --all-namespaces \
+            --output-directory=/tmp/cluster-logs
+
+      - name: Upload cluster logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cluster-logs-marketplace-feature-${{ github.sha }}
+          path: /tmp/cluster-logs
+          retention-days: 7
