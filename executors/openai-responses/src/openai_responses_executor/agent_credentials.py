@@ -19,9 +19,20 @@ from typing import Any
 from ark_sdk.client import V1_ALPHA1, with_ark_client
 from ark_sdk.k8s import SecretClient
 from kubernetes_asyncio import client as k8s_client
+from kubernetes_asyncio import config as k8s_config
 from kubernetes_asyncio.client.api_client import ApiClient
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_k8s_config() -> None:
+    # kubernetes_asyncio.ApiClient() (used by both SecretClient and CoreV1Api)
+    # reads from the global configuration object. load_incluster_config() must
+    # be called before any ApiClient is constructed — it is not called
+    # automatically when running inside a pod. We call it on every use rather
+    # than caching the result so that rotated service account tokens are always
+    # picked up from disk.
+    k8s_config.load_incluster_config()
 
 
 @dataclass
@@ -53,6 +64,7 @@ async def _resolve_secret(secret_ref: Any, namespace: str) -> str:
     if not (name and key):
         return ""
     try:
+        _ensure_k8s_config()
         sc = SecretClient(namespace=namespace)
         res = await sc.get_secret_value(name, key)
         return base64.b64decode(res["value"]).decode("utf-8")
@@ -67,6 +79,7 @@ async def _resolve_configmap(cm_ref: Any, namespace: str) -> str:
     if not (name and key):
         return ""
     try:
+        _ensure_k8s_config()
         async with ApiClient() as api:
             v1 = k8s_client.CoreV1Api(api)
             cm = await v1.read_namespaced_config_map(name=name, namespace=namespace)
@@ -97,11 +110,7 @@ async def _resolve_value_source(vs: Any, namespace: str) -> str:
 
 
 def _default_namespace() -> str:
-    return (
-        os.getenv("POD_NAMESPACE")
-        or os.getenv("ARK_NAMESPACE")
-        or "default"
-    )
+    return os.getenv("POD_NAMESPACE") or os.getenv("ARK_NAMESPACE") or "default"
 
 
 def parse_agent_ref(value: str) -> tuple[str, str]:
@@ -126,9 +135,7 @@ async def resolve_agent_openai_credentials(
     return ctx.api_key, ctx.base_url
 
 
-async def resolve_agent_context(
-    agent_name: str, namespace: str
-) -> AgentContext | None:
+async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext | None:
     """Resolve the full chat context for an agent from k8s.
 
     Reads the Agent CR's modelRef + prompt, then its Model CR's openai
