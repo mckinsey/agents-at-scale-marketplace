@@ -117,10 +117,13 @@ jobs:
             namespace: default
           spec:
             provider: openai
-            name: gpt-4o
+            type: completions
+            model:
+              value: gpt-4o
             config:
               openai:
-                apiKey: "stub-for-crd-validation"
+                apiKey:
+                  value: "stub-for-crd-validation"
           EOF
 
       # -----------------------------------------------------------------------
