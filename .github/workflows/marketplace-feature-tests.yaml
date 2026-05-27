@@ -40,7 +40,14 @@ jobs:
   marketplace-feature-tests:
     name: Feature Tests - Marketplace Items
     runs-on: ubuntu-24.04
-    if: ${{ !github.event.pull_request.head.repo.fork }}
+    # Run on schedule/dispatch always; on PRs skip forks (no GITHUB_TOKEN access)
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      !github.event.pull_request.head.repo.fork
+    permissions:
+      contents: read
+      packages: read   # needed to pull OCI charts from GHCR
 
     steps:
       - name: Checkout
@@ -54,6 +61,7 @@ jobs:
         uses: helm/kind-action@v1
         with:
           cluster_name: marketplace-tests
+          kubectl_version: v1.29.0
 
       - name: Verify cluster
         run: kubectl get nodes
@@ -62,6 +70,11 @@ jobs:
         uses: azure/setup-helm@v4
         with:
           version: "latest"
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username ${{ github.actor }} --password-stdin
 
       - name: Install cert-manager
         run: |
@@ -123,7 +136,9 @@ jobs:
             config:
               openai:
                 apiKey:
-                  value: "stub-for-crd-validation"
+                  value: "stub-key"
+                baseUrl:
+                  value: "https://api.openai.com/v1"
           EOF
 
       # -----------------------------------------------------------------------
