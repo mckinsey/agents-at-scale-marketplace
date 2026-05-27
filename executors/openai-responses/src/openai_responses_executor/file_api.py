@@ -45,24 +45,17 @@ ALLOWED_EXTENSIONS = {
 
 _UI_HTML = (Path(__file__).parent / "static" / "index.html").read_text()
 
-_env_provider: FileProvider | None = None
-_agent_provider_cache: dict[tuple[str, str], FileProvider] = {}
-
-
 def _get_env_provider() -> FileProvider:
-    global _env_provider
-    if _env_provider is None:
-        if not config.openai_api_key:
-            raise ValueError(
-                "No API key configured. Either pass ?agent=<name> on the request "
-                "or set OPENAI_API_KEY env var on the executor.",
-            )
-        _env_provider = create_provider(
-            provider=config.file_provider,
-            api_key=config.openai_api_key,
-            base_url=config.openai_base_url or None,
+    if not config.openai_api_key:
+        raise ValueError(
+            "No API key configured. Either pass ?agent=<name> on the request "
+            "or set OPENAI_API_KEY env var on the executor.",
         )
-    return _env_provider
+    return create_provider(
+        provider=config.file_provider,
+        api_key=config.openai_api_key,
+        base_url=config.openai_base_url or None,
+    )
 
 
 def _agent_param(request: Request) -> tuple[str, str] | None:
@@ -77,10 +70,6 @@ async def _get_provider_for_request(request: Request) -> FileProvider:
     if agent is None:
         return _get_env_provider()
 
-    cached = _agent_provider_cache.get(agent)
-    if cached is not None:
-        return cached
-
     namespace, name = agent
     creds = await resolve_agent_openai_credentials(name, namespace)
     if creds is None:
@@ -93,9 +82,7 @@ async def _get_provider_for_request(request: Request) -> FileProvider:
         return _get_env_provider()
 
     api_key, base_url = creds
-    provider = create_provider(provider="openai", api_key=api_key, base_url=base_url)
-    _agent_provider_cache[agent] = provider
-    return provider
+    return create_provider(provider="openai", api_key=api_key, base_url=base_url)
 
 
 async def executor_ui(request: Request) -> HTMLResponse:
