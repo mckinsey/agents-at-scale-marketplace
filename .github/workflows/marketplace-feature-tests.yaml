@@ -1,0 +1,209 @@
+name: Marketplace Feature Tests
+
+# Runs focused per-item feature tests: actual API calls, CRD validation,
+# and endpoint checks — not just "is it deployed?" health checks.
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "tests/test_marketplace_features.py"
+      - "agents/**"
+      - "demos/**"
+      - "executors/**"
+      - "mcps/**"
+      - "services/**"
+      - ".github/workflows/marketplace-feature-tests.yaml"
+  schedule:
+    # Nightly at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      skip-items:
+        description: "Comma-separated item names to skip"
+        required: false
+        default: ""
+      helm-timeout:
+        description: "Helm install timeout (e.g. 5m)"
+        required: false
+        default: "5m"
+      test-filter:
+        description: "pytest -k expression to run a subset of tests"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  marketplace-feature-tests:
+    name: Feature Tests - Marketplace Items
+    runs-on: ubuntu-24.04
+    # Run on schedule/dispatch always; on PRs skip forks (no GITHUB_TOKEN access)
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      !github.event.pull_request.head.repo.fork
+    permissions:
+      contents: read
+      packages: read   # needed to pull OCI charts from GHCR
+    env:
+      REPO_ROOT: ${{ github.workspace }}
+      HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+      SKIP_ITEMS: ${{ inputs.skip-items || '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Cluster setup
+      # -----------------------------------------------------------------------
+
+      - name: Setup kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: marketplace-tests
+          kubectl_version: v1.29.0
+
+      - name: Verify cluster
+        run: kubectl get nodes
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username ${{ github.actor }} --password-stdin
+
+      - name: Install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io --force-update
+          helm upgrade --install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --set crds.enabled=true \
+            --wait --timeout=5m
+
+      - name: Install Gateway API CRDs
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+
+      # -----------------------------------------------------------------------
+      # Ark core — required for ExecutionEngine, Agent, Team, MCPServer CRDs
+      # -----------------------------------------------------------------------
+
+      - name: Install Ark core
+        run: |
+          helm upgrade --install ark-controller \
+            oci://ghcr.io/mckinsey/agents-at-scale-ark/charts/ark-controller \
+            --namespace ark-system \
+            --create-namespace \
+            --set rbac.enable=true \
+            --wait --timeout=5m
+
+          helm upgrade --install ark-tenant \
+            oci://ghcr.io/mckinsey/agents-at-scale-ark/charts/ark-tenant \
+            --wait --timeout=3m
+
+          helm upgrade --install ark-api \
+            oci://ghcr.io/mckinsey/agents-at-scale-ark/charts/ark-api \
+            --wait --timeout=5m
+
+      - name: Wait for Ark webhook
+        run: |
+          kubectl wait --for=condition=available \
+            -n ark-system deployment/ark-controller \
+            --timeout=180s
+
+      # -----------------------------------------------------------------------
+      # Stub Model CR (KYC/COBOL bundles reference spec.modelRef.name: "default")
+      # -----------------------------------------------------------------------
+
+      - name: Create stub Model CR
+        run: |
+          kubectl apply -f - <<'EOF'
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Model
+          metadata:
+            name: default
+            namespace: default
+          spec:
+            provider: openai
+            type: completions
+            model:
+              value: gpt-4o
+            config:
+              openai:
+                apiKey:
+                  value: "stub-key"
+                baseUrl:
+                  value: "https://api.openai.com/v1"
+          EOF
+
+      # -----------------------------------------------------------------------
+      # Python + test runner
+      # -----------------------------------------------------------------------
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: pip install pytest requests pytest-timeout pyyaml kubernetes pytest-xdist
+
+      # -----------------------------------------------------------------------
+      # Feature tests — run the whole suite in one shot.
+      # SKIP_ITEMS is a comma-separated list of exact item names; the test
+      # code splits it and checks membership, so partial-name collisions
+      # are not possible. Pass test-filter to run a subset via -k.
+      # -----------------------------------------------------------------------
+
+      - name: Run marketplace feature tests
+        run: |
+          pytest tests/test_marketplace_features.py \
+            ${{ inputs.test-filter && format('-k "{0}"', inputs.test-filter) || '' }} \
+            -n 4 --dist=loadscope \
+            -v --tb=short --timeout=600
+
+      # -----------------------------------------------------------------------
+      # Diagnostics on failure
+      # -----------------------------------------------------------------------
+
+      - name: Collect cluster state on failure
+        if: failure()
+        run: |
+          echo "=== All pods ==="
+          kubectl get pods --all-namespaces -o wide
+
+          echo "=== Ark CRDs ==="
+          kubectl get agent,team,executionengine,mcpserver --all-namespaces 2>/dev/null || true
+
+          echo "=== All Helm releases ==="
+          helm list --all-namespaces
+
+          echo "=== Failed pod logs ==="
+          kubectl get pods --all-namespaces \
+            --field-selector=status.phase!=Running,status.phase!=Succeeded \
+            -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' \
+          | while read ns pod; do
+              echo "--- $ns/$pod ---"
+              kubectl logs "$pod" -n "$ns" --tail=50 2>/dev/null || true
+            done
+
+          kubectl cluster-info dump \
+            --all-namespaces \
+            --output-directory=/tmp/cluster-logs
+
+      - name: Upload cluster logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cluster-logs-marketplace-feature-${{ github.sha }}
+          path: /tmp/cluster-logs
+          retention-days: 7

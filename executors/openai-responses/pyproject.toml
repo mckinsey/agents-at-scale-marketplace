@@ -40,6 +40,9 @@ build-backend = "hatchling.build"
 [project.optional-dependencies]
 dev = [
     "pyright>=1.1.402",
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "requests>=2.31",
 ]
 
 [tool.hatch.metadata]
@@ -84,6 +87,7 @@ pythonpath = [
 testpaths = [
     "tests"
 ]
+markers = []
 
 [dependency-groups]
 dev = [

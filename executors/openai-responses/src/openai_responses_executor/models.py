@@ -67,6 +67,11 @@ class ModelConfig(BaseModel):
             azure = AzureModelConfig.model_validate(config.get("azure") or {})
             return cls(model_name=model.name, api_key=azure.apiKey, provider="azure", base_url=azure.baseUrl, api_version=azure.apiVersion)
 
+        if "openai" not in config:
+            raise ValueError(
+                f"Model config must contain provider 'openai' credentials. "
+                f"Got keys: {list(config.keys())}"
+            )
         openai = OpenAIModelConfig.model_validate(config.get("openai") or {})
         return cls(model_name=model.name, api_key=openai.apiKey, provider="openai", base_url=openai.baseUrl)
 
