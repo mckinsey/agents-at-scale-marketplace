@@ -155,7 +155,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install test dependencies
-        run: pip install pytest requests pytest-timeout pyyaml kubernetes
+        run: pip install pytest requests pytest-timeout pyyaml kubernetes pytest-xdist
 
       # -----------------------------------------------------------------------
       # Feature tests — run the whole suite in one shot.
@@ -168,6 +168,7 @@ jobs:
         run: |
           pytest tests/test_marketplace_features.py \
             ${{ inputs.test-filter && format('-k "{0}"', inputs.test-filter) || '' }} \
+            -n 4 --dist=loadscope \
             -v --tb=short --timeout=600
 
       # -----------------------------------------------------------------------

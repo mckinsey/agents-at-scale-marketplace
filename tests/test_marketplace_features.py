@@ -359,7 +359,7 @@ class TestFileGateway:
 
     FILE_KEY = "mkt-test/hello.txt"
     FILE_CONTENT = b"marketplace feature test content"
-    NAMESPACE = "default"
+    NAMESPACE = "file-gateway-ft"
     LOCAL_PORT = 19300
 
     @pytest.fixture(autouse=True, scope="class")
@@ -367,6 +367,7 @@ class TestFileGateway:
         release = _helm_install("file-gateway", self.NAMESPACE)
         yield
         _helm_uninstall("file-gateway", self.NAMESPACE, release)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     @pytest.fixture(scope="class")
     def api(self, install):
@@ -433,7 +434,7 @@ class TestFileGateway:
 class TestDevTools:
     """a2a-inspector and mcp-inspector web UIs return HTTP 200."""
 
-    NAMESPACE = "default"
+    NAMESPACE = "devtools-ft"
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self, request):
@@ -446,6 +447,7 @@ class TestDevTools:
             _helm_uninstall("a2a-inspector", self.NAMESPACE, rel_a2a)
         if rel_mcp:
             _helm_uninstall("mcp-inspector", self.NAMESPACE, rel_mcp)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     @pytest.mark.skipif("a2a-inspector" in SKIP_ITEMS, reason="a2a-inspector in SKIP_ITEMS")
     def test_a2a_inspector_ui(self):
@@ -469,7 +471,7 @@ class TestDevTools:
 class TestExecutors:
     """Each executor registers an ExecutionEngine CR and exposes a healthy /health endpoint."""
 
-    NAMESPACE = "default"
+    NAMESPACE = "executors-ft"
     EXECUTORS = [
         pytest.param("executor-openai-responses", 8000, 19320,
                      id="executor-openai-responses",
@@ -495,6 +497,7 @@ class TestExecutors:
         yield
         for name, rel in releases.items():
             _helm_uninstall(name, self.NAMESPACE, rel)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     @pytest.mark.parametrize("name,port,lport", EXECUTORS)
     def test_executor_deployed(self, name, port, lport):
@@ -662,7 +665,7 @@ class TestKYCOnboardingBundle:
 class TestFilesystemMCP:
     """filesystem-mcp-server: MCPServer CR registered and service reachable."""
 
-    NAMESPACE = "default"
+    NAMESPACE = "filesystem-mcp-ft"
     LOCAL_PORT = 19330
 
     @pytest.fixture(autouse=True, scope="class")
@@ -670,6 +673,7 @@ class TestFilesystemMCP:
         release = _helm_install("filesystem-mcp-server", self.NAMESPACE)
         yield
         _helm_uninstall("filesystem-mcp-server", self.NAMESPACE, release)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     def test_mcpserver_cr(self):
         """MCPServer CR exists and has a non-empty spec.address."""
@@ -695,7 +699,7 @@ class TestFilesystemMCP:
 class TestNoah:
     """Noah: Agent CR deployed with a prompt, MCP pod running and healthy."""
 
-    NAMESPACE = "default"
+    NAMESPACE = "noah-ft"
     LOCAL_PORT = 19340
 
     @pytest.fixture(autouse=True, scope="class")
@@ -703,6 +707,7 @@ class TestNoah:
         release = _helm_install("noah", self.NAMESPACE)
         yield
         _helm_uninstall("noah", self.NAMESPACE, release)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     def test_agent_cr(self):
         """Agent/noah exists and has a non-trivial prompt."""
@@ -740,7 +745,7 @@ class TestArkSandbox:
     - MCPServer CR is registered with a spec.address
     """
 
-    NAMESPACE = "default"
+    NAMESPACE = "ark-sandbox-ft"
     LOCAL_PORT = 19350
 
     @pytest.fixture(autouse=True, scope="class")
@@ -748,6 +753,7 @@ class TestArkSandbox:
         release = _helm_install("ark-sandbox", self.NAMESPACE)
         yield
         _helm_uninstall("ark-sandbox", self.NAMESPACE, release)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     def test_health(self):
         with port_forward("ark-sandbox", self.LOCAL_PORT, 80, self.NAMESPACE) as base_url:
@@ -869,7 +875,7 @@ class TestMCPServers:
     - MCPServer CR is created with a non-empty spec.address
     """
 
-    NAMESPACE = "default"
+    NAMESPACE = "mcp-servers-ft"
 
     # (helm-item-name, expected MCPServer CR name)
     MCP_ITEMS = [
@@ -897,10 +903,11 @@ class TestMCPServers:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
+        _k8s_create_namespace(self.NAMESPACE)
         for p in self.MCP_ITEMS:
             name, _cr_name = p.values
             if name not in SKIP_ITEMS:
-                # Use _template_and_apply so the MCPServer CR is created even
+                # Use helm template + apply so the MCPServer CR is created even
                 # when the image can't be pulled (no published GHCR image yet).
                 chart_dir = REPO_ROOT / _CHART_PATHS[name] / "chart"
                 _helm("dependency", "update", str(chart_dir), check=False)
@@ -910,30 +917,12 @@ class TestMCPServers:
                 if result.returncode != 0:
                     continue  # individual test will show it as skipped
                 docs = [d for d in yaml.safe_load_all(result.stdout) if d is not None]
-                raw = yaml.dump_all(docs)
                 subprocess.run(
                     [_KUBECTL, "apply", "-f", "-", "-n", self.NAMESPACE],
-                    input=raw, text=True, capture_output=True,
+                    input=yaml.dump_all(docs), text=True, capture_output=True,
                 )
         yield
-        # Clean up MCPServer CRs created by template apply
-        custom_api = k8s_client.CustomObjectsApi()
-        for p in self.MCP_ITEMS:
-            name, cr_name = p.values
-            try:
-                custom_api.delete_namespaced_custom_object(
-                    group=_ARK_GROUP,
-                    version=_ARK_VERSION,
-                    namespace=self.NAMESPACE,
-                    plural="mcpservers",
-                    name=cr_name,
-                )
-            except K8sApiException:
-                pass
-            # Broad resource cleanup (Deployments, Services, etc.) still uses kubectl
-            # as there is no single-call equivalent in the Python client.
-            _kubectl("delete", "all", "-l", f"app.kubernetes.io/instance={name}-ft",
-                     "-n", self.NAMESPACE, "--ignore-not-found", check=False)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     @pytest.mark.parametrize("name,cr_name", MCP_ITEMS)
     def test_mcpserver_cr(self, name, cr_name):
