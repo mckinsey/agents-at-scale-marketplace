@@ -60,13 +60,17 @@ except Exception:
         pass  # Tests will fail with a clear error if no kubeconfig is available
 
 _ARK_GROUP = "ark.mckinsey.com"
-_ARK_VERSION = "v1alpha1"
+_ARK_DEFAULT_VERSION = "v1alpha1"
 _ARK_PLURALS: dict[str, str] = {
     "agent": "agents",
     "team": "teams",
     "executionengine": "executionengines",
     "mcpserver": "mcpservers",
     "model": "models",
+}
+# ExecutionEngine uses a different API version from the other Ark CRDs.
+_ARK_VERSIONS: dict[str, str] = {
+    "executionengine": "v1prealpha1",
 }
 
 # ---------------------------------------------------------------------------
@@ -254,26 +258,6 @@ def _template_cleanup(namespace: str) -> None:
     _k8s_delete_namespace(namespace)
 
 
-def _wait_for_deployments(namespace: str = "default", release: str = "", timeout: str = "120s") -> None:
-    timeout_secs = int(timeout.rstrip("s")) if timeout.endswith("s") else 120
-    label_selector = f"app.kubernetes.io/instance={release}" if release else None
-    deadline = time.time() + timeout_secs
-    apps_api = k8s_client.AppsV1Api()
-    while time.time() < deadline:
-        try:
-            kwargs: dict[str, Any] = {"namespace": namespace}
-            if label_selector:
-                kwargs["label_selector"] = label_selector
-            deployments = apps_api.list_namespaced_deployment(**kwargs)
-            if deployments.items and all(
-                (d.status.available_replicas or 0) >= (d.spec.replicas or 1)
-                for d in deployments.items
-            ):
-                return
-        except K8sApiException:
-            pass
-        time.sleep(3)
-
 
 def _k8s_create_namespace(namespace: str) -> None:
     try:
@@ -326,13 +310,15 @@ def port_forward(
 
 
 def _get_resource(kind: str, name: str, namespace: str = "default") -> dict[str, Any]:
-    plural = _ARK_PLURALS.get(kind.lower())
+    k = kind.lower()
+    plural = _ARK_PLURALS.get(k)
     if not plural:
         raise ValueError(f"Unknown Ark CRD kind: {kind!r}. Known kinds: {list(_ARK_PLURALS)}")
+    version = _ARK_VERSIONS.get(k, _ARK_DEFAULT_VERSION)
     try:
         return k8s_client.CustomObjectsApi().get_namespaced_custom_object(  # type: ignore[return-value]
             group=_ARK_GROUP,
-            version=_ARK_VERSION,
+            version=version,
             namespace=namespace,
             plural=plural,
             name=name,
@@ -342,13 +328,15 @@ def _get_resource(kind: str, name: str, namespace: str = "default") -> dict[str,
 
 
 def _list_resources(kind: str, namespace: str = "default") -> list[dict[str, Any]]:
-    plural = _ARK_PLURALS.get(kind.lower())
+    k = kind.lower()
+    plural = _ARK_PLURALS.get(k)
     if not plural:
         raise ValueError(f"Unknown Ark CRD kind: {kind!r}. Known kinds: {list(_ARK_PLURALS)}")
+    version = _ARK_VERSIONS.get(k, _ARK_DEFAULT_VERSION)
     try:
         result = k8s_client.CustomObjectsApi().list_namespaced_custom_object(
             group=_ARK_GROUP,
-            version=_ARK_VERSION,
+            version=version,
             namespace=namespace,
             plural=plural,
         )
@@ -504,7 +492,6 @@ class TestExecutors:
             name = p.values[0]
             if name not in SKIP_ITEMS:
                 releases[name] = _helm_install(name, self.NAMESPACE)
-                _wait_for_deployments(self.NAMESPACE, release=releases[name])
         yield
         for name, rel in releases.items():
             _helm_uninstall(name, self.NAMESPACE, rel)
@@ -681,7 +668,6 @@ class TestFilesystemMCP:
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
         release = _helm_install("filesystem-mcp-server", self.NAMESPACE)
-        _wait_for_deployments(self.NAMESPACE, release=release)
         yield
         _helm_uninstall("filesystem-mcp-server", self.NAMESPACE, release)
 
@@ -715,7 +701,6 @@ class TestNoah:
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
         release = _helm_install("noah", self.NAMESPACE)
-        _wait_for_deployments(self.NAMESPACE, release=release)
         yield
         _helm_uninstall("noah", self.NAMESPACE, release)
 
@@ -761,7 +746,6 @@ class TestArkSandbox:
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
         release = _helm_install("ark-sandbox", self.NAMESPACE)
-        _wait_for_deployments(self.NAMESPACE, release=release)
         yield
         _helm_uninstall("ark-sandbox", self.NAMESPACE, release)
 
@@ -799,7 +783,6 @@ class TestLangfuse:
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
         release = _helm_install("langfuse", self.NAMESPACE)
-        _wait_for_deployments(self.NAMESPACE, release=release, timeout="180s")
         yield
         _helm_uninstall("langfuse", self.NAMESPACE, release)
         _k8s_delete_namespace(self.NAMESPACE)
@@ -844,7 +827,6 @@ class TestPhoenix:
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
         release = _helm_install("phoenix", self.NAMESPACE)
-        _wait_for_deployments(self.NAMESPACE, release=release, timeout="180s")
         yield
         _helm_uninstall("phoenix", self.NAMESPACE, release)
         _k8s_delete_namespace(self.NAMESPACE)
