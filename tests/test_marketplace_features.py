@@ -29,7 +29,6 @@ SKIP_ITEMS            Comma-separated item names to skip
 """
 
 import io
-import json
 import os
 import shutil
 import subprocess
@@ -41,11 +40,34 @@ from typing import Any, Generator
 import pytest
 import requests
 import yaml
+from kubernetes import client as k8s_client
+from kubernetes import config as k8s_config
+from kubernetes.client.rest import ApiException as K8sApiException
 
 # Resolve CLI tools to absolute paths at import time so subprocess.Popen works
 # regardless of how the test runner manipulates PATH (e.g. inside uv envs)
 _KUBECTL = shutil.which("kubectl") or "kubectl"
 _HELM = shutil.which("helm") or "helm"
+
+# Load kubeconfig once at import time; tests that don't need a cluster are
+# unaffected — the client is only called when a test method actually runs.
+try:
+    k8s_config.load_kube_config()
+except Exception:
+    try:
+        k8s_config.load_incluster_config()
+    except Exception:
+        pass  # Tests will fail with a clear error if no kubeconfig is available
+
+_ARK_GROUP = "ark.mckinsey.com"
+_ARK_VERSION = "v1alpha1"
+_ARK_PLURALS: dict[str, str] = {
+    "agent": "agents",
+    "team": "teams",
+    "executionengine": "executionengines",
+    "mcpserver": "mcpservers",
+    "model": "models",
+}
 
 # ---------------------------------------------------------------------------
 # Config
@@ -136,6 +158,30 @@ def _helm_uninstall(name: str, namespace: str = "default", release: str = "") ->
     _helm("uninstall", target, "--namespace", namespace, check=False)
 
 
+def _wait_for_agents_registered(
+    names: list[str],
+    namespace: str,
+    timeout_secs: int = 30,
+) -> None:
+    """Poll until every named Agent CR is visible in the Kubernetes API.
+
+    The Team admission webhook validates that referenced Agents exist before
+    accepting a Team resource.  Polling here is more reliable than sleeping.
+    """
+    if not names:
+        return
+    deadline = time.time() + timeout_secs
+    pending = set(names)
+    while pending and time.time() < deadline:
+        pending = {n for n in pending if not _get_resource("agent", n, namespace)}
+        if pending:
+            time.sleep(1)
+    if pending:
+        pytest.fail(
+            f"Agent CRs not visible in API after {timeout_secs}s: {sorted(pending)}"
+        )
+
+
 def _template_and_apply(
     name: str,
     namespace: str,
@@ -157,14 +203,14 @@ def _template_and_apply(
 
     chart_dir = REPO_ROOT / _CHART_PATHS[name] / "chart"
     _helm("dependency", "update", str(chart_dir), check=False)
-    _kubectl("create", "namespace", namespace, check=False)
+    _k8s_create_namespace(namespace)
 
     cmd = [_HELM, "template", release, str(chart_dir), "--namespace", namespace]
     for kv in (extra_set or []):
         cmd += ["--set", kv]
     result = _run(cmd, check=False)
     if result.returncode != 0:
-        pytest.skip(f"helm template {name} failed: {result.stderr[:400]}")
+        pytest.fail(f"helm template {name} failed: {result.stderr[:400]}")
 
     docs = [d for d in yaml.safe_load_all(result.stdout) if d is not None]
 
@@ -192,32 +238,58 @@ def _template_and_apply(
             input=raw, text=True, capture_output=True,
         )
         if r.returncode != 0:
-            pytest.skip(f"kubectl apply {name} failed: {r.stderr[:400]}")
+            pytest.fail(f"kubectl apply {name} failed: {r.stderr[:400]}")
 
     _apply(non_teams)
-    time.sleep(3)  # allow agents to be registered before teams reference them
+    _wait_for_agents_registered(
+        names=[doc["metadata"]["name"] for doc in non_teams if doc.get("kind") == "Agent"],
+        namespace=namespace,
+    )
     _apply(teams)
     return release
 
 
 def _template_cleanup(namespace: str) -> None:
     """Delete the entire namespace created by ``_template_and_apply``."""
-    _kubectl("delete", "namespace", namespace, "--ignore-not-found", check=False)
+    _k8s_delete_namespace(namespace)
 
 
 def _wait_for_deployments(namespace: str = "default", release: str = "", timeout: str = "120s") -> None:
-    label = f"app.kubernetes.io/instance={release}" if release else ""
-    selector = ["-l", label] if label else []
-    _kubectl(
-        "wait", "deployment", "--for=condition=Available",
-        "--timeout", timeout, "-n", namespace, *selector,
-        check=False,
-    )
+    timeout_secs = int(timeout.rstrip("s")) if timeout.endswith("s") else 120
+    label_selector = f"app.kubernetes.io/instance={release}" if release else None
+    deadline = time.time() + timeout_secs
+    apps_api = k8s_client.AppsV1Api()
+    while time.time() < deadline:
+        try:
+            kwargs: dict[str, Any] = {"namespace": namespace}
+            if label_selector:
+                kwargs["label_selector"] = label_selector
+            deployments = apps_api.list_namespaced_deployment(**kwargs)
+            if deployments.items and all(
+                (d.status.available_replicas or 0) >= (d.spec.replicas or 1)
+                for d in deployments.items
+            ):
+                return
+        except K8sApiException:
+            pass
+        time.sleep(3)
 
 
-def _skip_if(name: str) -> None:
-    if name in SKIP_ITEMS:
-        pytest.skip(f"{name} in SKIP_ITEMS")
+def _k8s_create_namespace(namespace: str) -> None:
+    try:
+        k8s_client.CoreV1Api().create_namespace(
+            k8s_client.V1Namespace(metadata=k8s_client.V1ObjectMeta(name=namespace))
+        )
+    except K8sApiException as exc:
+        if exc.status != 409:  # 409 = AlreadyExists
+            raise
+
+
+def _k8s_delete_namespace(namespace: str) -> None:
+    try:
+        k8s_client.CoreV1Api().delete_namespace(name=namespace)
+    except K8sApiException:
+        pass  # 404 = already gone
 
 
 # ---------------------------------------------------------------------------
@@ -254,22 +326,34 @@ def port_forward(
 
 
 def _get_resource(kind: str, name: str, namespace: str = "default") -> dict[str, Any]:
-    r = _kubectl("get", kind, name, "-n", namespace, "-o", "json", check=False)
-    if r.returncode != 0:
-        return {}
+    plural = _ARK_PLURALS.get(kind.lower())
+    if not plural:
+        raise ValueError(f"Unknown Ark CRD kind: {kind!r}. Known kinds: {list(_ARK_PLURALS)}")
     try:
-        return json.loads(r.stdout)
-    except json.JSONDecodeError:
+        return k8s_client.CustomObjectsApi().get_namespaced_custom_object(  # type: ignore[return-value]
+            group=_ARK_GROUP,
+            version=_ARK_VERSION,
+            namespace=namespace,
+            plural=plural,
+            name=name,
+        )
+    except K8sApiException:
         return {}
 
 
 def _list_resources(kind: str, namespace: str = "default") -> list[dict[str, Any]]:
-    r = _kubectl("get", kind, "-n", namespace, "-o", "json", check=False)
-    if r.returncode != 0:
-        return []
+    plural = _ARK_PLURALS.get(kind.lower())
+    if not plural:
+        raise ValueError(f"Unknown Ark CRD kind: {kind!r}. Known kinds: {list(_ARK_PLURALS)}")
     try:
-        return json.loads(r.stdout).get("items", [])
-    except json.JSONDecodeError:
+        result = k8s_client.CustomObjectsApi().list_namespaced_custom_object(
+            group=_ARK_GROUP,
+            version=_ARK_VERSION,
+            namespace=namespace,
+            plural=plural,
+        )
+        return result.get("items", [])  # type: ignore[return-value]
+    except K8sApiException:
         return []
 
 
@@ -278,6 +362,7 @@ def _list_resources(kind: str, namespace: str = "default") -> list[dict[str, Any
 # ===========================================================================
 
 
+@pytest.mark.skipif("file-gateway" in SKIP_ITEMS, reason="file-gateway in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestFileGateway:
     """
@@ -291,7 +376,6 @@ class TestFileGateway:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("file-gateway")
         release = _helm_install("file-gateway", self.NAMESPACE)
         yield
         _helm_uninstall("file-gateway", self.NAMESPACE, release)
@@ -375,15 +459,15 @@ class TestDevTools:
         if rel_mcp:
             _helm_uninstall("mcp-inspector", self.NAMESPACE, rel_mcp)
 
+    @pytest.mark.skipif("a2a-inspector" in SKIP_ITEMS, reason="a2a-inspector in SKIP_ITEMS")
     def test_a2a_inspector_ui(self):
-        _skip_if("a2a-inspector")
         with port_forward(self._rel_a2a, 19310, 8080, self.NAMESPACE) as base_url:
             r = requests.get(base_url, timeout=10)
             assert r.status_code == 200
-            assert "html" in r.headers.get("content-type", "").lower() or "<html" in r.text.lower()
+            assert "A2A" in r.text, f"Expected 'A2A' in a2a-inspector response body"
 
+    @pytest.mark.skipif("mcp-inspector" in SKIP_ITEMS, reason="mcp-inspector in SKIP_ITEMS")
     def test_mcp_inspector_ui(self):
-        _skip_if("mcp-inspector")
         with port_forward(self._rel_mcp, 19311, 6274, self.NAMESPACE) as base_url:
             assert requests.get(base_url, timeout=10).status_code == 200
 
@@ -399,15 +483,25 @@ class TestExecutors:
 
     NAMESPACE = "default"
     EXECUTORS = [
-        ("executor-openai-responses", 8000, 19320),
-        ("executor-claude-agent-sdk",  8000, 19321),
-        ("executor-langchain",          8000, 19322),
+        pytest.param("executor-openai-responses", 8000, 19320,
+                     id="executor-openai-responses",
+                     marks=pytest.mark.skipif("executor-openai-responses" in SKIP_ITEMS,
+                                              reason="executor-openai-responses in SKIP_ITEMS")),
+        pytest.param("executor-claude-agent-sdk", 8000, 19321,
+                     id="executor-claude-agent-sdk",
+                     marks=pytest.mark.skipif("executor-claude-agent-sdk" in SKIP_ITEMS,
+                                              reason="executor-claude-agent-sdk in SKIP_ITEMS")),
+        pytest.param("executor-langchain", 8000, 19322,
+                     id="executor-langchain",
+                     marks=pytest.mark.skipif("executor-langchain" in SKIP_ITEMS,
+                                              reason="executor-langchain in SKIP_ITEMS")),
     ]
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
         releases = {}
-        for name, *_ in self.EXECUTORS:
+        for p in self.EXECUTORS:
+            name = p.values[0]
             if name not in SKIP_ITEMS:
                 releases[name] = _helm_install(name, self.NAMESPACE)
                 _wait_for_deployments(self.NAMESPACE, release=releases[name])
@@ -415,10 +509,9 @@ class TestExecutors:
         for name, rel in releases.items():
             _helm_uninstall(name, self.NAMESPACE, rel)
 
-    @pytest.mark.parametrize("name,port,lport", EXECUTORS, ids=[e[0] for e in EXECUTORS])
+    @pytest.mark.parametrize("name,port,lport", EXECUTORS)
     def test_executor_deployed(self, name, port, lport):
         """ExecutionEngine CR exists with address, and /health returns 200."""
-        _skip_if(name)
         obj = _get_resource("executionengine", name, self.NAMESPACE)
         assert obj, f"ExecutionEngine/{name} not found"
         assert obj.get("spec", {}).get("address"), f"ExecutionEngine/{name} has no spec.address"
@@ -432,6 +525,7 @@ class TestExecutors:
 # ===========================================================================
 
 
+@pytest.mark.skipif("kyc-demo-bundle" in SKIP_ITEMS, reason="kyc-demo-bundle in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestKYCDemoBundle:
     """kyc-demo-bundle: 5 Agent CRs + 4 Team CRs deployed with correct config."""
@@ -448,7 +542,6 @@ class TestKYCDemoBundle:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("kyc-demo-bundle")
         # helm install is blocked by the local Ark controller webhook:
         #   - "maxTurns can only be set when loops is enabled" (Team webhook)
         #   - "maxCompletionTokens" unknown in older Agent CRD
@@ -509,6 +602,7 @@ class TestKYCDemoBundle:
 # ===========================================================================
 
 
+@pytest.mark.skipif("kyc-onboarding-bundle" in SKIP_ITEMS, reason="kyc-onboarding-bundle in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestKYCOnboardingBundle:
     """kyc-onboarding-bundle: spot-checks a representative subset and verifies counts."""
@@ -524,7 +618,6 @@ class TestKYCOnboardingBundle:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("kyc-onboarding-bundle")
         # Argo WorkflowTemplate CRDs are not installed locally; disable them.
         # Team member validation requires agents to exist first — _template_and_apply
         # handles the ordering (non-Teams applied before Teams).
@@ -577,6 +670,7 @@ class TestKYCOnboardingBundle:
 # ===========================================================================
 
 
+@pytest.mark.skipif("filesystem-mcp-server" in SKIP_ITEMS, reason="filesystem-mcp-server in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestFilesystemMCP:
     """filesystem-mcp-server: MCPServer CR registered and service reachable."""
@@ -586,7 +680,6 @@ class TestFilesystemMCP:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("filesystem-mcp-server")
         release = _helm_install("filesystem-mcp-server", self.NAMESPACE)
         _wait_for_deployments(self.NAMESPACE, release=release)
         yield
@@ -611,6 +704,7 @@ class TestFilesystemMCP:
 # ===========================================================================
 
 
+@pytest.mark.skipif("noah" in SKIP_ITEMS, reason="noah in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestNoah:
     """Noah: Agent CR deployed with a prompt, MCP pod running and healthy."""
@@ -620,7 +714,6 @@ class TestNoah:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("noah")
         release = _helm_install("noah", self.NAMESPACE)
         _wait_for_deployments(self.NAMESPACE, release=release)
         yield
@@ -634,12 +727,12 @@ class TestNoah:
 
     def test_mcp_healthy(self):
         """noah-mcp container is ready (not CrashLoopBackOff) and /health returns 200."""
-        ready = _kubectl(
-            "get", "pods", "-l", "app=noah-mcp", "-n", self.NAMESPACE,
-            "-o", "jsonpath={.items[0].status.containerStatuses[0].ready}",
-            check=False,
+        pods = k8s_client.CoreV1Api().list_namespaced_pod(
+            namespace=self.NAMESPACE, label_selector="app=noah-mcp"
         )
-        assert ready.stdout.strip() == "true", (
+        assert pods.items, f"No noah-mcp pods found in namespace {self.NAMESPACE!r}"
+        container_statuses = pods.items[0].status.container_statuses or []
+        assert container_statuses and container_statuses[0].ready, (
             f"noah-mcp not ready — run: kubectl logs -l app=noah-mcp -n {self.NAMESPACE}"
         )
         with port_forward("noah-mcp", self.LOCAL_PORT, 8639, self.NAMESPACE) as base_url:
@@ -651,6 +744,7 @@ class TestNoah:
 # ===========================================================================
 
 
+@pytest.mark.skipif("ark-sandbox" in SKIP_ITEMS, reason="ark-sandbox in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestArkSandbox:
     """
@@ -666,7 +760,6 @@ class TestArkSandbox:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("ark-sandbox")
         release = _helm_install("ark-sandbox", self.NAMESPACE)
         _wait_for_deployments(self.NAMESPACE, release=release)
         yield
@@ -690,6 +783,7 @@ class TestArkSandbox:
 # ===========================================================================
 
 
+@pytest.mark.skipif("langfuse" in SKIP_ITEMS, reason="langfuse in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestLangfuse:
     """
@@ -704,12 +798,11 @@ class TestLangfuse:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("langfuse")
         release = _helm_install("langfuse", self.NAMESPACE)
         _wait_for_deployments(self.NAMESPACE, release=release, timeout="180s")
         yield
         _helm_uninstall("langfuse", self.NAMESPACE, release)
-        _kubectl("delete", "namespace", self.NAMESPACE, "--ignore-not-found", check=False)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     def test_web_ui(self):
         """Langfuse web service serves HTTP 200."""
@@ -735,6 +828,7 @@ class TestLangfuse:
 # ===========================================================================
 
 
+@pytest.mark.skipif("phoenix" in SKIP_ITEMS, reason="phoenix in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestPhoenix:
     """
@@ -749,12 +843,11 @@ class TestPhoenix:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("phoenix")
         release = _helm_install("phoenix", self.NAMESPACE)
         _wait_for_deployments(self.NAMESPACE, release=release, timeout="180s")
         yield
         _helm_uninstall("phoenix", self.NAMESPACE, release)
-        _kubectl("delete", "namespace", self.NAMESPACE, "--ignore-not-found", check=False)
+        _k8s_delete_namespace(self.NAMESPACE)
 
     def test_web_ui(self):
         """Phoenix UI serves HTTP 200."""
@@ -798,20 +891,35 @@ class TestMCPServers:
 
     # (helm-item-name, expected MCPServer CR name)
     MCP_ITEMS = [
-        ("companies-house-mcp",  "companies-house"),   # nameOverride in chart
-        ("pdf-extraction-mcp",   "pdf-extraction-mcp-ft"),
-        ("perplexity-ask-mcp",   "perplexity"),         # nameOverride in chart
-        ("speech-mcp-server",    "speech-mcp-server-ft"),
-        ("web-research-mcp",     "web-research-mcp-ft"),
+        pytest.param("companies-house-mcp", "companies-house",         # nameOverride in chart
+                     id="companies-house-mcp",
+                     marks=pytest.mark.skipif("companies-house-mcp" in SKIP_ITEMS,
+                                              reason="companies-house-mcp in SKIP_ITEMS")),
+        pytest.param("pdf-extraction-mcp", "pdf-extraction-mcp-ft",
+                     id="pdf-extraction-mcp",
+                     marks=pytest.mark.skipif("pdf-extraction-mcp" in SKIP_ITEMS,
+                                              reason="pdf-extraction-mcp in SKIP_ITEMS")),
+        pytest.param("perplexity-ask-mcp", "perplexity",               # nameOverride in chart
+                     id="perplexity-ask-mcp",
+                     marks=pytest.mark.skipif("perplexity-ask-mcp" in SKIP_ITEMS,
+                                              reason="perplexity-ask-mcp in SKIP_ITEMS")),
+        pytest.param("speech-mcp-server", "speech-mcp-server-ft",
+                     id="speech-mcp-server",
+                     marks=pytest.mark.skipif("speech-mcp-server" in SKIP_ITEMS,
+                                              reason="speech-mcp-server in SKIP_ITEMS")),
+        pytest.param("web-research-mcp", "web-research-mcp-ft",
+                     id="web-research-mcp",
+                     marks=pytest.mark.skipif("web-research-mcp" in SKIP_ITEMS,
+                                              reason="web-research-mcp in SKIP_ITEMS")),
     ]
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        for name, _ in self.MCP_ITEMS:
+        for p in self.MCP_ITEMS:
+            name, _cr_name = p.values
             if name not in SKIP_ITEMS:
                 # Use _template_and_apply so the MCPServer CR is created even
                 # when the image can't be pulled (no published GHCR image yet).
-                _template_cleanup_ns = False  # these go into default, don't wipe it
                 chart_dir = REPO_ROOT / _CHART_PATHS[name] / "chart"
                 _helm("dependency", "update", str(chart_dir), check=False)
                 cmd = [_HELM, "template", f"{name}-ft", str(chart_dir),
@@ -827,17 +935,27 @@ class TestMCPServers:
                 )
         yield
         # Clean up MCPServer CRs created by template apply
-        for name, cr_name in self.MCP_ITEMS:
-            _kubectl("delete", "mcpserver", cr_name, "-n", self.NAMESPACE,
-                     "--ignore-not-found", check=False)
-            # Also remove the deployment/service by label
+        custom_api = k8s_client.CustomObjectsApi()
+        for p in self.MCP_ITEMS:
+            name, cr_name = p.values
+            try:
+                custom_api.delete_namespaced_custom_object(
+                    group=_ARK_GROUP,
+                    version=_ARK_VERSION,
+                    namespace=self.NAMESPACE,
+                    plural="mcpservers",
+                    name=cr_name,
+                )
+            except K8sApiException:
+                pass
+            # Broad resource cleanup (Deployments, Services, etc.) still uses kubectl
+            # as there is no single-call equivalent in the Python client.
             _kubectl("delete", "all", "-l", f"app.kubernetes.io/instance={name}-ft",
                      "-n", self.NAMESPACE, "--ignore-not-found", check=False)
 
-    @pytest.mark.parametrize("name,cr_name", MCP_ITEMS, ids=[m[0] for m in MCP_ITEMS])
+    @pytest.mark.parametrize("name,cr_name", MCP_ITEMS)
     def test_mcpserver_cr(self, name, cr_name):
         """MCPServer CR exists with a non-empty spec.address."""
-        _skip_if(name)
         obj = _get_resource("mcpserver", cr_name, self.NAMESPACE)
         assert obj, f"MCPServer/{cr_name} not found (rendered by helm template for {name})"
         assert obj.get("spec", {}).get("address"), (
@@ -850,6 +968,7 @@ class TestMCPServers:
 # ===========================================================================
 
 
+@pytest.mark.skipif("cobol-modernization-bundle" in SKIP_ITEMS, reason="cobol-modernization-bundle in SKIP_ITEMS")
 @pytest.mark.marketplace_feature
 class TestCOBOLBundle:
     """
@@ -872,7 +991,6 @@ class TestCOBOLBundle:
 
     @pytest.fixture(autouse=True, scope="class")
     def install(self):
-        _skip_if("cobol-modernization-bundle")
         _template_cleanup(self.NAMESPACE)
         _template_and_apply(
             "cobol-modernization-bundle", self.NAMESPACE,

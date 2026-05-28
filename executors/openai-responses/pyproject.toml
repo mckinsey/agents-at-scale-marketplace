@@ -87,10 +87,7 @@ pythonpath = [
 testpaths = [
     "tests"
 ]
-markers = [
-    "executor: marks tests that exercise the executor /execute endpoint",
-    "marketplace: marks tests that validate marketplace-listed features",
-]
+markers = []
 
 [dependency-groups]
 dev = [

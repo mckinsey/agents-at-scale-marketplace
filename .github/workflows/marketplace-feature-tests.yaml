@@ -48,6 +48,10 @@ jobs:
     permissions:
       contents: read
       packages: read   # needed to pull OCI charts from GHCR
+    env:
+      REPO_ROOT: ${{ github.workspace }}
+      HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+      SKIP_ITEMS: ${{ inputs.skip-items || '' }}
 
     steps:
       - name: Checkout
@@ -151,133 +155,19 @@ jobs:
           python-version: "3.13"
 
       - name: Install test dependencies
-        run: pip install pytest requests pytest-timeout pyyaml
+        run: pip install pytest requests pytest-timeout pyyaml kubernetes
 
       # -----------------------------------------------------------------------
-      # Feature tests — grouped by item, each class installs its own item
+      # Feature tests — run the whole suite in one shot.
+      # SKIP_ITEMS is a comma-separated list of exact item names; the test
+      # code splits it and checks membership, so partial-name collisions
+      # are not possible. Pass test-filter to run a subset via -k.
       # -----------------------------------------------------------------------
 
-      - name: Run file-gateway feature tests
-        if: ${{ !contains(inputs.skip-items, 'file-gateway') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestFileGateway \
-            -v --tb=short --timeout=300
-
-      - name: Run dev-tools feature tests
-        if: ${{ !contains(inputs.skip-items, 'a2a-inspector') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestDevTools \
-            -v --tb=short --timeout=300
-
-      - name: Run executor feature tests
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          SKIP_ITEMS: ${{ inputs.skip-items || '' }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestExecutors \
-            -v --tb=short --timeout=300
-
-      - name: Run kyc-demo-bundle feature tests
-        if: ${{ !contains(inputs.skip-items, 'kyc-demo-bundle') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestKYCDemoBundle \
-            -v --tb=short --timeout=360
-
-      - name: Run kyc-onboarding-bundle feature tests
-        if: ${{ !contains(inputs.skip-items, 'kyc-onboarding-bundle') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestKYCOnboardingBundle \
-            -v --tb=short --timeout=360
-
-      - name: Run cobol-modernization-bundle feature tests
-        if: ${{ !contains(inputs.skip-items, 'cobol-modernization-bundle') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestCOBOLBundle \
-            -v --tb=short --timeout=360
-
-      - name: Run filesystem-mcp-server feature tests
-        if: ${{ !contains(inputs.skip-items, 'filesystem-mcp-server') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestFilesystemMCP \
-            -v --tb=short --timeout=300
-
-      - name: Run mcp-servers feature tests (companies-house, pdf-extraction, perplexity, speech, web-research)
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          SKIP_ITEMS: ${{ inputs.skip-items || '' }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestMCPServers \
-            -v --tb=short --timeout=300
-
-      - name: Run ark-sandbox feature tests
-        if: ${{ !contains(inputs.skip-items, 'ark-sandbox') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestArkSandbox \
-            -v --tb=short --timeout=300
-
-      - name: Run langfuse feature tests
-        if: ${{ !contains(inputs.skip-items, 'langfuse') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestLangfuse \
-            -v --tb=short --timeout=600
-
-      - name: Run phoenix feature tests
-        if: ${{ !contains(inputs.skip-items, 'phoenix') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestPhoenix \
-            -v --tb=short --timeout=600
-
-      - name: Run noah feature tests
-        if: ${{ !contains(inputs.skip-items, 'noah') }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
-        run: |
-          pytest tests/test_marketplace_features.py::TestNoah \
-            -v --tb=short --timeout=600
-
-      # -----------------------------------------------------------------------
-      # Ad-hoc filter (workflow_dispatch only)
-      # -----------------------------------------------------------------------
-
-      - name: Run custom test filter
-        if: ${{ inputs.test-filter != '' }}
-        env:
-          REPO_ROOT: ${{ github.workspace }}
-          SKIP_ITEMS: ${{ inputs.skip-items || '' }}
-          HELM_INSTALL_TIMEOUT: ${{ inputs.helm-timeout || '5m' }}
+      - name: Run marketplace feature tests
         run: |
           pytest tests/test_marketplace_features.py \
-            -k "${{ inputs.test-filter }}" \
+            ${{ inputs.test-filter && format('-k "{0}"', inputs.test-filter) || '' }} \
             -v --tb=short --timeout=600
 
       # -----------------------------------------------------------------------
