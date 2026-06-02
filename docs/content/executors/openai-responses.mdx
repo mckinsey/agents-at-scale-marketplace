@@ -202,3 +202,10 @@ This section covers data surfaces specific to the OpenAI Responses executor. For
 - The executor logs agent name, model name, conversation ID, and tool types at info level.
 - **Function tool arguments are logged unmasked** at info level when tool calls are executed. If tools receive sensitive inputs, configure your log aggregator to filter these entries.
 - API keys are retrieved at runtime from Model CRDs and passed directly to the SDK client — they are not logged except in unhandled error tracebacks.
+
+### Data retention and disposal
+
+The executor does not manage data lifecycle — retention and cleanup are deployment configuration.
+
+- **Session response IDs**: Files in `/data/sessions/` accumulate indefinitely on the PVC. Schedule a CronJob to prune entries older than your retention window. The PVC survives `helm uninstall` — delete it explicitly when decommissioning.
+- **OpenAI server-side state**: Conversation history linked by `response_id` is retained by OpenAI according to their data retention policies. The executor has no mechanism to request deletion. Deleting the local `response_id` file breaks the threading link but does not remove data from OpenAI's servers. Review OpenAI's data retention terms for your usage tier.
