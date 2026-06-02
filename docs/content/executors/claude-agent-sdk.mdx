@@ -364,6 +364,14 @@ This section covers data surfaces specific to the Claude Agent SDK executor. For
 - Tool call inputs/outputs are not logged by the executor itself, but the Claude Agent SDK may emit them at debug level.
 - API keys are passed via environment variables and are not logged.
 
+### Data retention and disposal
+
+The executor does not manage data lifecycle — retention and cleanup are deployment configuration.
+
+- **Standalone mode**: Session directories on the PVC accumulate indefinitely. Schedule a CronJob to prune `/data/sessions/` entries older than your retention window. The PVC itself survives `helm uninstall` — delete it explicitly when decommissioning.
+- **Scheduler mode**: Set `shutdownPolicy: Delete` and tune `sessionIdleTTL` to bound sandbox lifetime. When a sandbox is deleted, its ephemeral filesystem is discarded with it.
+- **Anthropic API**: Conversation data retained by Anthropic is governed by their data retention policies, not by Ark. Review Anthropic's terms for your usage tier.
+
 ## Additional Resources
 
 - [Claude Agent SDK Executor README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/claude-agent-sdk)
