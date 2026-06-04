@@ -32,6 +32,7 @@ jobs:
           - { name: executor-langchain, path: executors/langchain }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
           - { name: executor-openai-responses, path: executors/openai-responses }
+          - { name: litellm-model-provider, path: services/litellm }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -69,6 +70,8 @@ jobs:
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk, namespace: default, run-deployment-test: false }
           # disable executor-openai-responses deployment tests for PRs to avoid hitting 5m limit
           - { name: executor-openai-responses, path: executors/openai-responses, namespace: default, run-deployment-test: false }
+          # disable litellm deployment tests for PRs to avoid hitting 5m limit
+          - { name: litellm, path: services/litellm, namespace: ark-system, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}
@@ -160,6 +163,7 @@ jobs:
           - { name: executor-langchain, path: executors/langchain }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
           - { name: executor-openai-responses, path: executors/openai-responses }
+          - { name: litellm-model-provider, path: services/litellm }
     uses: ./.github/workflows/_reusable-docker-cicd.yaml
     with:
       service-name: ${{ matrix.service.name }}
@@ -187,6 +191,7 @@ jobs:
           - { name: executor-langchain, path: executors/langchain, namespace: default }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk, namespace: default }
           - { name: executor-openai-responses, path: executors/openai-responses, namespace: default }
+          - { name: litellm, path: services/litellm, namespace: ark-system }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}

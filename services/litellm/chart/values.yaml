@@ -1,0 +1,186 @@
+# LiteLLM wrapper chart values.
+#
+# Architecture: LiteLLM runs in the Ark system namespace and holds ALL provider
+# secrets. Tenants never see provider keys — they reach models through the
+# proxy's OpenAI-compatible /v1 endpoint. This single service bundles two parts:
+#   - data plane: the LiteLLM proxy + Postgres (via the litellm-helm subchart)
+#   - control plane: the model provider (modelProvider.*) that syncs Ark Model
+#     resources and scoped virtual keys into tenant namespaces
+# Disable the control plane with modelProvider.enabled=false to run proxy-only.
+
+# Namespace the service is intended to run in (informational; install with -n).
+namespace: ark-system
+
+# ─── Master key ───────────────────────────────────────────────────────────────
+# The master key guards the proxy and is required to mint per-tenant virtual
+# keys via /key/generate. Weak, memorable dev default (like other marketplace
+# charts) so a clean install runs out of the box — CHANGE FOR PRODUCTION
+# (--set masterKey=sk-... or a pre-created Secret via masterkeySecretName).
+masterKey: "sk-1234"
+masterKeySecretName: litellm-masterkey
+masterKeySecretKey: masterkey
+
+# ─── Admin UI route ─────────────────────────────────────────────────────────────
+# LiteLLM serves an admin dashboard at /ui on the proxy port (login = master key).
+# Backend the HTTPRoute points at (the upstream service is named after the release).
+service:
+  name: litellm
+  port: 4000
+
+# Gateway API route to the UI. Disabled by default; enable for local/dev access.
+# To surface the UI tile in the Ark dashboard, set the marketplace UI annotations
+# on the proxy service at install time, e.g.:
+#   --set litellm-helm.service.annotations.ark\.mckinsey\.com/marketplace-item-ui-url=https://litellm.example.com/ui
+#   --set litellm-helm.service.annotations.ark\.mckinsey\.com/marketplace-item-ui-label="LiteLLM"
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  hostnames:
+    - "litellm.ark-system.127.0.0.1.nip.io"
+
+# ─── NetworkPolicy ─────────────────────────────────────────────────────────────
+# Restrict ingress to the proxy port. Allowed sources: the ark-system namespace
+# and any namespace labelled `ark.mckinsey.com/litellm-access: "true"`. Egress is
+# unrestricted so the proxy can reach upstream providers.
+networkPolicy:
+  enabled: true
+  accessLabel: ark.mckinsey.com/litellm-access
+
+# ─── Values passed to the upstream litellm-helm subchart ────────────────────────
+litellm-helm:
+  # Bitnami moved all non-latest image tags to the `bitnamilegacy` repo (Aug 2025),
+  # so the subchart's pinned docker.io/bitnami/postgresql tag 404s. Point Postgres
+  # at the legacy repo; allowInsecureImages lets the Bitnami chart accept a
+  # non-default image registry/repo.
+  global:
+    security:
+      allowInsecureImages: true
+
+  service:
+    type: ClusterIP
+    # Labels required for Ark marketplace detection; instance must match release.
+    labels:
+      app.kubernetes.io/instance: litellm
+
+  # Use the master-key Secret created by this wrapper (see templates/).
+  masterkeySecretName: litellm-masterkey
+  masterkeySecretKey: masterkey
+
+  # Dashboard (/ui) login. Weak, memorable dev default like other marketplace
+  # charts — CHANGE FOR PRODUCTION. Unset both to fall back to master-key login.
+  envVars:
+    UI_USERNAME: admin
+    UI_PASSWORD: admin
+
+  # DB-backed mode: bundled Postgres (Bitnami subchart) + store models in DB so
+  # virtual keys, spend tracking, and runtime model management work and persist.
+  db:
+    deployStandalone: true
+  postgresql:
+    architecture: standalone
+    image:
+      registry: docker.io
+      repository: bitnamilegacy/postgresql
+      tag: 16.2.0-debian-12-r6
+
+  # litellm-helm's migration Job races Postgres startup and its script exits 0
+  # even when the DB is unreachable (proxy_cli.py: "migration failed but
+  # continuing"), so on a cold cluster the schema is silently never created and
+  # /key/generate 500s. The chart renders extraInitContainers through `tpl`, so
+  # gate the Job on Postgres being reachable. Host is {release}-postgresql.
+  migrationJob:
+    extraInitContainers:
+      - name: wait-for-postgres
+        image: busybox:1.36
+        command:
+          - sh
+          - -c
+          - "until nc -z {{ .Release.Name }}-postgresql 5432; do echo waiting for postgres; sleep 2; done"
+
+  # Provider API keys live ONLY in this in-cluster Secret, projected as env vars
+  # and referenced from proxy_config via os.environ/<VAR>. Create it before
+  # install (see README). Never put real keys in values.
+  environmentSecrets:
+    - litellm-provider-secrets
+
+  # Proxy config rendered to config.yaml. Models are commented examples — enable
+  # the ones you need and ensure the matching env vars exist in the Secret above.
+  proxy_config:
+    general_settings:
+      # Persist models/keys created via the admin API in Postgres.
+      store_model_in_db: true
+    model_list:
+      # At least one model must exist for the proxy to start. Replace this.
+      - model_name: gpt-4o
+        litellm_params:
+          model: openai/gpt-4o
+          api_key: os.environ/OPENAI_API_KEY
+
+      # ─── OpenAI ───
+      # - model_name: gpt-4o
+      #   litellm_params:
+      #     model: openai/gpt-4o
+      #     api_key: os.environ/OPENAI_API_KEY
+
+      # ─── Azure OpenAI ───
+      # - model_name: azure-gpt-4o
+      #   litellm_params:
+      #     model: azure/<deployment-name>
+      #     api_base: os.environ/AZURE_API_BASE
+      #     api_key: os.environ/AZURE_API_KEY
+      #     api_version: os.environ/AZURE_API_VERSION
+
+      # ─── Anthropic ───
+      # - model_name: claude-sonnet
+      #   litellm_params:
+      #     model: anthropic/claude-3-5-sonnet-20241022
+      #     api_key: os.environ/ANTHROPIC_API_KEY
+
+      # ─── AWS Bedrock ───
+      # - model_name: bedrock-claude
+      #   litellm_params:
+      #     model: bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0
+      #     aws_region_name: os.environ/AWS_REGION_NAME
+
+# ─── Model provider (control plane) ─────────────────────────────────────────────
+# Reconciles Ark Model resources + scoped virtual keys into tenant namespaces, so
+# tenants reference models by name and hold only a scoped token (never a provider
+# key). Set enabled=false to deploy the proxy alone.
+modelProvider:
+  enabled: true
+  image:
+    # Published by CI as ghcr.io/<owner>/<repo>/<service-name>. DevSpace overrides
+    # this with a locally-built image for development.
+    repository: ghcr.io/mckinsey/agents-at-scale-marketplace/litellm-model-provider
+    tag: latest
+    pullPolicy: IfNotPresent
+  serviceAccount:
+    name: litellm-model-provider
+  # Connection to the proxy + its master key (lists models, mints/scopes vkeys).
+  litellm:
+    baseUrl: http://litellm.ark-system.svc.cluster.local:4000
+    masterKeySecret:
+      name: litellm-masterkey
+      key: masterkey
+  # Full re-sync cadence; picks up models added to LiteLLM and config changes.
+  reconcileIntervalSeconds: 60
+  # Secret created in each tenant namespace holding the virtual key.
+  vkeySecretName: litellm-vkey
+  # Dashboard icon stamped on generated Model resources. Served from the
+  # marketplace docs site (docs/public/icons/litellm.png) rather than an external
+  # CDN, so the link stays stable and owned by this repo.
+  modelIcon: "https://mckinsey.github.io/agents-at-scale-marketplace/icons/litellm.png"
+  # Namespaces to provision into. Omit `models` for all models (key is then
+  # unrestricted, so models added later sync with no key change); list `models`
+  # to scope a namespace to a subset.
+  targets:
+    - namespace: default
+      # models:
+      #   - gpt-4o
+  rbac:
+    # Cluster-scoped: target namespaces are dynamic config, so the provider
+    # manages Model resources + the vkey Secret across namespaces.
+    create: true

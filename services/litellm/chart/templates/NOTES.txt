@@ -1,0 +1,37 @@
+LiteLLM deployed to namespace: {{ .Release.Namespace }}
+
+Dashboard /ui login: admin / admin (weak dev default — CHANGE FOR PRODUCTION).
+Master key: set via masterKey (defaults to a weak dev value — change for prod).
+
+Provider keys are read from the Secret: litellm-provider-secrets
+Create it before use, e.g.:
+
+  kubectl create secret generic litellm-provider-secrets -n {{ .Release.Namespace }} \
+    --from-literal=OPENAI_API_KEY=sk-...
+
+Reach the proxy in-cluster:
+  http://litellm.{{ .Release.Namespace }}.svc.cluster.local:4000
+
+Quick checks (port-forward, then use the master key):
+  kubectl port-forward -n {{ .Release.Namespace }} svc/litellm 4000:4000
+  curl http://localhost:4000/v1/models -H "Authorization: Bearer $MASTER_KEY"
+
+Mint a per-tenant virtual key scoped to specific models:
+  curl -X POST http://localhost:4000/key/generate \
+    -H "Authorization: Bearer $MASTER_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"models": ["gpt-4o"], "metadata": {"team": "tenant-a"}}'
+
+{{ if .Values.modelProvider.enabled }}
+Model provider (control plane) is ENABLED, syncing every {{ .Values.modelProvider.reconcileIntervalSeconds }}s into:
+{{- range .Values.modelProvider.targets }}
+  - {{ .namespace }}{{ if .models }} (models: {{ join ", " .models }}){{ else }} (all models){{ end }}
+{{- end }}
+
+It mints a virtual key per namespace and creates Ark Model resources. Verify:
+  kubectl get models -n <namespace>
+  kubectl logs -n {{ .Release.Namespace }} deploy/litellm-model-provider -f
+{{- else }}
+Model provider (control plane) is DISABLED — proxy only. Enable with
+modelProvider.enabled=true to auto-sync models into tenant namespaces.
+{{- end }}

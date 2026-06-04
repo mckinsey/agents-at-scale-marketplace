@@ -18,6 +18,9 @@ __pycache__/
 *.pyd
 .Python
 *.so
+.venv/
+.pytest_cache/
+*.egg-info/
 
 # Just keep some stuff locally
 .local/
@@ -30,3 +33,9 @@ downloaded-outputs/
 
 # Claude Code
 .claude/
+
+# Scratch / temp work
+scratch/
+
+# DevSpace cache
+.devspace/

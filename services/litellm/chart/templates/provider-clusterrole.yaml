@@ -1,0 +1,20 @@
+{{- if and .Values.modelProvider.enabled .Values.modelProvider.rbac.create }}
+# Manages the virtual-key Secret and Ark Model resources in tenant namespaces,
+# and reads namespaces. Cluster-scoped because target namespaces are config.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Chart.Name }}-model-provider
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}-model-provider
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "update", "patch"]
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["models"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+{{- end }}

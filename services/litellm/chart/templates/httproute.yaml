@@ -1,0 +1,36 @@
+{{- if .Values.httpRoute.enabled -}}
+{{- if .Capabilities.APIVersions.Has "gateway.networking.k8s.io/v1/HTTPRoute" -}}
+# Exposes the LiteLLM admin UI (served at /ui on the proxy port). Disabled by
+# default — enable for Gateway API routing. UI login uses the master key.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+  {{- with .Values.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.httpRoute.parentRefs }}
+  parentRefs:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ .Values.service.name }}
+          port: {{ .Values.service.port }}
+{{- else }}
+# WARNING: httpRoute.enabled is true but Gateway API CRDs are not installed.
+# Skipping HTTPRoute. Install Gateway API CRDs or set httpRoute.enabled=false.
+{{- end }}
+{{- end }}
