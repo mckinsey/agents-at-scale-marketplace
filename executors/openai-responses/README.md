@@ -130,7 +130,24 @@ This executor serves a built-in chat + file-upload UI at `GET /` on the pod, bac
 
 - `POST /chat` — SSE stream of text deltas, with conversation threading via `previous_response_id` saved under `SESSIONS_DIR/<conversationId>/`.
 - `POST /chat/reset` — drop the saved `previous_response_id` for a conversation.
-- `/v1/files` (POST/GET/DELETE) — OpenAI-compatible Files API. Uploads here can be attached to queries via the `executor-openai-file-inputs.ark.mckinsey.com/file-ids` annotation — see the [`openai-file-inputs` executor](../openai-file-inputs/README.md) for the annotation cascade. The same annotation works whether the chat agent targets this executor or `openai-file-inputs`.
+- `/v1/files` (POST/GET/DELETE) — OpenAI-compatible Files API. Uploads here can be attached to queries via the `executor-openai-responses.ark.mckinsey.com/file-ids` annotation (a JSON array of file IDs, e.g. `["file-abc123"]`).
+
+### Attaching files to queries
+
+Set the annotation on the Query (or Agent, or ExecutionEngine — Query wins) and the executor passes each ID as an `input_file` content part to the Responses API:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/file-ids: '["file-abc123"]'
+spec:
+  input: Summarise the attached document.
+  target: {type: agent, name: my-responses-agent}
+```
+
+File IDs come from this executor's `/v1/files` endpoint or from uploading directly to the OpenAI Files API with the same credentials the agent's Model uses.
 
 ### Scoping uploads to an agent
 

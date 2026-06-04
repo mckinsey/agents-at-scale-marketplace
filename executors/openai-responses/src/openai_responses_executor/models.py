@@ -16,12 +16,10 @@ logger = logging.getLogger(__name__)
 ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
 REASONING_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/reasoning"
 OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/output-schema"
-# Shared with executor-openai-file-inputs: a paired file-assistant agent uploads
-# files via that executor and the dashboard passes the resulting file IDs to
-# whichever agent the user chats with. Both executors honour the same key so
-# files attach uniformly whether the chat target is the file-inputs agent or a
-# regular responses agent paired with one.
-FILE_IDS_ANNOTATION_KEY = "executor-openai-file-inputs.ark.mckinsey.com/file-ids"
+# File IDs returned by the /v1/files upload API (or uploaded directly to the
+# OpenAI Files API) attach to queries via this annotation; the value is a JSON
+# array of IDs, resolved with the Query > Agent > ExecutionEngine cascade.
+FILE_IDS_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/file-ids"
 
 
 # ---------------------------------------------------------------------------
