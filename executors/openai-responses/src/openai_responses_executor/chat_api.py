@@ -7,8 +7,8 @@ directly, reusing:
 
 * ``resolve_agent_context`` for the agent's Model creds + prompt;
 * ``file_index`` for the per-agent ``file_ids`` to attach;
-* ``previous_response_id`` files on the PVC for conversation threading
-  (same path the BaseExecutor uses).
+* the shared ``sessions`` store for conversation threading (same path the
+  BaseExecutor uses).
 
 Production traffic should still go via Ark. This endpoint exists so the
 upload UI feels like the dashboard chat without requiring the dashboard
@@ -17,6 +17,7 @@ or an Ark control plane.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, AsyncIterator
@@ -25,13 +26,14 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
+from . import sessions
 from .agent_credentials import (
     AgentContext,
     parse_agent_ref,
     resolve_agent_context,
 )
 from .config import config
-from .file_index import get_index
+from .file_index import ENV_INDEX_KEY, get_index
 
 logger = logging.getLogger(__name__)
 
@@ -63,61 +65,33 @@ async def _resolve_context(request: Request) -> AgentContext:
         return _env_context()
     namespace, name = agent
     ctx = await resolve_agent_context(name, namespace)
-    if ctx is not None:
-        return ctx
-    logger.info(
-        "agent %s/%s did not resolve; using env fallback for /chat",
-        namespace,
-        name,
-    )
-    return _env_context()
+    if ctx is None:
+        # An explicit ?agent= that doesn't resolve is an error, not a cue to
+        # fall back to the env key — that silently sends the conversation to
+        # whatever OpenAI project the cluster-wide key belongs to.
+        raise ValueError(
+            f"Could not resolve credentials for agent {namespace}/{name} "
+            "(agent/Model/Secret missing or not readable by this executor's "
+            "service account). Drop ?agent= to use the env-var fallback.",
+        )
+    return ctx
 
 
-def _file_ids_for(request: Request) -> list[str]:
+async def _file_ids_for(request: Request) -> list[str]:
     agent = _agent_param(request)
-    if agent is None:
-        return []
-    _, name = agent
+    name = agent[1] if agent is not None else ENV_INDEX_KEY
     try:
-        return list(get_index(config.sessions_dir).list_for_agent(name))
+        index = get_index(config.sessions_dir)
+        return list(await asyncio.to_thread(index.list_for_agent, name))
     except Exception as e:
         logger.warning("file_index list failed for %s: %s", name, e)
         return []
 
 
-def _conv_dir(conversation_id: str):
-    return config.sessions_dir / conversation_id
-
-
-def _get_previous_response_id(conversation_id: str) -> str | None:
-    path = _conv_dir(conversation_id) / "response_id"
-    if path.exists():
-        return path.read_text().strip() or None
-    return None
-
-
-def _save_response_id(conversation_id: str, response_id: str) -> None:
-    d = _conv_dir(conversation_id)
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "response_id").write_text(response_id)
-
-
-def _clear_conversation(conversation_id: str) -> None:
-    path = _conv_dir(conversation_id) / "response_id"
-    if path.exists():
-        path.unlink()
-
-
 def _build_input(
     user_text: str,
     file_ids: list[str],
-    previous_response_id: str | None,
 ) -> str | list[dict[str, Any]]:
-    if previous_response_id:
-        # Continuation turns can be plain text — the server already has the
-        # prior file_ids in its response state. Re-attaching them confuses
-        # the model with duplicate input_file parts.
-        return user_text
     if not file_ids:
         return user_text
     content: list[dict[str, Any]] = [{"type": "input_file", "file_id": fid} for fid in file_ids]
@@ -141,11 +115,16 @@ async def _stream_chat(
         api_key=ctx.api_key,
         **({"base_url": ctx.base_url} if ctx.base_url else {}),
     )
-    prev_id = _get_previous_response_id(conversation_id)
+    prev_id = await sessions.get_previous_response_id(conversation_id)
+    # Attach only files new to this conversation: the threaded response state
+    # already holds previously attached files, and re-attaching duplicates
+    # input_file parts. Files uploaded mid-conversation still attach.
+    sent = await sessions.get_sent_file_ids(conversation_id) if prev_id else set()
+    attach_ids = [fid for fid in file_ids if fid not in sent]
     api_kwargs: dict[str, Any] = {
         "model": ctx.model_name,
         "instructions": ctx.instructions,
-        "input": _build_input(message, file_ids, prev_id),
+        "input": _build_input(message, attach_ids),
     }
     if prev_id:
         api_kwargs["previous_response_id"] = prev_id
@@ -153,7 +132,7 @@ async def _stream_chat(
     yield _sse({
         "type": "start",
         "model": ctx.model_name,
-        "file_ids": file_ids if not prev_id else [],
+        "file_ids": attach_ids,
         "conversationId": conversation_id,
     })
 
@@ -163,7 +142,8 @@ async def _stream_chat(
                 if event.type == "response.output_text.delta":
                     yield _sse({"type": "delta", "text": event.delta})
             final = await stream.get_final_response()
-        _save_response_id(conversation_id, final.id)
+        await sessions.save_response_id(conversation_id, final.id)
+        await sessions.mark_file_ids_sent(conversation_id, set(attach_ids))
         yield _sse({"type": "done", "response_id": final.id})
     except Exception as e:
         logger.exception("chat stream failed")
@@ -189,7 +169,7 @@ async def chat(request: Request) -> StreamingResponse | JSONResponse:
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
-    file_ids = _file_ids_for(request)
+    file_ids = await _file_ids_for(request)
 
     return StreamingResponse(
         _stream_chat(ctx, message, conversation_id, file_ids),
@@ -206,7 +186,7 @@ async def reset_chat(request: Request) -> JSONResponse:
     conversation_id = (body.get("conversationId") or "").strip()
     if not conversation_id:
         return JSONResponse({"error": "conversationId is required"}, status_code=400)
-    _clear_conversation(conversation_id)
+    await sessions.clear_conversation(conversation_id)
     return JSONResponse({"ok": True, "conversationId": conversation_id})
 
 

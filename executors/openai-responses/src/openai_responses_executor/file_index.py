@@ -22,9 +22,14 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Process-wide lock — Starlette runs handlers on a single asyncio loop so writes
-# don't actually race, but multiple replicas would; if we ever scale beyond 1
-# pod the index needs a real backend. Today: 1 replica, file-level safety only.
+# Index key for uploads made without ?agent= (env-var credential mode), so
+# env-mode uploads can still be attached to /chat conversations.
+ENV_INDEX_KEY = "__env__"
+
+# Process-wide lock — index calls run via asyncio.to_thread so they can
+# genuinely interleave; the lock serialises read-modify-write cycles. Multiple
+# replicas would still race; if we ever scale beyond 1 pod the index needs a
+# real backend. Today: 1 replica, file-level safety only.
 _lock = threading.Lock()
 
 

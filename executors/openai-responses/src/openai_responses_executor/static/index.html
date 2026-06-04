@@ -271,7 +271,7 @@
       <div class="messages" id="messages">
         <div class="empty-chat">
           Drop files on the right, then ask a question.<br>
-          Files attached to this agent are sent with your first message.
+          Files attached to this agent are sent with your next message.
         </div>
       </div>
       <div class="attached-hint" id="attached-hint" hidden></div>
@@ -414,14 +414,13 @@
 
   function updateAttachedHint() {
     if (!state.files.length) { els.attachedHint.hidden = true; return; }
+    els.attachedHint.hidden = false;
     if (state.messages.length === 0) {
-      els.attachedHint.hidden = false;
       els.attachedHint.textContent =
         `${state.files.length} file${state.files.length === 1 ? "" : "s"} will be attached to your first message.`;
     } else {
-      els.attachedHint.hidden = false;
       els.attachedHint.textContent =
-        "Files were attached on the first turn. New uploads apply to a fresh conversation — use Reset to start one.";
+        "Files already sent stay in the conversation; new uploads attach with your next message.";
     }
   }
 
@@ -616,7 +615,7 @@
   async function resetChat() {
     if (!confirm("Reset this conversation? Server-side response state is dropped.")) return;
     try {
-      await fetch("/chat/reset", {
+      await fetch(apiUrl("/chat/reset"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId: ensureConversationId() }),

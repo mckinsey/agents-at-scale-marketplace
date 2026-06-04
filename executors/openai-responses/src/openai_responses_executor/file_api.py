@@ -9,25 +9,27 @@ Exposes:
 
 All endpoints accept ``?agent=<namespace>/<name>`` (or ``<name>``). When set,
 credentials are resolved from the agent's Model CR so uploads land in the same
-OpenAI project the agent's Responses calls will use. Uploads/deletes are also
-recorded in a per-agent index so the listing only returns this agent's files.
-Without ``?agent=``, the cluster-wide ``OPENAI_API_KEY`` env var is used and
-the listing returns every file the key can see.
+OpenAI project the agent's Responses calls will use; an agent that fails to
+resolve is a 400, not a silent fallback. Uploads/deletes are recorded in a
+per-agent index so the listing only returns that agent's files. Without
+``?agent=``, the cluster-wide ``OPENAI_API_KEY`` env var is used and uploads
+are indexed under a shared env-mode key so they can still attach to /chat.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from pathlib import Path
 
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route
 
 from .agent_credentials import parse_agent_ref, resolve_agent_openai_credentials
 from .config import config
-from .file_index import get_index
+from .file_index import ENV_INDEX_KEY, get_index
 from .providers import FileProvider, create_provider
 
 logger = logging.getLogger(__name__)
@@ -43,7 +45,17 @@ ALLOWED_EXTENSIONS = {
     ".xls", ".xlsx", ".tsv",
 }
 
-_UI_HTML = (Path(__file__).parent / "static" / "index.html").read_text()
+_ui_html: str | None = None
+
+
+def _load_ui_html() -> str:
+    # Lazy-loaded so a missing static asset breaks only the UI route, not the
+    # whole executor (this module is imported by app startup).
+    global _ui_html
+    if _ui_html is None:
+        _ui_html = (Path(__file__).parent / "static" / "index.html").read_text()
+    return _ui_html
+
 
 def _get_env_provider() -> FileProvider:
     if not config.openai_api_key:
@@ -65,6 +77,11 @@ def _agent_param(request: Request) -> tuple[str, str] | None:
     return parse_agent_ref(raw)
 
 
+def _index_key(request: Request) -> str:
+    agent = _agent_param(request)
+    return agent[1] if agent is not None else ENV_INDEX_KEY
+
+
 async def _get_provider_for_request(request: Request) -> FileProvider:
     agent = _agent_param(request)
     if agent is None:
@@ -73,23 +90,35 @@ async def _get_provider_for_request(request: Request) -> FileProvider:
     namespace, name = agent
     creds = await resolve_agent_openai_credentials(name, namespace)
     if creds is None:
-        logger.warning(
-            "Could not resolve OpenAI credentials for agent %s/%s; "
-            "falling back to env var provider.",
-            namespace,
-            name,
+        # An explicit ?agent= that doesn't resolve is an error: falling back to
+        # the env key would silently put files in a different OpenAI project
+        # from the one the agent's Responses calls use.
+        raise ValueError(
+            f"Could not resolve OpenAI credentials for agent {namespace}/{name} "
+            "(agent/Model/Secret missing or not readable by this executor's "
+            "service account). Drop ?agent= to use the env-var fallback.",
         )
-        return _get_env_provider()
 
     api_key, base_url = creds
     return create_provider(provider="openai", api_key=api_key, base_url=base_url)
 
 
-async def executor_ui(request: Request) -> HTMLResponse:
-    return HTMLResponse(_UI_HTML)
+async def executor_ui(request: Request) -> Response:
+    try:
+        return HTMLResponse(_load_ui_html())
+    except OSError:
+        logger.exception("executor UI asset missing")
+        return Response("Executor UI assets not available.", status_code=404)
 
 
 async def upload_file(request: Request) -> JSONResponse:
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > config.max_upload_bytes:
+        return JSONResponse(
+            {"error": f"File exceeds the {config.max_upload_bytes} byte upload limit."},
+            status_code=413,
+        )
+
     form = await request.form()
     upload = form.get("file")
     purpose = form.get("purpose", "user_data")
@@ -106,19 +135,23 @@ async def upload_file(request: Request) -> JSONResponse:
         )
 
     content = await upload.read()
+    if len(content) > config.max_upload_bytes:
+        return JSONResponse(
+            {"error": f"File exceeds the {config.max_upload_bytes} byte upload limit."},
+            status_code=413,
+        )
     try:
         provider = await _get_provider_for_request(request)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     result = await provider.upload(filename, content, purpose)
 
-    agent = _agent_param(request)
-    if agent is not None:
-        _, name = agent
-        try:
-            get_index(config.sessions_dir).add(name, result.id)
-        except Exception as e:
-            logger.warning("file_index add failed for %s/%s: %s", name, result.id, e)
+    name = _index_key(request)
+    try:
+        index = get_index(config.sessions_dir)
+        await asyncio.to_thread(index.add, name, result.id)
+    except Exception as e:
+        logger.warning("file_index add failed for %s/%s: %s", name, result.id, e)
 
     return JSONResponse(result.to_dict(), status_code=201)
 
@@ -131,12 +164,11 @@ async def list_files(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(e)}, status_code=400)
     files = await provider.list_files(purpose=purpose)
 
-    agent = _agent_param(request)
-    if agent is not None:
-        _, name = agent
-        known_ids = {f.id for f in files}
-        survivors = set(get_index(config.sessions_dir).prune_to(name, known_ids))
-        files = [f for f in files if f.id in survivors]
+    name = _index_key(request)
+    known_ids = {f.id for f in files}
+    index = get_index(config.sessions_dir)
+    survivors = set(await asyncio.to_thread(index.prune_to, name, known_ids))
+    files = [f for f in files if f.id in survivors]
 
     return JSONResponse({"data": [f.to_dict() for f in files], "object": "list"})
 
@@ -159,13 +191,12 @@ async def delete_file(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(e)}, status_code=400)
     result = await provider.delete(file_id)
 
-    agent = _agent_param(request)
-    if agent is not None:
-        _, name = agent
-        try:
-            get_index(config.sessions_dir).remove(name, file_id)
-        except Exception as e:
-            logger.warning("file_index remove failed for %s/%s: %s", name, file_id, e)
+    name = _index_key(request)
+    try:
+        index = get_index(config.sessions_dir)
+        await asyncio.to_thread(index.remove, name, file_id)
+    except Exception as e:
+        logger.warning("file_index remove failed for %s/%s: %s", name, file_id, e)
 
     return JSONResponse(result.to_dict())
 

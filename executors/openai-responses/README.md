@@ -153,17 +153,20 @@ File IDs come from this executor's `/v1/files` endpoint or from uploading direct
 
 All `/v1/files` endpoints accept `?agent=<namespace>/<name>` (or just `<name>`). When set:
 
-- Credentials come from the named agent's `modelRef.config.openai.{apiKey,baseUrl}`, so uploads land in the same OpenAI project the agent's Responses calls use.
+- Credentials come from the named agent's `modelRef.config.openai.{apiKey,baseUrl}`, so uploads land in the same OpenAI project the agent's Responses calls use. An agent that fails to resolve is a `400` — there is no silent fallback to the env key.
 - `GET /v1/files` only returns files this agent uploaded (a per-agent index lives at `SESSIONS_DIR/file_index.json` on the executor's PVC).
 
-Without `?agent=`, the executor falls back to the cluster-wide `OPENAI_API_KEY` env var and `GET /v1/files` returns every file that key can see.
+Without `?agent=`, the executor uses the cluster-wide `OPENAI_API_KEY` env var; uploads are indexed under a shared env-mode key and `GET /v1/files` returns only those uploads.
+
+Files attach on the turn after upload: the first message carries everything uploaded so far, later uploads attach with the next message of the same conversation (already-sent files are tracked per conversation and not re-attached).
 
 | Env Var | Default | Description |
 |---|---|---|
 | `OPENAI_API_KEY` | — | Cluster-wide fallback for Files API |
 | `OPENAI_BASE_URL` | — | Optional override for the fallback |
 | `FILE_PROVIDER` | `openai` | File backend (only `openai` today) |
-| `SESSIONS_DIR` | `/data/sessions` | Persistence for response IDs and the per-agent file index |
+| `MAX_UPLOAD_BYTES` | `52428800` (50MB) | Upload size limit (uploads buffer in pod memory) |
+| `SESSIONS_DIR` | `/data/sessions` | Persistence for response IDs, attached-file tracking, and the per-agent file index |
 
 ## Deployment
 

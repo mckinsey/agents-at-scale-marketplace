@@ -87,7 +87,9 @@ class OpenAIFileProvider(FileProvider):
         kwargs: dict[str, Any] = {}
         if purpose:
             kwargs["purpose"] = purpose
-        result = await self._client.files.list(**kwargs)
+        # Iterate the cursor so pagination is followed: a single page would
+        # under-report on large orgs, and callers prune the per-agent index
+        # against this listing — a partial page would delete valid entries.
         return [
             FileObject(
                 id=f.id,
@@ -98,7 +100,7 @@ class OpenAIFileProvider(FileProvider):
                 provider=self.name,
                 status=f.status or "processed",
             )
-            for f in result.data
+            async for f in self._client.files.list(**kwargs)
         ]
 
     async def get(self, file_id: str) -> FileObject:

@@ -19,6 +19,9 @@ class ExecutorConfig(BaseSettings):
     file_provider: str = Field(default="openai", validation_alias="FILE_PROVIDER")
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
     openai_base_url: str = Field(default="", validation_alias="OPENAI_BASE_URL")
+    # Uploads buffer in pod memory before reaching the provider; keep the cap
+    # well under the container memory limit (512Mi in the default chart).
+    max_upload_bytes: int = Field(default=50 * 1024 * 1024, validation_alias="MAX_UPLOAD_BYTES")
 
     # Defaults used by the /chat endpoint when no ?agent= is specified or the
     # agent can't be resolved from k8s (e.g. local dev without a cluster). When
