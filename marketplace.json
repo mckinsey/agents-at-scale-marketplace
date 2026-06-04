@@ -71,6 +71,41 @@
             }
         },
         {
+            "name": "litellm",
+            "type": "service",
+            "displayName": "LiteLLM",
+            "description": "Central LLM credential broker for the Ark system namespace: proxy + Postgres plus a model provider that syncs models and scoped keys into tenant namespaces",
+            "version": "0.1.0",
+            "author": "ARK Marketplace",
+            "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "license": "Apache-2.0",
+            "tags": [
+                "llm",
+                "proxy",
+                "credentials",
+                "gateway",
+                "multi-tenant"
+            ],
+            "category": "infrastructure",
+            "icon": "https://mckinsey.github.io/agents-at-scale-marketplace/icons/litellm.png",
+            "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/services/litellm/",
+            "support": {
+                "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+            },
+            "ark": {
+                "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/litellm",
+                "namespace": "ark-system",
+                "helmReleaseName": "litellm",
+                "installArgs": [
+                    "--create-namespace"
+                ],
+                "k8sServiceName": "litellm",
+                "k8sServicePort": 4000,
+                "k8sDeploymentName": "litellm"
+            }
+        },
+        {
             "name": "a2a-inspector",
             "type": "service",
             "displayName": "A2A Inspector",

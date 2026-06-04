@@ -1,0 +1,17 @@
+apiVersion: v2
+name: litellm
+description: LiteLLM proxy deployed to the Ark system namespace as a central LLM credential broker
+type: application
+version: 0.1.0
+appVersion: 1.87.0
+annotations:
+  ark.mckinsey.com/service: litellm
+  ark.mckinsey.com/resources: service
+  ark.mckinsey.com/marketplace-item-name: service/litellm
+dependencies:
+  # Official LiteLLM chart. Provider keys, Postgres, and the proxy come from
+  # here; this wrapper only adds Ark annotations, a master-key Secret, and a
+  # NetworkPolicy. Pin to a known-good upstream version.
+  - name: litellm-helm
+    version: 1.87.0
+    repository: oci://ghcr.io/berriai

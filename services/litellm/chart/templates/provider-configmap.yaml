@@ -1,0 +1,18 @@
+{{- if .Values.modelProvider.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-model-provider-config
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}-model-provider
+data:
+  # Master key is injected separately as an env var from a Secret.
+  config.yaml: |
+    litellm:
+      baseUrl: {{ .Values.modelProvider.litellm.baseUrl | quote }}
+    reconcileIntervalSeconds: {{ .Values.modelProvider.reconcileIntervalSeconds }}
+    vkeySecretName: {{ .Values.modelProvider.vkeySecretName | quote }}
+    modelIcon: {{ .Values.modelProvider.modelIcon | quote }}
+    targets:
+{{ .Values.modelProvider.targets | toYaml | indent 6 }}
+{{- end }}
