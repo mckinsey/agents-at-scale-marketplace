@@ -175,11 +175,15 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
                 )
                 return None
             instructions = _attr_or_key(agent.spec, "prompt") or ""
-            # The Model CR's name is the API-side model name (e.g. "gpt-4o").
+            # The API-side model id lives in spec.model (a ValueSource); the
+            # CR name is just a DNS-1123 k8s identifier (e.g. CR "gpt-5-4"
+            # vs model id "gpt-5.4-2026-03-05") and gateways reject it.
+            model_vs = _attr_or_key(model.spec, "model")
+            model_id = await _resolve_value_source(model_vs, model_ns) or model_ref_name
             return AgentContext(
                 api_key=api_key,
                 base_url=base_url or None,
-                model_name=model_ref_name,
+                model_name=model_id,
                 instructions=instructions,
             )
     except Exception as e:
