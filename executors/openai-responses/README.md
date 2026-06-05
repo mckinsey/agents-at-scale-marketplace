@@ -158,6 +158,8 @@ All `/v1/files` endpoints accept `?agent=<namespace>/<name>` (or just `<name>`).
 
 Without `?agent=`, the executor uses the cluster-wide `OPENAI_API_KEY` env var; uploads are indexed under a shared env-mode key and `GET /v1/files` returns only those uploads.
 
+> **IMPORTANT**: by default (`UPLOADED_FILES_ONLY=true`) the file listing only shows files uploaded *through this executor* for the requesting agent. The raw OpenAI Files listing is everything the API key can see — on a shared LLM gateway key that is the entire org's uploads (easily thousands of files belonging to other teams). Set `UPLOADED_FILES_ONLY=false` only if you understand you are exposing the full upstream listing to every UI user. Chat attachment always uses the per-agent uploads regardless of this setting.
+
 Files attach on the turn after upload: the first message carries everything uploaded so far, later uploads attach with the next message of the same conversation (already-sent files are tracked per conversation and not re-attached).
 
 | Env Var | Default | Description |
@@ -166,6 +168,7 @@ Files attach on the turn after upload: the first message carries everything uplo
 | `OPENAI_BASE_URL` | — | Optional override for the fallback |
 | `FILE_PROVIDER` | `openai` | File backend (only `openai` today) |
 | `MAX_UPLOAD_BYTES` | `52428800` (50MB) | Upload size limit (uploads buffer in pod memory) |
+| `UPLOADED_FILES_ONLY` | `true` | List only files uploaded through this executor (see IMPORTANT note above) |
 | `SESSIONS_DIR` | `/data/sessions` | Persistence for response IDs, attached-file tracking, and the per-agent file index |
 
 ## Deployment

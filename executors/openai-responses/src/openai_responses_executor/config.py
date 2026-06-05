@@ -22,6 +22,11 @@ class ExecutorConfig(BaseSettings):
     # Uploads buffer in pod memory before reaching the provider; keep the cap
     # well under the container memory limit (512Mi in the default chart).
     max_upload_bytes: int = Field(default=50 * 1024 * 1024, validation_alias="MAX_UPLOAD_BYTES")
+    # When true (default), GET /v1/files only returns files uploaded through
+    # this executor for the requesting agent. On a shared gateway key the raw
+    # upstream listing is the whole org's files — leaking those to every UI
+    # user is rarely what you want, so turning this off is an explicit opt-in.
+    uploaded_files_only: bool = Field(default=True, validation_alias="UPLOADED_FILES_ONLY")
 
     # Defaults used by the /chat endpoint when no ?agent= is specified or the
     # agent can't be resolved from k8s (e.g. local dev without a cluster). When
