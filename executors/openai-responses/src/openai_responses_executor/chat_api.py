@@ -169,7 +169,13 @@ async def chat(request: Request) -> StreamingResponse | JSONResponse:
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
-    file_ids = await _file_ids_for(request)
+    # Explicit selection from the UI wins; falling back to "everything in the
+    # per-agent index" keeps plain API callers working.
+    selected = body.get("file_ids")
+    if isinstance(selected, list):
+        file_ids = [fid for fid in selected if isinstance(fid, str) and fid]
+    else:
+        file_ids = await _file_ids_for(request)
 
     return StreamingResponse(
         _stream_chat(ctx, message, conversation_id, file_ids),

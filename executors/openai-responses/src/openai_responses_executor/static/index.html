@@ -274,7 +274,7 @@
       <div class="messages" id="messages">
         <div class="empty-chat">
           Drop files on the right, then ask a question.<br>
-          Files attached to this agent are sent with your next message.
+          Tick files to attach them to your next message; new uploads are ticked automatically.
         </div>
       </div>
       <div class="attached-hint" id="attached-hint" hidden></div>
@@ -323,6 +323,7 @@
 
   const state = {
     files: [],
+    selected: new Set(), // file ids to attach with the next message
     messages: [],
     streaming: false,
     conversationId: null,
@@ -420,6 +421,7 @@
     }
     els.filesList.innerHTML = state.files.map((f) => `
       <div class="file-row" data-id="${escapeHtml(f.id)}">
+        <input type="checkbox" data-action="select" data-id="${escapeHtml(f.id)}" ${state.selected.has(f.id) ? "checked" : ""} title="Attach to your next message">
         <div style="min-width:0;flex:1;">
           <div class="name" title="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</div>
           <span class="id">${escapeHtml(f.id)}</span>
@@ -430,19 +432,23 @@
     els.filesList.querySelectorAll('[data-action="delete"]').forEach((b) => {
       b.addEventListener("click", () => deleteFile(b.dataset.id, b.dataset.name));
     });
+    els.filesList.querySelectorAll('[data-action="select"]').forEach((cb) => {
+      cb.addEventListener("change", () => {
+        if (cb.checked) state.selected.add(cb.dataset.id);
+        else state.selected.delete(cb.dataset.id);
+        updateAttachedHint();
+      });
+    });
     updateAttachedHint();
   }
 
   function updateAttachedHint() {
     if (!state.files.length) { els.attachedHint.hidden = true; return; }
     els.attachedHint.hidden = false;
-    if (state.messages.length === 0) {
-      els.attachedHint.textContent =
-        `${state.files.length} file${state.files.length === 1 ? "" : "s"} will be attached to your first message.`;
-    } else {
-      els.attachedHint.textContent =
-        "Files already sent stay in the conversation; new uploads attach with your next message.";
-    }
+    const n = state.selected.size;
+    els.attachedHint.textContent = n
+      ? `${n} file${n === 1 ? "" : "s"} selected — attach with your next message.`
+      : "Tick files to attach them to your next message.";
   }
 
   // Listing can be slow (a shared gateway key lists the whole org's files)
@@ -497,6 +503,7 @@
         }
         showToast("Uploaded " + data.filename, "ok");
         recentUploads.set(data.id, data);
+        state.selected.add(data.id); // session uploads attach by default
         if (!state.files.some((f) => f.id === data.id)) state.files.unshift(data);
         renderFiles();
       } catch (e) {
@@ -517,6 +524,7 @@
       }
       showToast("Deleted " + (filename || id), "ok");
       recentUploads.delete(id);
+      state.selected.delete(id);
       state.files = state.files.filter((f) => f.id !== id);
       renderFiles();
       loadFiles();
@@ -591,7 +599,11 @@
       const res = await fetch(apiUrl("/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, conversationId: ensureConversationId() }),
+        body: JSON.stringify({
+          message: text,
+          conversationId: ensureConversationId(),
+          file_ids: [...state.selected],
+        }),
       });
 
       if (!res.ok || !res.body) {
@@ -624,6 +636,9 @@
         if (ev.type === "start") {
           els.modelBadge.textContent = "model: " + ev.model;
           if (ev.file_ids && ev.file_ids.length) addAttachmentChips(userMsg, ev.file_ids);
+          // Selection consumed: the conversation now holds these files.
+          state.selected.clear();
+          renderFiles();
         } else if (ev.type === "delta") {
           if (typing.parentNode) typing.remove();
           if (!updatedBody.dataset.committed) {
@@ -698,6 +713,7 @@
   els.agent.addEventListener("change", () => {
     persistAgent();
     refreshScope();
+    state.selected.clear();
     state.messages = [];
     els.messages.innerHTML = '<div class="empty-chat">Switched agent. Files and conversation reloaded.</div>';
     loadFiles();
