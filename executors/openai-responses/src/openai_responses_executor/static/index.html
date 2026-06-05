@@ -440,20 +440,34 @@
     }
   }
 
+  // Listing can be slow (a shared gateway key lists the whole org's files)
+  // and eventually consistent (a fresh listing can briefly miss a file we
+  // just uploaded). So: show an explicit loading state, only the latest
+  // request wins, keep the last good list on errors, and union in recent
+  // uploads the listing hasn't caught up with yet.
+  let loadSeq = 0;
+  const recentUploads = new Map(); // id -> file object, until seen in a listing
+
   async function loadFiles() {
+    const seq = ++loadSeq;
+    els.filesScope.textContent = "loading…";
     try {
       const res = await fetch(apiUrl("/v1/files"));
       const data = await res.json();
+      if (seq !== loadSeq) return; // a newer request superseded this one
       if (!res.ok) {
-        state.files = [];
-        renderFiles();
         showToast(data.error || ("Failed to load files (" + res.status + ")"), "err");
-        return;
+        return; // keep the last good list
       }
-      state.files = data.data || [];
+      const files = data.data || [];
+      for (const f of files) recentUploads.delete(f.id);
+      for (const f of recentUploads.values()) files.unshift(f);
+      state.files = files;
       renderFiles();
     } catch (e) {
-      showToast("Files error: " + e.message, "err");
+      if (seq === loadSeq) showToast("Files error: " + e.message, "err");
+    } finally {
+      if (seq === loadSeq) refreshScope();
     }
   }
 
@@ -471,6 +485,9 @@
           continue;
         }
         showToast("Uploaded " + data.filename, "ok");
+        recentUploads.set(data.id, data);
+        if (!state.files.some((f) => f.id === data.id)) state.files.unshift(data);
+        renderFiles();
       } catch (e) {
         showToast("Upload error: " + e.message, "err");
       }
@@ -488,6 +505,9 @@
         return;
       }
       showToast("Deleted " + (filename || id), "ok");
+      recentUploads.delete(id);
+      state.files = state.files.filter((f) => f.id !== id);
+      renderFiles();
       loadFiles();
     } catch (e) {
       showToast("Delete error: " + e.message, "err");
