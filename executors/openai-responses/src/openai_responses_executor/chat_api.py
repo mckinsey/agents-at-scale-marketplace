@@ -64,15 +64,15 @@ async def _resolve_context(request: Request) -> AgentContext:
     if agent is None:
         return _env_context()
     namespace, name = agent
+    # Resolution failures (not found, RBAC, bad Secret ref) raise ValueError
+    # with the precise reason; an explicit ?agent= must never silently fall
+    # back to the env key (wrong OpenAI project).
     ctx = await resolve_agent_context(name, namespace)
     if ctx is None:
-        # An explicit ?agent= that doesn't resolve is an error, not a cue to
-        # fall back to the env key — that silently sends the conversation to
-        # whatever OpenAI project the cluster-wide key belongs to.
         raise ValueError(
-            f"Could not resolve credentials for agent {namespace}/{name} "
-            "(agent/Model/Secret missing or not readable by this executor's "
-            "service account). Drop ?agent= to use the env-var fallback.",
+            f"Agent {namespace}/{name} has no OpenAI model configured "
+            "(no modelRef, or its Model has no openai config). "
+            "Drop ?agent= to use the env-var fallback.",
         )
     return ctx
 

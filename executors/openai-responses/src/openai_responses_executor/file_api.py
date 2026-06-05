@@ -116,15 +116,15 @@ async def _get_provider_for_request(request: Request) -> FileProvider:
         return _get_env_provider()
 
     namespace, name = agent
+    # Resolution failures (not found, RBAC, bad Secret ref) raise ValueError
+    # with the precise reason; an explicit ?agent= must never silently fall
+    # back to the env key (wrong OpenAI project).
     creds = await resolve_agent_openai_credentials(name, namespace)
     if creds is None:
-        # An explicit ?agent= that doesn't resolve is an error: falling back to
-        # the env key would silently put files in a different OpenAI project
-        # from the one the agent's Responses calls use.
         raise ValueError(
-            f"Could not resolve OpenAI credentials for agent {namespace}/{name} "
-            "(agent/Model/Secret missing or not readable by this executor's "
-            "service account). Drop ?agent= to use the env-var fallback.",
+            f"Agent {namespace}/{name} has no OpenAI model configured "
+            "(no modelRef, or its Model has no openai config). "
+            "Drop ?agent= to use the env-var fallback.",
         )
 
     api_key, base_url = creds
