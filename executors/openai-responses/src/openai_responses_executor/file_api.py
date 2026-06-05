@@ -23,6 +23,7 @@ import logging
 import os
 from pathlib import Path
 
+from openai import APIConnectionError, APIStatusError
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route
@@ -55,6 +56,33 @@ def _load_ui_html() -> str:
     if _ui_html is None:
         _ui_html = (Path(__file__).parent / "static" / "index.html").read_text()
     return _ui_html
+
+
+def _maps_provider_errors(handler):
+    """Surface upstream provider failures as structured errors, not bare 500s.
+
+    Client-side upstream errors (4xx, e.g. expired gateway credentials) pass
+    through with their status; upstream 5xx and connection failures map to 502.
+    """
+
+    async def wrapped(request: Request) -> Response:
+        try:
+            return await handler(request)
+        except APIStatusError as e:
+            status = e.status_code if 400 <= e.status_code < 500 else 502
+            logger.warning("provider call failed (%s): %s", e.status_code, e.message)
+            return JSONResponse(
+                {"error": f"Upstream file provider error ({e.status_code}): {e.message}"},
+                status_code=status,
+            )
+        except APIConnectionError as e:
+            logger.warning("provider connection failed: %s", e)
+            return JSONResponse(
+                {"error": f"Could not reach the upstream file provider: {e}"},
+                status_code=502,
+            )
+
+    return wrapped
 
 
 def _get_env_provider() -> FileProvider:
@@ -111,6 +139,7 @@ async def executor_ui(request: Request) -> Response:
         return Response("Executor UI assets not available.", status_code=404)
 
 
+@_maps_provider_errors
 async def upload_file(request: Request) -> JSONResponse:
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > config.max_upload_bytes:
@@ -156,6 +185,7 @@ async def upload_file(request: Request) -> JSONResponse:
     return JSONResponse(result.to_dict(), status_code=201)
 
 
+@_maps_provider_errors
 async def list_files(request: Request) -> JSONResponse:
     purpose = request.query_params.get("purpose")
     try:
@@ -173,6 +203,7 @@ async def list_files(request: Request) -> JSONResponse:
     return JSONResponse({"data": [f.to_dict() for f in files], "object": "list"})
 
 
+@_maps_provider_errors
 async def get_file(request: Request) -> JSONResponse:
     file_id = request.path_params["file_id"]
     try:
@@ -183,6 +214,7 @@ async def get_file(request: Request) -> JSONResponse:
     return JSONResponse(result.to_dict())
 
 
+@_maps_provider_errors
 async def delete_file(request: Request) -> JSONResponse:
     file_id = request.path_params["file_id"]
     try:
