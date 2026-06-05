@@ -45,8 +45,22 @@ dev:
   executor-openai-responses:
     imageSelector: executor-openai-responses
     namespace: default
+    # Run uvicorn with --reload so synced source changes restart the app;
+    # --factory because create_app() builds the Starlette instance.
+    command:
+      [
+        "sh",
+        "-c",
+        "cd /app && uv run uvicorn openai_responses_executor.app:create_app --factory --reload --reload-include '*.html' --host 0.0.0.0 --port 8000",
+      ]
     logs:
       lastLines: 50
+    sync:
+      - path: ./src:/app/src
+        startContainer: true
+        disableDownload: true
+    ssh:
+      enabled: true
 
 hooks:
   - command: |-
