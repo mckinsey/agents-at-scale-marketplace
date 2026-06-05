@@ -148,13 +148,13 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
     propagates — flattening those into None hid real failures behind
     silent credential fallbacks.
     """
-    from kubernetes_asyncio.client.exceptions import ApiException
-
     try:
         async with with_ark_client(namespace, V1_ALPHA1) as ark:
             try:
                 agent = await ark.agents.a_get(agent_name, namespace)
-            except ApiException as e:
+            except ValueError:
+                raise
+            except Exception as e:
                 raise _k8s_error("Agent", f"{namespace}/{agent_name}", e) from e
             model_ref = _attr_or_key(agent.spec, "model_ref", "modelRef")
             if not model_ref:
@@ -166,7 +166,9 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
                 return None
             try:
                 model = await ark.models.a_get(model_ref_name, model_ns)
-            except ApiException as e:
+            except ValueError:
+                raise
+            except Exception as e:
                 raise _k8s_error("Model", f"{model_ns}/{model_ref_name}", e) from e
             cfg = _attr_or_key(model.spec, "config")
             openai_cfg = _attr_or_key(cfg, "openai")
@@ -198,7 +200,7 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
                 model_name=model_id,
                 instructions=instructions,
             )
-    except (ValueError, ApiException):
+    except ValueError:
         raise
     except Exception:
         logger.exception(
@@ -207,11 +209,14 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
         raise
 
 
-def _k8s_error(kind: str, ref: str, e: Any) -> ValueError:
+def _k8s_error(kind: str, ref: str, e: Exception) -> ValueError:
+    # ark-sdk wraps kubernetes ApiException in a bare Exception whose text
+    # carries the status, so classify from both the attribute and the text.
     status = getattr(e, "status", None)
-    if status == 404:
+    text = str(e)
+    if status == 404 or "(404)" in text or "Not Found" in text:
         return ValueError(f"{kind} {ref} not found")
-    if status == 403:
+    if status == 403 or "(403)" in text or "Forbidden" in text:
         return ValueError(
             f"Access to {kind} {ref} forbidden — the executor's service "
             "account RBAC is namespace-scoped; cross-namespace refs are not "
