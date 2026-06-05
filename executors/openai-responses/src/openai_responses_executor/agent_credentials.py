@@ -214,9 +214,9 @@ def _k8s_error(kind: str, ref: str, e: Exception) -> ValueError:
     # carries the status, so classify from both the attribute and the text.
     status = getattr(e, "status", None)
     text = str(e)
-    if status == 404 or "(404)" in text or "Not Found" in text:
+    if status == 404 or "(404)" in text or "not found" in text.lower():
         return ValueError(f"{kind} {ref} not found")
-    if status == 403 or "(403)" in text or "Forbidden" in text:
+    if status == 403 or "(403)" in text or "forbidden" in text.lower():
         return ValueError(
             f"Access to {kind} {ref} forbidden — the executor's service "
             "account RBAC is namespace-scoped; cross-namespace refs are not "
