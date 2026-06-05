@@ -351,10 +351,26 @@
     return ensureConversationId();
   }
 
-  const initial = new URLSearchParams(location.search).get("agent");
+  // Agent selection sticks across reloads: explicit ?agent= wins, otherwise
+  // the last-used agent from localStorage — opening the bare URL silently
+  // dropping into env mode was a recurring footgun.
+  const AGENT_KEY = "files-ui-agent";
+  const initial = new URLSearchParams(location.search).get("agent")
+    || localStorage.getItem(AGENT_KEY) || "";
   if (initial) els.agent.value = initial;
 
   function agent() { return els.agent.value.trim(); }
+
+  function persistAgent() {
+    const a = agent();
+    if (a) localStorage.setItem(AGENT_KEY, a);
+    else localStorage.removeItem(AGENT_KEY);
+    const url = new URL(location.href);
+    if (a) url.searchParams.set("agent", a);
+    else url.searchParams.delete("agent");
+    history.replaceState(null, "", url);
+  }
+  persistAgent();
 
   function apiUrl(path) {
     const a = agent();
@@ -365,7 +381,7 @@
   function refreshScope() {
     const a = agent();
     els.scope.textContent = a ? "agent: " + a : "no agent (env fallback)";
-    els.filesScope.textContent = a ? a : "all org files";
+    els.filesScope.textContent = a ? a : "env uploads (no agent)";
     ensureConversationId();
   }
 
@@ -644,6 +660,7 @@
   });
   els.refreshFiles.addEventListener("click", loadFiles);
   els.agent.addEventListener("change", () => {
+    persistAgent();
     refreshScope();
     state.messages = [];
     els.messages.innerHTML = '<div class="empty-chat">Switched agent. Files and conversation reloaded.</div>';
