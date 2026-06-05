@@ -40,9 +40,9 @@ deployments:
           enabled: ${HTTPROUTE_ENABLED}
         executionEngine:
           enabled: true
-        files:
-          # Local dev: show the full upstream listing (see README IMPORTANT note).
-          uploadedOnly: false
+        # files.uploadedOnly defaults to true (chart values). Setting it false
+        # against a shared gateway is impractical: the org listing here is
+        # 35k+ files / ~7MB / ~30s per request.
 
 dev:
   executor-openai-responses:

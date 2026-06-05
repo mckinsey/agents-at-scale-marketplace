@@ -23,7 +23,7 @@ import logging
 import os
 from pathlib import Path
 
-from openai import APIConnectionError, APIStatusError
+from openai import APIConnectionError, APIStatusError, NotFoundError
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route
@@ -192,20 +192,31 @@ async def list_files(request: Request) -> JSONResponse:
         provider = await _get_provider_for_request(request)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
-    listing = await provider.list_files(purpose=purpose)
 
-    files = listing.files
     if config.uploaded_files_only:
+        # Drive the listing from the per-agent index and fetch each file by
+        # id. Listing upstream and filtering would pull the org's entire file
+        # set on a shared gateway key (observed: 35k files / ~7MB / ~30s).
         name = _index_key(request)
-        known_ids = {f.id for f in files}
         index = get_index(config.sessions_dir)
-        if listing.complete:
-            survivors = set(await asyncio.to_thread(index.prune_to, name, known_ids))
-        else:
-            # Incomplete upstream listing (gateway without cursor pagination):
-            # absence doesn't prove deletion, so filter without persisting prunes.
-            survivors = known_ids & set(await asyncio.to_thread(index.list_for_agent, name))
-        files = [f for f in files if f.id in survivors]
+        ids = await asyncio.to_thread(index.list_for_agent, name)
+        results = await asyncio.gather(
+            *(provider.get(fid) for fid in ids), return_exceptions=True
+        )
+        files = []
+        for fid, result in zip(ids, results):
+            if isinstance(result, NotFoundError):
+                # Definitively gone upstream — drop from the index.
+                await asyncio.to_thread(index.remove, name, fid)
+            elif isinstance(result, BaseException):
+                raise result
+            else:
+                files.append(result)
+        if purpose:
+            files = [f for f in files if f.purpose == purpose]
+    else:
+        listing = await provider.list_files(purpose=purpose)
+        files = listing.files
 
     return JSONResponse({"data": [f.to_dict() for f in files], "object": "list"})
 
