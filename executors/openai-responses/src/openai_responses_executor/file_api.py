@@ -192,13 +192,18 @@ async def list_files(request: Request) -> JSONResponse:
         provider = await _get_provider_for_request(request)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
-    files = await provider.list_files(purpose=purpose)
+    listing = await provider.list_files(purpose=purpose)
 
     name = _index_key(request)
-    known_ids = {f.id for f in files}
+    known_ids = {f.id for f in listing.files}
     index = get_index(config.sessions_dir)
-    survivors = set(await asyncio.to_thread(index.prune_to, name, known_ids))
-    files = [f for f in files if f.id in survivors]
+    if listing.complete:
+        survivors = set(await asyncio.to_thread(index.prune_to, name, known_ids))
+    else:
+        # Incomplete upstream listing (gateway without cursor pagination):
+        # absence doesn't prove deletion, so filter without persisting prunes.
+        survivors = known_ids & set(await asyncio.to_thread(index.list_for_agent, name))
+    files = [f for f in listing.files if f.id in survivors]
 
     return JSONResponse({"data": [f.to_dict() for f in files], "object": "list"})
 

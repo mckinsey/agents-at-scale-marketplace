@@ -5,9 +5,17 @@ Each provider implements upload/list/get/delete against a specific backend
 provider is configured.
 """
 
+import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+# Base URLs whose /files endpoint rejects cursor pagination (e.g. LLM gateways
+# that proxy the OpenAI API but 500 on the `after` param). Remembered so we
+# don't pay a retry cascade on every list call.
+_pagination_unsupported: set[str] = set()
 
 
 @dataclass
@@ -41,6 +49,19 @@ class DeleteResult:
         return {"id": self.id, "deleted": self.deleted}
 
 
+@dataclass
+class FileListing:
+    """A file listing plus whether it covers everything upstream.
+
+    ``complete=False`` means pagination could not be followed (unsupported by
+    the upstream gateway) — callers must not treat absence from ``files`` as
+    proof a file no longer exists.
+    """
+
+    files: list[FileObject] = field(default_factory=list)
+    complete: bool = True
+
+
 class FileProvider(ABC):
     name: str
 
@@ -49,7 +70,7 @@ class FileProvider(ABC):
         pass
 
     @abstractmethod
-    async def list_files(self, purpose: str | None = None) -> list[FileObject]:
+    async def list_files(self, purpose: str | None = None) -> FileListing:
         pass
 
     @abstractmethod
@@ -69,6 +90,7 @@ class OpenAIFileProvider(FileProvider):
         kwargs: dict[str, str] = {"api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
+        self._base_url = base_url or "https://api.openai.com/v1"
         self._client = AsyncOpenAI(**kwargs)
 
     async def upload(self, filename: str, content: bytes, purpose: str) -> FileObject:
@@ -83,25 +105,45 @@ class OpenAIFileProvider(FileProvider):
             status=result.status or "processed",
         )
 
-    async def list_files(self, purpose: str | None = None) -> list[FileObject]:
+    def _to_file_object(self, f: Any) -> FileObject:
+        return FileObject(
+            id=f.id,
+            filename=f.filename,
+            bytes=f.bytes,
+            created_at=f.created_at,
+            purpose=f.purpose,
+            provider=self.name,
+            status=f.status or "processed",
+        )
+
+    async def list_files(self, purpose: str | None = None) -> FileListing:
+        from openai import APIStatusError
+
         kwargs: dict[str, Any] = {}
         if purpose:
             kwargs["purpose"] = purpose
-        # Iterate the cursor so pagination is followed: a single page would
-        # under-report on large orgs, and callers prune the per-agent index
-        # against this listing — a partial page would delete valid entries.
-        return [
-            FileObject(
-                id=f.id,
-                filename=f.filename,
-                bytes=f.bytes,
-                created_at=f.created_at,
-                purpose=f.purpose,
-                provider=self.name,
-                status=f.status or "processed",
-            )
-            async for f in self._client.files.list(**kwargs)
-        ]
+        # Follow the cursor so large orgs aren't under-reported: callers prune
+        # the per-agent index against this listing, and a partial page would
+        # delete valid entries. Some gateways 500 on the `after` cursor param,
+        # so pagination failures degrade to an incomplete listing (prune is
+        # skipped) rather than failing the whole request.
+        page = await self._client.files.list(**kwargs)
+        files = [self._to_file_object(f) for f in page.data]
+        if self._base_url in _pagination_unsupported:
+            return FileListing(files=files, complete=not page.has_next_page())
+        while page.has_next_page():
+            try:
+                page = await page.get_next_page()
+            except APIStatusError as e:
+                logger.warning(
+                    "file list pagination unsupported by %s (%s); "
+                    "returning first %d files as an incomplete listing",
+                    self._base_url, e.status_code, len(files),
+                )
+                _pagination_unsupported.add(self._base_url)
+                return FileListing(files=files, complete=False)
+            files.extend(self._to_file_object(f) for f in page.data)
+        return FileListing(files=files, complete=True)
 
     async def get(self, file_id: str) -> FileObject:
         result = await self._client.files.retrieve(file_id)
