@@ -628,8 +628,9 @@
     showToast("Chat reset", "ok");
   }
 
-  // Wire events
-  els.drop.addEventListener("click", () => els.fileInput.click());
+  // Wire events. No click handler on the dropzone: it's a <label> wrapping
+  // the file input, so clicks open the picker natively — a JS click() on top
+  // opens the dialog twice.
   els.drop.addEventListener("dragover", (e) => { e.preventDefault(); els.drop.classList.add("over"); });
   els.drop.addEventListener("dragleave", () => els.drop.classList.remove("over"));
   els.drop.addEventListener("drop", (e) => {
