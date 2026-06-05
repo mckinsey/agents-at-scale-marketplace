@@ -71,7 +71,13 @@ class ModelConfig(BaseModel):
             azure = AzureModelConfig.model_validate(config.get("azure") or {})
             return cls(model_name=model.name, api_key=azure.apiKey, provider="azure", base_url=azure.baseUrl, api_version=azure.apiVersion)
 
-        openai = OpenAIModelConfig.model_validate(config.get("openai") or {})
+        openai_cfg = config.get("openai")
+        if not openai_cfg:
+            raise ValueError(
+                f"Model '{model.name}' has no config for provider 'openai'; "
+                "this executor requires an OpenAI (or Azure OpenAI) Model"
+            )
+        openai = OpenAIModelConfig.model_validate(openai_cfg)
         return cls(model_name=model.name, api_key=openai.apiKey, provider="openai", base_url=openai.baseUrl)
 
 

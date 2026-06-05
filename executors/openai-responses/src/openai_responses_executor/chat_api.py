@@ -147,7 +147,11 @@ async def _stream_chat(
         yield _sse({"type": "done", "response_id": final.id})
     except Exception as e:
         logger.exception("chat stream failed")
-        yield _sse({"type": "error", "error": str(e)})
+        if sessions.is_zdr_threading_error(e):
+            await sessions.clear_conversation(conversation_id)
+            yield _sse({"type": "error", "error": f"{sessions.ZDR_HINT} (provider error: {e})"})
+        else:
+            yield _sse({"type": "error", "error": str(e)})
 
 
 async def chat(request: Request) -> StreamingResponse | JSONResponse:

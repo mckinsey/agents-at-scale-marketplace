@@ -121,6 +121,9 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 await sessions.mark_file_ids_sent(conversation_id, set(file_ids))
             return result
         except Exception as e:
+            if conversation_id and sessions.is_zdr_threading_error(e):
+                await sessions.clear_conversation(conversation_id)
+                raise RuntimeError(f"{sessions.ZDR_HINT} (provider error: {e})") from e
             logger.error(f"Error in OpenAI Responses API processing: {e}", exc_info=True)
             raise
 

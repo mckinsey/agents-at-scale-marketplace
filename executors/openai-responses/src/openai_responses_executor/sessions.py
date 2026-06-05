@@ -90,3 +90,18 @@ async def mark_file_ids_sent(conversation_id: str, file_ids: set[str]) -> None:
 
 async def clear_conversation(conversation_id: str) -> None:
     await asyncio.to_thread(_clear, conversation_id)
+
+
+def is_zdr_threading_error(error: Exception) -> bool:
+    """True when the provider rejected previous_response_id because the org
+    runs Zero Data Retention (no server-side response state is kept)."""
+    text = str(error)
+    return "previous_response_id" in text and "Zero Data Retention" in text
+
+
+ZDR_HINT = (
+    "This OpenAI organization runs Zero Data Retention, so conversation "
+    "threading via previous_response_id is not supported. The stored "
+    "conversation state has been reset — retry the request and it will run "
+    "as a fresh turn (files will re-attach)."
+)
