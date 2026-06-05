@@ -222,6 +222,9 @@
   .file-row .meta { color: var(--muted); font-size: 0.7rem; flex: 0 0 auto; }
   .file-row .id { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.65rem; color: var(--accent); display: block; }
   .files-empty { padding: 1.5rem 1rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
+  .files-loading { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding: 1.5rem 1rem; color: var(--muted); font-size: 0.8rem; }
+  .spinner { width: 22px; height: 22px; border: 2px solid var(--muted); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; opacity: 0.7; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* TOAST */
   .toast {
@@ -409,7 +412,9 @@
 
   function renderFiles() {
     if (!state.files.length) {
-      els.filesList.innerHTML = '<div class="files-empty">No files yet.</div>';
+      els.filesList.innerHTML = state.filesLoading
+        ? '<div class="files-loading"><div class="spinner"></div>Loading files…</div>'
+        : '<div class="files-empty">No files yet.</div>';
       els.attachedHint.hidden = true;
       return;
     }
@@ -451,6 +456,8 @@
   async function loadFiles() {
     const seq = ++loadSeq;
     els.filesScope.textContent = "loading…";
+    state.filesLoading = true;
+    if (!state.files.length) renderFiles();
     try {
       const res = await fetch(apiUrl("/v1/files"));
       const data = await res.json();
@@ -467,7 +474,11 @@
     } catch (e) {
       if (seq === loadSeq) showToast("Files error: " + e.message, "err");
     } finally {
-      if (seq === loadSeq) refreshScope();
+      if (seq === loadSeq) {
+        state.filesLoading = false;
+        renderFiles();
+        refreshScope();
+      }
     }
   }
 
