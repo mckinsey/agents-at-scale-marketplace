@@ -40,26 +40,9 @@ deployments:
           enabled: ${HTTPROUTE_ENABLED}
         executionEngine:
           enabled: true
-
-# Opt-in: `devspace deploy -p show-all-files` lists the full upstream file
-# listing instead of only this executor's uploads (see README IMPORTANT note).
-profiles:
-  - name: show-all-files
-    merge:
-      deployments:
-        executor-openai-responses:
-          helm:
-            values:
-              app:
-                env:
-                  - name: HOST
-                    value: "0.0.0.0"
-                  - name: PORT
-                    value: "8000"
-                  - name: OTEL_INSTRUMENTATION_A2A_SDK_ENABLED
-                    value: "false"
-                  - name: UPLOADED_FILES_ONLY
-                    value: "false"
+        files:
+          # Local dev: show the full upstream listing (see README IMPORTANT note).
+          uploadedOnly: false
 
 dev:
   executor-openai-responses:

@@ -42,6 +42,8 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
+            - name: UPLOADED_FILES_ONLY
+              value: {{ .Values.files.uploadedOnly | quote }}
           envFrom:
             - secretRef:
                 name: otel-environment-variables

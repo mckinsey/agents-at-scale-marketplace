@@ -93,3 +93,9 @@ persistence:
   accessModes:
     - ReadWriteOnce
   size: 1Gi
+
+# File listing scope. When true (default), GET /v1/files only returns files
+# uploaded through this executor for the requesting agent — the raw upstream
+# listing on a shared gateway key is the entire org's uploads. See README.
+files:
+  uploadedOnly: true
