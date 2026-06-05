@@ -530,6 +530,20 @@
     if (empty) empty.remove();
   }
 
+  function addAttachmentChips(msg, fileIds) {
+    if (!msg || !fileIds || !fileIds.length) return;
+    const wrap = document.createElement("div");
+    wrap.className = "attachments";
+    for (const fid of fileIds) {
+      const f = state.files.find((x) => x.id === fid);
+      const span = document.createElement("span");
+      span.className = "attachment";
+      span.textContent = "📎 " + (f ? f.filename : fid);
+      wrap.appendChild(span);
+    }
+    msg.appendChild(wrap);
+  }
+
   function appendMessage(role, content, opts = {}) {
     clearEmptyMessage();
     const msg = document.createElement("div");
@@ -537,18 +551,7 @@
     const who = role === "user" ? "You" : role === "assistant" ? "Assistant" : "Error";
     msg.innerHTML = `<div class="who">${who}</div><div class="body"></div>`;
     msg.querySelector(".body").textContent = content;
-    if (opts.fileIds && opts.fileIds.length) {
-      const wrap = document.createElement("div");
-      wrap.className = "attachments";
-      for (const fid of opts.fileIds) {
-        const f = state.files.find((x) => x.id === fid);
-        const span = document.createElement("span");
-        span.className = "attachment";
-        span.textContent = "📎 " + (f ? f.filename : fid);
-        wrap.appendChild(span);
-      }
-      msg.appendChild(wrap);
-    }
+    addAttachmentChips(msg, opts.fileIds);
     els.messages.appendChild(msg);
     els.messages.scrollTop = els.messages.scrollHeight;
     state.messages.push({ role, content });
@@ -574,9 +577,10 @@
 
   async function sendMessage(text) {
     if (!text.trim() || state.streaming) return;
-    const isFirstTurn = state.messages.length === 0;
-    const fileIdsForUI = isFirstTurn ? state.files.map((f) => f.id) : [];
-    appendMessage("user", text, { fileIds: fileIdsForUI });
+    // Attachment chips render from the server's `start` event, which carries
+    // the file_ids actually attached — guessing from the local sidebar list
+    // showed every visible file as "attached" (wildly wrong in org mode).
+    const userMsg = appendMessage("user", text);
     const typing = appendTyping();
     setSending(true);
 
@@ -619,6 +623,7 @@
       const handleEvent = (ev) => {
         if (ev.type === "start") {
           els.modelBadge.textContent = "model: " + ev.model;
+          if (ev.file_ids && ev.file_ids.length) addAttachmentChips(userMsg, ev.file_ids);
         } else if (ev.type === "delta") {
           if (typing.parentNode) typing.remove();
           if (!updatedBody.dataset.committed) {
