@@ -97,6 +97,6 @@ persistence:
 # File listing scope. When true, GET /v1/files only returns files uploaded
 # through this executor for the requesting agent — the raw upstream listing
 # on a shared gateway key is the entire org's uploads (can be huge and slow).
-# Currently false while the feature is evaluated; will flip to true. See README.
+# See README.
 files:
-  uploadedOnly: false
+  uploadedOnly: true

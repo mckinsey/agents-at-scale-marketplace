@@ -204,7 +204,7 @@ Files attach on the turn after upload: the first message carries everything uplo
 | `OPENAI_BASE_URL` | — | Optional override for the fallback |
 | `FILE_PROVIDER` | `openai` | File backend (only `openai` today) |
 | `MAX_UPLOAD_BYTES` | `52428800` (50MB) | Upload size limit (uploads buffer in pod memory) |
-| `UPLOADED_FILES_ONLY` | `true` (app) / `false` (chart, temporarily) | List only files uploaded through this executor (see IMPORTANT note above). Helm: `--set files.uploadedOnly=true` |
+| `UPLOADED_FILES_ONLY` | `true` | List only files uploaded through this executor (see IMPORTANT note above). Helm: `--set files.uploadedOnly=false` |
 | `SESSIONS_DIR` | `/data/sessions` | Persistence for response IDs, attached-file tracking, and the per-agent file index |
 
 ## Deployment
