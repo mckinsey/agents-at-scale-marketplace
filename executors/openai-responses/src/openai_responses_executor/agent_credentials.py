@@ -212,6 +212,8 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
 def _k8s_error(kind: str, ref: str, e: Exception) -> ValueError:
     # ark-sdk wraps kubernetes ApiException in a bare Exception whose text
     # carries the status, so classify from both the attribute and the text.
+    # Text matching is a stopgap: remove once the SDK preserves status/type
+    # (https://github.com/mckinsey/agents-at-scale-ark/issues/2373).
     status = getattr(e, "status", None)
     text = str(e)
     if status == 404 or "(404)" in text or "not found" in text.lower():
