@@ -149,6 +149,42 @@ spec:
 
 File IDs come from this executor's `/v1/files` endpoint or from uploading directly to the OpenAI Files API with the same credentials the agent's Model uses.
 
+### Programmatic use
+
+End-to-end: upload → attach to a Query → read the answer.
+
+```bash
+kubectl port-forward svc/executor-openai-responses 8000:8000 &
+
+FILE_ID=$(curl -s -X POST "http://localhost:8000/v1/files?agent=default/my-agent" \
+    -F "file=@report.pdf" | jq -r .id)
+
+kubectl apply -f - <<EOF
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: report-summary
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/file-ids: '["$FILE_ID"]'
+spec:
+  input: Summarise the attached report.
+  target: {type: agent, name: my-agent}
+EOF
+
+kubectl wait --for=jsonpath='{.status.phase}'=done query/report-summary --timeout=120s
+kubectl get query report-summary -o jsonpath='{.status.response.content}'
+```
+
+Or via the `/chat` SSE endpoint (UI shortcut, bypasses the Ark control plane); `file_ids` selects exactly what to attach, omitting it attaches the agent's uploads:
+
+```bash
+curl -N -X POST "http://localhost:8000/chat?agent=default/my-agent" \
+    -H "Content-Type: application/json" \
+    -d '{"message": "Summarise the attached report.", "conversationId": "c1", "file_ids": ["'$FILE_ID'"]}'
+```
+
+> Conversation threading uses `previous_response_id`, which OpenAI rejects for Zero Data Retention orgs — the executor returns a clear error, resets the conversation, and a retry runs as a fresh turn.
+
 ### Scoping uploads to an agent
 
 All `/v1/files` endpoints accept `?agent=<namespace>/<name>` (or just `<name>`). When set:
