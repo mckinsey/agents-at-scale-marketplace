@@ -18,6 +18,9 @@ from typing import Any
 
 from ark_sdk.client import V1_ALPHA1, with_ark_client
 from ark_sdk.k8s import SecretClient
+# ark-sdk's resource clients are built on the sync kubernetes package, so
+# this is the ApiException its CRUD calls raise (ark-sdk >= 0.1.62).
+from kubernetes.client.exceptions import ApiException
 from kubernetes_asyncio import client as k8s_client
 from kubernetes_asyncio import config as k8s_config
 from kubernetes_asyncio.client.api_client import ApiClient
@@ -152,9 +155,7 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
         async with with_ark_client(namespace, V1_ALPHA1) as ark:
             try:
                 agent = await ark.agents.a_get(agent_name, namespace)
-            except ValueError:
-                raise
-            except Exception as e:
+            except ApiException as e:
                 raise _k8s_error("Agent", f"{namespace}/{agent_name}", e) from e
             model_ref = _attr_or_key(agent.spec, "model_ref", "modelRef")
             if not model_ref:
@@ -166,9 +167,7 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
                 return None
             try:
                 model = await ark.models.a_get(model_ref_name, model_ns)
-            except ValueError:
-                raise
-            except Exception as e:
+            except ApiException as e:
                 raise _k8s_error("Model", f"{model_ns}/{model_ref_name}", e) from e
             cfg = _attr_or_key(model.spec, "config")
             openai_cfg = _attr_or_key(cfg, "openai")
@@ -209,19 +208,15 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
         raise
 
 
-def _k8s_error(kind: str, ref: str, e: Exception) -> ValueError:
-    # ark-sdk wraps kubernetes ApiException in a bare Exception whose text
-    # carries the status, so classify from both the attribute and the text.
-    # Text matching is a stopgap: remove once the SDK preserves status/type
-    # (https://github.com/mckinsey/agents-at-scale-ark/issues/2373).
-    status = getattr(e, "status", None)
-    text = str(e)
-    if status == 404 or "(404)" in text or "not found" in text.lower():
+def _k8s_error(kind: str, ref: str, e: "ApiException") -> ValueError:
+    # ark-sdk >= 0.1.62 propagates ApiException (ark#2075), so we classify on
+    # the status code.
+    if e.status == 404:
         return ValueError(f"{kind} {ref} not found")
-    if status == 403 or "(403)" in text or "forbidden" in text.lower():
+    if e.status == 403:
         return ValueError(
             f"Access to {kind} {ref} forbidden — the executor's service "
             "account RBAC is namespace-scoped; cross-namespace refs are not "
             "readable"
         )
-    return ValueError(f"Failed to read {kind} {ref}: {e}")
+    return ValueError(f"Failed to read {kind} {ref}: {e.status} {e.reason}")
