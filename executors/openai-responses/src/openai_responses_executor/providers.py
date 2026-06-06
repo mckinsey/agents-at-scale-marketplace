@@ -1,14 +1,11 @@
-"""File storage provider abstraction.
-
-Each provider implements upload/list/get/delete against a specific backend
-(OpenAI, Anthropic, etc.). The file API routes delegate to whichever
-provider is configured.
-"""
+"""OpenAI Files API client used by the /v1/files endpoints."""
 
 import logging
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +13,25 @@ logger = logging.getLogger(__name__)
 # that proxy the OpenAI API but 500 on the `after` param). Remembered so we
 # don't pay a retry cascade on every list call.
 _pagination_unsupported: set[str] = set()
+
+# One AsyncOpenAI (and its httpx connection pool) per credential set, so
+# requests reuse keep-alive connections instead of paying a fresh TLS
+# handshake per call.
+_clients: dict[tuple[str, str | None], "AsyncOpenAI"] = {}
+
+
+def client_for(api_key: str, base_url: str | None = None) -> "AsyncOpenAI":
+    from openai import AsyncOpenAI
+
+    key = (api_key, base_url)
+    client = _clients.get(key)
+    if client is None:
+        kwargs: dict[str, str] = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        client = AsyncOpenAI(**kwargs)
+        _clients[key] = client
+    return client
 
 
 @dataclass
@@ -62,48 +78,16 @@ class FileListing:
     complete: bool = True
 
 
-class FileProvider(ABC):
-    name: str
-
-    @abstractmethod
-    async def upload(self, filename: str, content: bytes, purpose: str) -> FileObject:
-        pass
-
-    @abstractmethod
-    async def list_files(self, purpose: str | None = None) -> FileListing:
-        pass
-
-    @abstractmethod
-    async def get(self, file_id: str) -> FileObject:
-        pass
-
-    @abstractmethod
-    async def delete(self, file_id: str) -> DeleteResult:
-        pass
-
-
-class OpenAIFileProvider(FileProvider):
+class OpenAIFileProvider:
     name = "openai"
 
     def __init__(self, api_key: str, base_url: str | None = None):
-        from openai import AsyncOpenAI
-        kwargs: dict[str, str] = {"api_key": api_key}
-        if base_url:
-            kwargs["base_url"] = base_url
         self._base_url = base_url or "https://api.openai.com/v1"
-        self._client = AsyncOpenAI(**kwargs)
+        self._client = client_for(api_key, base_url)
 
     async def upload(self, filename: str, content: bytes, purpose: str) -> FileObject:
         result = await self._client.files.create(file=(filename, content), purpose=purpose)
-        return FileObject(
-            id=result.id,
-            filename=result.filename,
-            bytes=result.bytes,
-            created_at=result.created_at,
-            purpose=result.purpose,
-            provider=self.name,
-            status=result.status or "processed",
-        )
+        return self._to_file_object(result)
 
     def _to_file_object(self, f: Any) -> FileObject:
         return FileObject(
@@ -147,22 +131,8 @@ class OpenAIFileProvider(FileProvider):
 
     async def get(self, file_id: str) -> FileObject:
         result = await self._client.files.retrieve(file_id)
-        return FileObject(
-            id=result.id,
-            filename=result.filename,
-            bytes=result.bytes,
-            created_at=result.created_at,
-            purpose=result.purpose,
-            provider=self.name,
-            status=result.status or "processed",
-        )
+        return self._to_file_object(result)
 
     async def delete(self, file_id: str) -> DeleteResult:
         result = await self._client.files.delete(file_id)
         return DeleteResult(id=result.id, deleted=result.deleted)
-
-
-def create_provider(provider: str, api_key: str, base_url: str | None = None) -> FileProvider:
-    if provider == "openai":
-        return OpenAIFileProvider(api_key=api_key, base_url=base_url)
-    raise ValueError(f"Unknown file provider: {provider}. Supported: openai")

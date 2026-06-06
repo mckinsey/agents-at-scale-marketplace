@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -138,6 +139,15 @@ async def resolve_agent_openai_credentials(
     return ctx.api_key, ctx.base_url
 
 
+# Short TTL cache: every file/chat request otherwise costs ~4 k8s API
+# round-trips (in-cluster config load + Agent + Model + Secret). The TTL is
+# kept short so rotated secrets and Model edits are picked up promptly —
+# caching indefinitely is what previously broke token rotation. Failures are
+# never cached, so a fixed misconfiguration resolves immediately.
+_CONTEXT_TTL_SECONDS = 30.0
+_context_cache: dict[tuple[str, str], tuple[float, AgentContext]] = {}
+
+
 async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext | None:
     """Resolve the full chat context for an agent from k8s.
 
@@ -151,6 +161,17 @@ async def resolve_agent_context(agent_name: str, namespace: str) -> AgentContext
     propagates — flattening those into None hid real failures behind
     silent credential fallbacks.
     """
+    cache_key = (namespace, agent_name)
+    cached = _context_cache.get(cache_key)
+    if cached and time.monotonic() - cached[0] < _CONTEXT_TTL_SECONDS:
+        return cached[1]
+    ctx = await _resolve_agent_context_uncached(agent_name, namespace)
+    if ctx is not None:
+        _context_cache[cache_key] = (time.monotonic(), ctx)
+    return ctx
+
+
+async def _resolve_agent_context_uncached(agent_name: str, namespace: str) -> AgentContext | None:
     try:
         async with with_ark_client(namespace, V1_ALPHA1) as ark:
             try:

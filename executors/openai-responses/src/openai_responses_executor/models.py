@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_azure_clients: dict[tuple, "AsyncAzureOpenAI"] = {}
+
 # Annotation key for tool configuration on Agent, Query, and ExecutionEngine CRs
 ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
 REASONING_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/reasoning"
@@ -46,17 +48,24 @@ class ModelConfig(BaseModel):
     api_version: Optional[str] = None
 
     def build_client(self) -> "Union[AsyncOpenAI, AsyncAzureOpenAI]":
-        from openai import AsyncAzureOpenAI, AsyncOpenAI
         if self.provider == "azure":
-            return AsyncAzureOpenAI(
-                api_key=self.api_key,
-                azure_endpoint=self.base_url,
-                api_version=self.api_version,
-            )
-        return AsyncOpenAI(
-            api_key=self.api_key,
-            **({"base_url": self.base_url} if self.base_url else {}),
-        )
+            # Cached per credential set so the httpx connection pool persists
+            # across requests instead of a TLS handshake per query.
+            from openai import AsyncAzureOpenAI
+
+            key = ("azure", self.api_key, self.base_url, self.api_version)
+            client = _azure_clients.get(key)
+            if client is None:
+                client = AsyncAzureOpenAI(
+                    api_key=self.api_key,
+                    azure_endpoint=self.base_url,
+                    api_version=self.api_version,
+                )
+                _azure_clients[key] = client
+            return client
+        from .providers import client_for
+
+        return client_for(self.api_key, self.base_url)
 
     @classmethod
     def from_request(cls, request: ExecutionEngineRequest) -> "ModelConfig":

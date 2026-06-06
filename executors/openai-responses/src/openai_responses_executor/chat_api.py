@@ -34,6 +34,7 @@ from .agent_credentials import (
 )
 from .config import config
 from .file_index import ENV_INDEX_KEY, get_index
+from .providers import client_for
 
 logger = logging.getLogger(__name__)
 
@@ -109,12 +110,7 @@ async def _stream_chat(
     conversation_id: str,
     file_ids: list[str],
 ) -> AsyncIterator[str]:
-    from openai import AsyncOpenAI
-
-    client = AsyncOpenAI(
-        api_key=ctx.api_key,
-        **({"base_url": ctx.base_url} if ctx.base_url else {}),
-    )
+    client = client_for(ctx.api_key, ctx.base_url)
     prev_id = await sessions.get_previous_response_id(conversation_id)
     # Attach only files new to this conversation: the threaded response state
     # already holds previously attached files, and re-attaching duplicates

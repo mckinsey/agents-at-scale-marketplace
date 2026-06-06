@@ -31,7 +31,7 @@ from starlette.routing import Route
 from .agent_credentials import parse_agent_ref, resolve_agent_openai_credentials
 from .config import config
 from .file_index import ENV_INDEX_KEY, get_index
-from .providers import FileProvider, create_provider
+from .providers import OpenAIFileProvider
 
 logger = logging.getLogger(__name__)
 
@@ -85,14 +85,13 @@ def _maps_provider_errors(handler):
     return wrapped
 
 
-def _get_env_provider() -> FileProvider:
+def _get_env_provider() -> OpenAIFileProvider:
     if not config.openai_api_key:
         raise ValueError(
             "No API key configured. Either pass ?agent=<name> on the request "
             "or set OPENAI_API_KEY env var on the executor.",
         )
-    return create_provider(
-        provider=config.file_provider,
+    return OpenAIFileProvider(
         api_key=config.openai_api_key,
         base_url=config.openai_base_url or None,
     )
@@ -110,7 +109,7 @@ def _index_key(request: Request) -> str:
     return agent[1] if agent is not None else ENV_INDEX_KEY
 
 
-async def _get_provider_for_request(request: Request) -> FileProvider:
+async def _get_provider_for_request(request: Request) -> OpenAIFileProvider:
     agent = _agent_param(request)
     if agent is None:
         return _get_env_provider()
@@ -128,7 +127,7 @@ async def _get_provider_for_request(request: Request) -> FileProvider:
         )
 
     api_key, base_url = creds
-    return create_provider(provider="openai", api_key=api_key, base_url=base_url)
+    return OpenAIFileProvider(api_key=api_key, base_url=base_url)
 
 
 async def executor_ui(request: Request) -> Response:
