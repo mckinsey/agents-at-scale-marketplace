@@ -84,7 +84,7 @@ healthCheck:
 # ExecutionEngine CRD configuration
 executionEngine:
   enabled: true
-  description: "OpenAI Responses API Executor - A2A server with built-in tool support and multi-turn threading"
+  description: "OpenAI Responses API Executor - A2A server with built-in tool support, multi-turn threading, and a /files upload UI backed by the OpenAI Files API"
 
 # Persistent volume for session data (stores previous_response_id per conversation)
 persistence:
@@ -93,3 +93,10 @@ persistence:
   accessModes:
     - ReadWriteOnce
   size: 1Gi
+
+# File listing scope. When true, GET /v1/files only returns files uploaded
+# through this executor for the requesting agent — the raw upstream listing
+# on a shared gateway key is the entire org's uploads (can be huge and slow).
+# See README.
+files:
+  uploadedOnly: true

@@ -7,8 +7,9 @@ from typing import Any, Optional
 
 from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
 
+from . import sessions
 from .config import config
-from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_output_schema
+from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_file_ids, resolve_output_schema
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +33,6 @@ class OpenAIResponsesExecutor(BaseExecutor):
 
     def __init__(self) -> None:
         super().__init__("OpenAIResponses")
-
-    # ------------------------------------------------------------------
-    # Session persistence
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _get_previous_response_id(conversation_id: str) -> Optional[str]:
-        session_file = config.sessions_dir / conversation_id / "response_id"
-        if session_file.exists():
-            return session_file.read_text().strip() or None
-        return None
-
-    @staticmethod
-    def _save_response_id(conversation_id: str, response_id: str) -> None:
-        session_dir = config.sessions_dir / conversation_id
-        session_dir.mkdir(parents=True, exist_ok=True)
-        (session_dir / "response_id").write_text(response_id)
 
     # ------------------------------------------------------------------
     # Response parsing
@@ -75,7 +59,10 @@ class OpenAIResponsesExecutor(BaseExecutor):
     # ------------------------------------------------------------------
 
     async def execute_agent(self, request: ExecutionEngineRequest) -> list[Message]:
-        conversation_id = getattr(request, "conversationId", None) or request.agent.name
+        # No conversationId = unthreaded query. Don't fall back to agent.name:
+        # that would collapse every unthreaded query against an agent into one
+        # shared session, leaking previous_response_id state across users.
+        conversation_id = getattr(request, "conversationId", None) or None
 
         model_config = ModelConfig.from_request(request)
         instructions = self._resolve_prompt(request.agent)
@@ -86,22 +73,34 @@ class OpenAIResponsesExecutor(BaseExecutor):
         # reasoning only supported on gpt-5+; temperature not supported on gpt-5+
         reasoning = resolve_reasoning(request) if model_config.model_name.startswith("gpt-5") else None
         output_schema = resolve_output_schema(request)
-        previous_response_id = self._get_previous_response_id(conversation_id)
+        previous_response_id = (
+            await sessions.get_previous_response_id(conversation_id) if conversation_id else None
+        )
 
         logger.info(
             f"Executing OpenAI Responses API query for agent {request.agent.name} "
-            f"(model: {model_config.model_name}, conversation: {conversation_id}, "
+            f"(model: {model_config.model_name}, conversation: {conversation_id or 'unthreaded'}, "
             f"{'resuming' if previous_response_id else 'new session'})"
         )
 
         client = model_config.build_client()
 
+        file_ids = resolve_file_ids(request)
         if previous_response_id:
+            # Attach only files new to this conversation: the threaded response
+            # state already holds previously attached files, and Agent-level
+            # annotations re-present the same IDs on every turn.
+            sent = await sessions.get_sent_file_ids(conversation_id)
+            new_file_ids = [fid for fid in file_ids if fid not in sent]
             params = ResponsesCreateParams.continuation(
                 model_config=model_config,
                 instructions=instructions,
                 previous_response_id=previous_response_id,
-                input=request.userInput.content,
+                input=(
+                    [ResponsesCreateParams._build_user_message(request.userInput.content, new_file_ids)]
+                    if new_file_ids
+                    else request.userInput.content
+                ),
                 tools=tools or None,
                 reasoning=reasoning,
                 text=output_schema,
@@ -117,8 +116,14 @@ class OpenAIResponsesExecutor(BaseExecutor):
             )
 
         try:
-            return await self._run_tool_loop(client, params, model_config, instructions, tools, request, conversation_id)
+            result = await self._run_tool_loop(client, params, model_config, instructions, tools, request, conversation_id)
+            if conversation_id and file_ids:
+                await sessions.mark_file_ids_sent(conversation_id, set(file_ids))
+            return result
         except Exception as e:
+            if conversation_id and sessions.is_zdr_threading_error(e):
+                await sessions.clear_conversation(conversation_id)
+                raise RuntimeError(f"{sessions.ZDR_HINT} (provider error: {e})") from e
             logger.error(f"Error in OpenAI Responses API processing: {e}", exc_info=True)
             raise
 
@@ -130,7 +135,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
         instructions: str,
         tools: list[Any],
         request: ExecutionEngineRequest,
-        conversation_id: str,
+        conversation_id: Optional[str],
     ) -> list[Message]:
         for iteration in range(config.max_tool_iterations):
             api_kwargs = params.to_api_kwargs()
@@ -143,7 +148,8 @@ class OpenAIResponsesExecutor(BaseExecutor):
                         await self.stream_chunk(event.delta)
                 response = await stream.get_final_response()
 
-            self._save_response_id(conversation_id, response.id)
+            if conversation_id:
+                await sessions.save_response_id(conversation_id, response.id)
             logger.info(f"Response output types: {[getattr(item, 'type', None) for item in response.output]}")
 
             function_calls = self._extract_function_calls(response)

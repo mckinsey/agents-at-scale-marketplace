@@ -112,5 +112,5 @@ class TestModelConfigFromRequest:
 
     def test_unknown_provider_falls_back_to_openai_path(self):
         model = _model("gpt-5", "unknown", {})
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValueError, match="provider 'openai'"):
             ModelConfig.from_request(_request(model))

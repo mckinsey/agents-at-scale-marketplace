@@ -579,7 +579,7 @@
             "name": "executor-openai-responses",
             "type": "executor",
             "displayName": "OpenAI Responses Executor",
-            "description": "OpenAI Responses API executor with built-in tools (web search, code interpreter), CFG/grammar-constrained output, structured JSON output, and multi-turn conversation threading",
+            "description": "OpenAI Responses API executor with built-in tools (web search, code interpreter), structured JSON output, multi-turn threading, file attachments via the executor-openai-responses.ark.mckinsey.com/file-ids annotation, and a built-in file upload UI backed by an OpenAI-compatible /v1/files API",
             "version": "0.1.0",
             "author": "ARK Marketplace",
             "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
@@ -591,6 +591,8 @@
                 "execution-engine",
                 "web-search",
                 "structured-output",
+                "file-inputs",
+                "attachments",
                 "gpt-5"
             ],
             "category": "development",

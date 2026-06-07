@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ark · OpenAI Responses</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #161924;
+    --panel-2: #1c2030;
+    --border: #262a39;
+    --text: #e5e7eb;
+    --muted: #8b93a7;
+    --accent: #6366f1;
+    --accent-hover: #5558e6;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --ok: #10b981;
+    --warn: #f59e0b;
+    --user-bubble: #1e2538;
+    --assistant-bubble: #1a1d27;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .app { display: flex; flex-direction: column; height: 100vh; }
+  header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    gap: 1rem;
+  }
+  header .brand { display: flex; align-items: baseline; gap: 0.5rem; }
+  header h1 { font-size: 1rem; font-weight: 600; }
+  header h1 small { color: var(--muted); font-weight: 400; }
+  header .agent {
+    flex: 1 1 0;
+    max-width: 480px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  header .agent label { color: var(--muted); font-size: 0.8rem; }
+  input[type="text"], textarea {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+  input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: none; line-height: 1.4; }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--accent-hover); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); background: transparent; }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: var(--danger-hover); }
+  button.icon { padding: 0.3rem 0.5rem; font-size: 0.75rem; }
+
+  main { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px; overflow: hidden; }
+
+  /* CHAT */
+  .chat { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--border); }
+  .chat-toolbar {
+    flex: 0 0 auto;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .chat-toolbar .spacer { flex: 1; }
+  .chat-toolbar .badge {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .messages {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .msg { display: flex; flex-direction: column; max-width: 80%; }
+  .msg.user { align-self: flex-end; }
+  .msg.assistant { align-self: flex-start; }
+  .msg .who { font-size: 0.7rem; color: var(--muted); margin: 0 0.5rem 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .msg.user .who { text-align: right; }
+  .msg .body {
+    background: var(--assistant-bubble);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.user .body { background: var(--user-bubble); }
+  .msg .attachments {
+    margin-top: 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .msg .attachment {
+    font-size: 0.7rem;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 2px 8px;
+    color: var(--muted);
+  }
+  .msg.error .body { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: #fecaca; }
+  .typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); opacity: 0.4; animation: blink 1.4s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
+  .empty-chat {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 2rem;
+  }
+  .composer {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+  }
+  .composer textarea { min-height: 38px; max-height: 200px; }
+  .attached-hint {
+    flex: 0 0 auto;
+    padding: 0.3rem 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--panel);
+  }
+
+  /* FILES */
+  .files { display: flex; flex-direction: column; min-width: 0; background: var(--panel); }
+  .files-header {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .files-header h2 { font-size: 0.85rem; font-weight: 600; }
+  .files-header h2 small { color: var(--muted); font-weight: 400; margin-left: 0.4rem; }
+  .drop {
+    margin: 0.75rem 1rem 0.5rem;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); color: var(--text); }
+  .drop input { display: none; }
+  .files-list {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.25rem 0.5rem 0.75rem;
+  }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+  .file-row:hover { background: var(--panel-2); }
+  .file-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-row .meta { color: var(--muted); font-size: 0.7rem; flex: 0 0 auto; }
+  .file-row .id { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.65rem; color: var(--accent); display: block; }
+  .files-empty { padding: 1.5rem 1rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
+  .files-loading { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding: 1.5rem 1rem; color: var(--muted); font-size: 0.8rem; }
+  .spinner { width: 22px; height: 22px; border: 2px solid var(--muted); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; opacity: 0.7; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    display: none;
+    max-width: 420px;
+  }
+  .toast.ok { border-color: var(--ok); }
+  .toast.err { border-color: var(--danger); color: #fecaca; }
+
+  @media (max-width: 720px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+    .chat { border-right: none; border-bottom: 1px solid var(--border); }
+    .files { max-height: 40vh; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Ark · OpenAI Responses</h1>
+      <small id="scope">no agent</small>
+    </div>
+    <div class="agent">
+      <label for="agent-input">Agent</label>
+      <input id="agent-input" type="text" placeholder="namespace/name — leave blank for local fallback" autocomplete="off">
+    </div>
+  </header>
+
+  <main>
+    <section class="chat">
+      <div class="chat-toolbar">
+        <span id="model-badge" class="badge">model: —</span>
+        <span class="spacer"></span>
+        <button class="ghost icon" id="reset">Reset chat</button>
+      </div>
+      <div class="messages" id="messages">
+        <div class="empty-chat">
+          Drop files on the right, then ask a question.<br>
+          Tick files to attach them to your next message; new uploads are ticked automatically.
+        </div>
+      </div>
+      <div class="attached-hint" id="attached-hint" hidden></div>
+      <form class="composer" id="composer">
+        <textarea id="input" rows="1" placeholder="Ask about your files…"></textarea>
+        <button id="send" type="submit">Send</button>
+      </form>
+    </section>
+
+    <aside class="files">
+      <div class="files-header">
+        <h2>Files <small id="files-scope">—</small></h2>
+        <button class="ghost icon" id="refresh-files">Refresh</button>
+      </div>
+      <label class="drop" id="drop">
+        <span><strong>Drop</strong> or click to upload</span>
+        <input type="file" id="file-input" multiple>
+      </label>
+      <div class="files-list" id="files-list"><div class="files-empty">No files yet.</div></div>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    agent: $("agent-input"),
+    scope: $("scope"),
+    filesScope: $("files-scope"),
+    modelBadge: $("model-badge"),
+    messages: $("messages"),
+    composer: $("composer"),
+    input: $("input"),
+    send: $("send"),
+    reset: $("reset"),
+    drop: $("drop"),
+    fileInput: $("file-input"),
+    filesList: $("files-list"),
+    refreshFiles: $("refresh-files"),
+    attachedHint: $("attached-hint"),
+    toast: $("toast"),
+  };
+
+  const state = {
+    files: [],
+    selected: new Set(), // file ids to attach with the next message
+    messages: [],
+    streaming: false,
+    conversationId: null,
+    firstTurnFileIds: null,
+  };
+
+  // Persistent per-agent conversation IDs so reloads keep threading.
+  const CONV_STORAGE = "ark-file-assistant.conversations";
+  const loadConv = () => {
+    try { return JSON.parse(localStorage.getItem(CONV_STORAGE) || "{}"); }
+    catch { return {}; }
+  };
+  const saveConv = (map) => localStorage.setItem(CONV_STORAGE, JSON.stringify(map));
+  const conversationKey = () => "agent:" + (agent() || "__env__");
+  function ensureConversationId() {
+    const map = loadConv();
+    const key = conversationKey();
+    if (!map[key]) {
+      map[key] = "conv-" + Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
+      saveConv(map);
+    }
+    state.conversationId = map[key];
+    return state.conversationId;
+  }
+  function newConversationId() {
+    const map = loadConv();
+    delete map[conversationKey()];
+    saveConv(map);
+    return ensureConversationId();
+  }
+
+  // Agent selection sticks across reloads: explicit ?agent= wins, otherwise
+  // the last-used agent from localStorage — opening the bare URL silently
+  // dropping into env mode was a recurring footgun.
+  const AGENT_KEY = "files-ui-agent";
+  const initial = new URLSearchParams(location.search).get("agent")
+    || localStorage.getItem(AGENT_KEY) || "";
+  if (initial) els.agent.value = initial;
+
+  function agent() { return els.agent.value.trim(); }
+
+  function persistAgent() {
+    const a = agent();
+    if (a) localStorage.setItem(AGENT_KEY, a);
+    else localStorage.removeItem(AGENT_KEY);
+    const url = new URL(location.href);
+    if (a) url.searchParams.set("agent", a);
+    else url.searchParams.delete("agent");
+    history.replaceState(null, "", url);
+  }
+  persistAgent();
+
+  function apiUrl(path) {
+    const a = agent();
+    const qs = a ? "?agent=" + encodeURIComponent(a) : "";
+    return path + qs;
+  }
+
+  function refreshScope() {
+    const a = agent();
+    els.scope.textContent = a ? "agent: " + a : "no agent (env fallback)";
+    els.filesScope.textContent = a ? a : "env uploads (no agent)";
+    ensureConversationId();
+  }
+
+  function showToast(msg, kind = "ok") {
+    els.toast.textContent = msg;
+    els.toast.className = "toast " + kind;
+    els.toast.style.display = "block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => (els.toast.style.display = "none"), 3500);
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    })[c]);
+  }
+
+  function fmtBytes(b) {
+    if (b == null) return "—";
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    if (b < 1024 * 1024 * 1024) return (b / 1048576).toFixed(1) + " MB";
+    return (b / 1073741824).toFixed(2) + " GB";
+  }
+
+  function renderFiles() {
+    if (!state.files.length) {
+      els.filesList.innerHTML = state.filesLoading
+        ? '<div class="files-loading"><div class="spinner"></div>Loading files…</div>'
+        : '<div class="files-empty">No files yet.</div>';
+      els.attachedHint.hidden = true;
+      return;
+    }
+    els.filesList.innerHTML = state.files.map((f) => `
+      <div class="file-row" data-id="${escapeHtml(f.id)}">
+        <input type="checkbox" data-action="select" data-id="${escapeHtml(f.id)}" ${state.selected.has(f.id) ? "checked" : ""} title="Attach to your next message">
+        <div style="min-width:0;flex:1;">
+          <div class="name" title="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</div>
+          <span class="id">${escapeHtml(f.id)}</span>
+        </div>
+        <span class="meta">${fmtBytes(f.bytes)}</span>
+        <button class="ghost icon" data-action="delete" data-id="${escapeHtml(f.id)}" data-name="${escapeHtml(f.filename)}">Delete</button>
+      </div>`).join("");
+    els.filesList.querySelectorAll('[data-action="delete"]').forEach((b) => {
+      b.addEventListener("click", () => deleteFile(b.dataset.id, b.dataset.name));
+    });
+    els.filesList.querySelectorAll('[data-action="select"]').forEach((cb) => {
+      cb.addEventListener("change", () => {
+        if (cb.checked) state.selected.add(cb.dataset.id);
+        else state.selected.delete(cb.dataset.id);
+        updateAttachedHint();
+      });
+    });
+    updateAttachedHint();
+  }
+
+  function updateAttachedHint() {
+    if (!state.files.length) { els.attachedHint.hidden = true; return; }
+    els.attachedHint.hidden = false;
+    const n = state.selected.size;
+    els.attachedHint.textContent = n
+      ? `${n} file${n === 1 ? "" : "s"} selected — attach with your next message.`
+      : "Tick files to attach them to your next message.";
+  }
+
+  // Listing can be slow (a shared gateway key lists the whole org's files)
+  // and eventually consistent (a fresh listing can briefly miss a file we
+  // just uploaded). So: show an explicit loading state, only the latest
+  // request wins, keep the last good list on errors, and union in recent
+  // uploads the listing hasn't caught up with yet.
+  let loadSeq = 0;
+  const recentUploads = new Map(); // id -> file object, until seen in a listing
+
+  async function loadFiles() {
+    const seq = ++loadSeq;
+    els.filesScope.textContent = "loading…";
+    state.filesLoading = true;
+    if (!state.files.length) renderFiles();
+    try {
+      const res = await fetch(apiUrl("/v1/files"));
+      const data = await res.json();
+      if (seq !== loadSeq) return; // a newer request superseded this one
+      if (!res.ok) {
+        showToast(data.error || ("Failed to load files (" + res.status + ")"), "err");
+        return; // keep the last good list
+      }
+      const files = data.data || [];
+      for (const f of files) recentUploads.delete(f.id);
+      for (const f of recentUploads.values()) files.unshift(f);
+      state.files = files;
+      renderFiles();
+    } catch (e) {
+      if (seq === loadSeq) showToast("Files error: " + e.message, "err");
+    } finally {
+      if (seq === loadSeq) {
+        state.filesLoading = false;
+        renderFiles();
+        refreshScope();
+      }
+    }
+  }
+
+  async function uploadFiles(files) {
+    if (!files || !files.length) return;
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("purpose", "user_data");
+      try {
+        const res = await fetch(apiUrl("/v1/files"), { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || ("Upload failed (" + res.status + ")"), "err");
+          continue;
+        }
+        showToast("Uploaded " + data.filename, "ok");
+        recentUploads.set(data.id, data);
+        state.selected.add(data.id); // session uploads attach by default
+        if (!state.files.some((f) => f.id === data.id)) state.files.unshift(data);
+        renderFiles();
+      } catch (e) {
+        showToast("Upload error: " + e.message, "err");
+      }
+    }
+    loadFiles();
+  }
+
+  async function deleteFile(id, filename) {
+    if (!confirm("Delete " + (filename || id) + "?")) return;
+    try {
+      const res = await fetch(apiUrl("/v1/files/" + encodeURIComponent(id)), { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || ("Delete failed (" + res.status + ")"), "err");
+        return;
+      }
+      showToast("Deleted " + (filename || id), "ok");
+      recentUploads.delete(id);
+      state.selected.delete(id);
+      state.files = state.files.filter((f) => f.id !== id);
+      renderFiles();
+      loadFiles();
+    } catch (e) {
+      showToast("Delete error: " + e.message, "err");
+    }
+  }
+
+  function clearEmptyMessage() {
+    const empty = els.messages.querySelector(".empty-chat");
+    if (empty) empty.remove();
+  }
+
+  function addAttachmentChips(msg, fileIds) {
+    if (!msg || !fileIds || !fileIds.length) return;
+    const wrap = document.createElement("div");
+    wrap.className = "attachments";
+    for (const fid of fileIds) {
+      const f = state.files.find((x) => x.id === fid);
+      const span = document.createElement("span");
+      span.className = "attachment";
+      span.textContent = "📎 " + (f ? f.filename : fid);
+      wrap.appendChild(span);
+    }
+    msg.appendChild(wrap);
+  }
+
+  function appendMessage(role, content, opts = {}) {
+    clearEmptyMessage();
+    const msg = document.createElement("div");
+    msg.className = "msg " + role + (opts.error ? " error" : "");
+    const who = role === "user" ? "You" : role === "assistant" ? "Assistant" : "Error";
+    msg.innerHTML = `<div class="who">${who}</div><div class="body"></div>`;
+    msg.querySelector(".body").textContent = content;
+    addAttachmentChips(msg, opts.fileIds);
+    els.messages.appendChild(msg);
+    els.messages.scrollTop = els.messages.scrollHeight;
+    state.messages.push({ role, content });
+    updateAttachedHint();
+    return msg;
+  }
+
+  function appendTyping() {
+    clearEmptyMessage();
+    const msg = document.createElement("div");
+    msg.className = "msg assistant";
+    msg.innerHTML = `<div class="who">Assistant</div><div class="body"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    els.messages.appendChild(msg);
+    els.messages.scrollTop = els.messages.scrollHeight;
+    return msg;
+  }
+
+  function setSending(sending) {
+    state.streaming = sending;
+    els.send.disabled = sending;
+    els.input.disabled = sending;
+  }
+
+  async function sendMessage(text) {
+    if (!text.trim() || state.streaming) return;
+    // Attachment chips render from the server's `start` event, which carries
+    // the file_ids actually attached — guessing from the local sidebar list
+    // showed every visible file as "attached" (wildly wrong in org mode).
+    const userMsg = appendMessage("user", text);
+    const typing = appendTyping();
+    setSending(true);
+
+    let assistantText = "";
+    let updatedBody = typing.querySelector(".body");
+
+    try {
+      const res = await fetch(apiUrl("/chat"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          conversationId: ensureConversationId(),
+          file_ids: [...state.selected],
+        }),
+      });
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        typing.remove();
+        appendMessage("error", data.error || ("Request failed (" + res.status + ")"), { error: true });
+        setSending(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const flush = () => {
+        let nl;
+        while ((nl = buffer.indexOf("\n\n")) !== -1) {
+          const chunk = buffer.slice(0, nl);
+          buffer = buffer.slice(nl + 2);
+          const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+          if (!line) continue;
+          let payload;
+          try { payload = JSON.parse(line.slice(6)); }
+          catch { continue; }
+          handleEvent(payload);
+        }
+      };
+
+      const handleEvent = (ev) => {
+        if (ev.type === "start") {
+          els.modelBadge.textContent = "model: " + ev.model;
+          if (ev.file_ids && ev.file_ids.length) addAttachmentChips(userMsg, ev.file_ids);
+          // Selection consumed: the conversation now holds these files.
+          state.selected.clear();
+          renderFiles();
+        } else if (ev.type === "delta") {
+          if (typing.parentNode) typing.remove();
+          if (!updatedBody.dataset.committed) {
+            const msg = appendMessage("assistant", "");
+            updatedBody = msg.querySelector(".body");
+            updatedBody.dataset.committed = "1";
+            // remove the placeholder push we did via appendMessage
+            state.messages.pop();
+          }
+          assistantText += ev.text;
+          updatedBody.textContent = assistantText;
+          els.messages.scrollTop = els.messages.scrollHeight;
+        } else if (ev.type === "error") {
+          if (typing.parentNode) typing.remove();
+          appendMessage("error", ev.error, { error: true });
+        } else if (ev.type === "done") {
+          if (typing.parentNode) typing.remove();
+          if (assistantText) {
+            state.messages.push({ role: "assistant", content: assistantText });
+          }
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        flush();
+      }
+      buffer += decoder.decode();
+      flush();
+    } catch (e) {
+      if (typing.parentNode) typing.remove();
+      appendMessage("error", "Network error: " + e.message, { error: true });
+    } finally {
+      setSending(false);
+      els.input.focus();
+    }
+  }
+
+  async function resetChat() {
+    if (!confirm("Reset this conversation? Server-side response state is dropped.")) return;
+    try {
+      await fetch(apiUrl("/chat/reset"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: ensureConversationId() }),
+      });
+    } catch (e) { /* ignore */ }
+    newConversationId();
+    state.messages = [];
+    els.messages.innerHTML = '<div class="empty-chat">Conversation reset. Files re-attach on your next message.</div>';
+    updateAttachedHint();
+    showToast("Chat reset", "ok");
+  }
+
+  // Wire events. No click handler on the dropzone: it's a <label> wrapping
+  // the file input, so clicks open the picker natively — a JS click() on top
+  // opens the dialog twice.
+  els.drop.addEventListener("dragover", (e) => { e.preventDefault(); els.drop.classList.add("over"); });
+  els.drop.addEventListener("dragleave", () => els.drop.classList.remove("over"));
+  els.drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    els.drop.classList.remove("over");
+    uploadFiles(e.dataTransfer.files);
+  });
+  els.fileInput.addEventListener("change", () => {
+    uploadFiles(els.fileInput.files);
+    els.fileInput.value = "";
+  });
+  els.refreshFiles.addEventListener("click", loadFiles);
+  els.agent.addEventListener("change", () => {
+    persistAgent();
+    refreshScope();
+    state.selected.clear();
+    state.messages = [];
+    els.messages.innerHTML = '<div class="empty-chat">Switched agent. Files and conversation reloaded.</div>';
+    loadFiles();
+  });
+  els.composer.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = els.input.value;
+    els.input.value = "";
+    els.input.style.height = "auto";
+    sendMessage(text);
+  });
+  els.input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      els.composer.requestSubmit();
+    }
+  });
+  els.input.addEventListener("input", () => {
+    els.input.style.height = "auto";
+    els.input.style.height = Math.min(200, els.input.scrollHeight) + "px";
+  });
+  els.reset.addEventListener("click", resetChat);
+
+  // Init
+  refreshScope();
+  loadFiles();
+  setTimeout(() => els.input.focus(), 50);
+})();
+</script>
+</body>
+</html>

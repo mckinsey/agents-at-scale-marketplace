@@ -119,6 +119,17 @@ Effort values: `"low"`, `"medium"`, `"high"`. Omitting the annotation defaults t
 
 Use `"low"` for focused single-task agents (e.g. find one URL). Use `"medium"` or higher for agents that must gather multiple pieces of information (e.g. structured lookup with web search across several fields) — lower effort may not perform enough searches to find all required data.
 
+### File Attachments
+
+Attach OpenAI file IDs to a query; the executor passes each as an `input_file` content part. File IDs come from the executor's `/v1/files` API (below) or direct upload to the OpenAI Files API with the same credentials the agent's Model uses.
+
+```yaml
+annotations:
+  executor-openai-responses.ark.mckinsey.com/file-ids: '["file-abc123"]'
+```
+
+Files attach on the turn they are new to the conversation: already-attached IDs are tracked per conversation and not re-sent (the threaded response state retains them).
+
 ### Structured Output
 
 Constrains the response to a JSON object matching the schema — enforced at token level:
@@ -136,6 +147,18 @@ annotations:
       "additionalProperties": false
     }
 ```
+
+## Files API and UI
+
+The executor serves an OpenAI-compatible Files API and a chat + upload UI at `GET /` on the pod:
+
+- `POST /v1/files` — multipart upload (`file`, `purpose`); proxied to the OpenAI Files API
+- `GET /v1/files` — list; `DELETE /v1/files/{id}` — delete
+- `POST /chat` — SSE chat with optional `file_ids` selection (UI shortcut, bypasses the Ark control plane)
+
+All endpoints accept `?agent=<namespace>/<name>`: credentials resolve from that agent's Model CRD, so uploads land in the OpenAI project the agent's Responses calls use, and listings are scoped to that agent's uploads (`UPLOADED_FILES_ONLY`, see the [README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/openai-responses)).
+
+> **Note**: conversation threading uses `previous_response_id`, which OpenAI does not support for Zero Data Retention organizations. On ZDR orgs each turn runs fresh — the executor detects the provider error, resets the stored conversation state, and returns a clear message telling the caller to retry.
 
 ## Examples
 

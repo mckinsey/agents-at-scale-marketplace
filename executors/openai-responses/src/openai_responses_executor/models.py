@@ -12,10 +12,16 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_azure_clients: dict[tuple, "AsyncAzureOpenAI"] = {}
+
 # Annotation key for tool configuration on Agent, Query, and ExecutionEngine CRs
 ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/tools"
 REASONING_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/reasoning"
 OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/output-schema"
+# File IDs returned by the /v1/files upload API (or uploaded directly to the
+# OpenAI Files API) attach to queries via this annotation; the value is a JSON
+# array of IDs, resolved with the Query > Agent > ExecutionEngine cascade.
+FILE_IDS_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/file-ids"
 
 
 # ---------------------------------------------------------------------------
@@ -42,17 +48,24 @@ class ModelConfig(BaseModel):
     api_version: Optional[str] = None
 
     def build_client(self) -> "Union[AsyncOpenAI, AsyncAzureOpenAI]":
-        from openai import AsyncAzureOpenAI, AsyncOpenAI
         if self.provider == "azure":
-            return AsyncAzureOpenAI(
-                api_key=self.api_key,
-                azure_endpoint=self.base_url,
-                api_version=self.api_version,
-            )
-        return AsyncOpenAI(
-            api_key=self.api_key,
-            **({"base_url": self.base_url} if self.base_url else {}),
-        )
+            # Cached per credential set so the httpx connection pool persists
+            # across requests instead of a TLS handshake per query.
+            from openai import AsyncAzureOpenAI
+
+            key = ("azure", self.api_key, self.base_url, self.api_version)
+            client = _azure_clients.get(key)
+            if client is None:
+                client = AsyncAzureOpenAI(
+                    api_key=self.api_key,
+                    azure_endpoint=self.base_url,
+                    api_version=self.api_version,
+                )
+                _azure_clients[key] = client
+            return client
+        from .providers import client_for
+
+        return client_for(self.api_key, self.base_url)
 
     @classmethod
     def from_request(cls, request: ExecutionEngineRequest) -> "ModelConfig":
@@ -67,7 +80,13 @@ class ModelConfig(BaseModel):
             azure = AzureModelConfig.model_validate(config.get("azure") or {})
             return cls(model_name=model.name, api_key=azure.apiKey, provider="azure", base_url=azure.baseUrl, api_version=azure.apiVersion)
 
-        openai = OpenAIModelConfig.model_validate(config.get("openai") or {})
+        openai_cfg = config.get("openai")
+        if not openai_cfg:
+            raise ValueError(
+                f"Model '{model.name}' has no config for provider 'openai'; "
+                "this executor requires an OpenAI (or Azure OpenAI) Model"
+            )
+        openai = OpenAIModelConfig.model_validate(openai_cfg)
         return cls(model_name=model.name, api_key=openai.apiKey, provider="openai", base_url=openai.baseUrl)
 
 
@@ -158,6 +177,35 @@ def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str,
     return None
 
 
+def resolve_file_ids(request: ExecutionEngineRequest) -> list[str]:
+    """Resolve OpenAI file IDs from the annotation cascade.
+
+    Priority (highest wins): Query > Agent > ExecutionEngine annotations.
+    Annotation value is a JSON-encoded array of strings (e.g. ``["file-abc"]``).
+    """
+    for source in [
+        request.query_annotations,
+        (getattr(request.agent, "annotations", None) or {}),
+        request.execution_engine_annotations,
+    ]:
+        raw = source.get(FILE_IDS_ANNOTATION_KEY, "")
+        if not raw:
+            continue
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            logger.warning("Failed to parse file-ids annotation: %s", exc)
+            continue
+        if not isinstance(value, list):
+            logger.warning(
+                "file-ids annotation must be a JSON array, got %s",
+                type(value).__name__,
+            )
+            continue
+        return [fid for fid in value if isinstance(fid, str) and fid]
+    return []
+
+
 # ---------------------------------------------------------------------------
 # Function tool
 # ---------------------------------------------------------------------------
@@ -199,6 +247,14 @@ class ResponsesCreateParams(BaseModel):
     def to_api_kwargs(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
 
+    @staticmethod
+    def _build_user_message(text: str, file_ids: list[str]) -> dict[str, Any]:
+        if file_ids:
+            content: list[dict[str, Any]] = [{"type": "input_file", "file_id": fid} for fid in file_ids]
+            content.append({"type": "input_text", "text": text})
+            return {"role": "user", "content": content}
+        return {"role": "user", "content": text}
+
     @classmethod
     def first_turn(
         cls,
@@ -209,9 +265,10 @@ class ResponsesCreateParams(BaseModel):
         reasoning: Optional[dict[str, Any]] = None,
         text: Optional[dict[str, Any]] = None,
     ) -> "ResponsesCreateParams":
+        file_ids = resolve_file_ids(request)
         input_messages = [
             {"role": msg.role, "content": msg.content} for msg in getattr(request, "history", [])
-        ] + [{"role": "user", "content": request.userInput.content}]
+        ] + [cls._build_user_message(request.userInput.content, file_ids)]
 
         return cls(
             model=model_config.model_name,

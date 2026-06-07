@@ -4,7 +4,19 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ark_sdk.executor import Message, ToolDefinition
+from ark_sdk.executor import Message
+
+try:  # removed from ark-sdk 0.1.60; tests only need the attribute shape
+    from ark_sdk.executor import ToolDefinition
+except ImportError:
+    from pydantic import BaseModel as _ToolBase
+
+    class ToolDefinition(_ToolBase):
+        name: str
+        description: str = ""
+        parameters: dict = {}
+
+from openai_responses_executor import sessions
 from openai_responses_executor.executor import OpenAIResponsesExecutor
 from openai_responses_executor.models import (
     FunctionTool,
@@ -12,6 +24,7 @@ from openai_responses_executor.models import (
     ResponsesCreateParams,
     resolve_built_in_tools,
     ANNOTATION_KEY,
+    FILE_IDS_ANNOTATION_KEY,
 )
 
 
@@ -250,18 +263,31 @@ class TestResponsesCreateParams:
 
 
 class TestSessionHelpers:
-    def test_save_and_get_response_id(self, tmp_path):
-        with patch("openai_responses_executor.executor.config") as mock_cfg:
+    @pytest.mark.asyncio
+    async def test_save_and_get_response_id(self, tmp_path):
+        with patch("openai_responses_executor.sessions.config") as mock_cfg:
             mock_cfg.sessions_dir = tmp_path
-            OpenAIResponsesExecutor._save_response_id("conv-1", "resp-abc123")
-            result = OpenAIResponsesExecutor._get_previous_response_id("conv-1")
+            await sessions.save_response_id("conv-1", "resp-abc123")
+            result = await sessions.get_previous_response_id("conv-1")
         assert result == "resp-abc123"
 
-    def test_get_response_id_missing_returns_none(self, tmp_path):
-        with patch("openai_responses_executor.executor.config") as mock_cfg:
+    @pytest.mark.asyncio
+    async def test_get_response_id_missing_returns_none(self, tmp_path):
+        with patch("openai_responses_executor.sessions.config") as mock_cfg:
             mock_cfg.sessions_dir = tmp_path
-            result = OpenAIResponsesExecutor._get_previous_response_id("conv-nonexistent")
+            result = await sessions.get_previous_response_id("conv-nonexistent")
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_sent_file_ids_roundtrip_and_clear(self, tmp_path):
+        with patch("openai_responses_executor.sessions.config") as mock_cfg:
+            mock_cfg.sessions_dir = tmp_path
+            assert await sessions.get_sent_file_ids("conv-1") == set()
+            await sessions.mark_file_ids_sent("conv-1", {"file-a"})
+            await sessions.mark_file_ids_sent("conv-1", {"file-b"})
+            assert await sessions.get_sent_file_ids("conv-1") == {"file-a", "file-b"}
+            await sessions.clear_conversation("conv-1")
+            assert await sessions.get_sent_file_ids("conv-1") == set()
 
 
 # ---------------------------------------------------------------------------
@@ -294,120 +320,172 @@ def _make_function_call_response(name, arguments, call_id, response_id="resp-too
     return response
 
 
+class _FakeStream:
+    """Stands in for client.responses.stream(...): async context manager,
+    async-iterable (no delta events), returning a canned final response."""
+
+    def __init__(self, response):
+        self._response = response
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        raise StopAsyncIteration
+
+    async def get_final_response(self):
+        response = self._response
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+
+def _mock_client(*responses):
+    """Client whose responses.stream yields each canned response in turn."""
+    queue = list(responses)
+    captured = []
+
+    def stream(**kwargs):
+        captured.append(kwargs)
+        return _FakeStream(queue.pop(0))
+
+    client = MagicMock()
+    client.responses.stream = stream
+    client.captured = captured
+    return client
+
+
 class TestExecuteAgent:
-    def _mock_config(self, tmp_path):
+    def _patches(self, tmp_path, client):
         mock_cfg = MagicMock()
         mock_cfg.sessions_dir = tmp_path
         mock_cfg.max_tool_iterations = 10
-        return mock_cfg
+        sessions_cfg = MagicMock()
+        sessions_cfg.sessions_dir = tmp_path
+        return (
+            patch("openai_responses_executor.executor.config", mock_cfg),
+            patch("openai_responses_executor.sessions.config", sessions_cfg),
+            patch.object(ModelConfig, "build_client", return_value=client),
+        )
+
+    def _executor(self):
+        executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
+        executor.stream_chunk = AsyncMock()
+        return executor
 
     @pytest.mark.asyncio
     async def test_simple_text_response(self, tmp_path):
-        executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
-        req = _request()
-        mock_response = _make_text_response("Paris is the capital of France.")
-        mock_client = AsyncMock()
-        mock_client.responses.create = AsyncMock(return_value=mock_response)
-
-        with patch("openai_responses_executor.executor.config", self._mock_config(tmp_path)), \
-             patch("openai_responses_executor.executor.AsyncOpenAI", return_value=mock_client):
-            messages = await executor.execute_agent(req)
+        client = _mock_client(_make_text_response("Paris is the capital of France."))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            messages = await self._executor().execute_agent(_request())
 
         assert messages[0].content == "Paris is the capital of France."
         assert messages[0].role == "assistant"
 
     @pytest.mark.asyncio
     async def test_uses_previous_response_id_on_second_turn(self, tmp_path):
-        executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
-        req = _request()
-
         session_dir = tmp_path / "conv-123"
         session_dir.mkdir()
         (session_dir / "response_id").write_text("resp-prev-001")
 
-        mock_response = _make_text_response("Follow-up answer.")
-        captured = {}
+        client = _mock_client(_make_text_response("Follow-up answer."))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await self._executor().execute_agent(_request())
 
-        async def capture_create(**kwargs):
-            captured.update(kwargs)
-            return mock_response
-
-        mock_client = AsyncMock()
-        mock_client.responses.create = capture_create
-
-        with patch("openai_responses_executor.executor.config", self._mock_config(tmp_path)), \
-             patch("openai_responses_executor.executor.AsyncOpenAI", return_value=mock_client):
-            await executor.execute_agent(req)
-
-        assert captured.get("previous_response_id") == "resp-prev-001"
-        assert captured.get("input") == "hello"
+        assert client.captured[0].get("previous_response_id") == "resp-prev-001"
+        assert client.captured[0].get("input") == "hello"
 
     @pytest.mark.asyncio
     async def test_saves_response_id_after_call(self, tmp_path):
-        executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
-        req = _request()
-        mock_response = _make_text_response("Answer.", response_id="resp-saved-001")
-        mock_client = AsyncMock()
-        mock_client.responses.create = AsyncMock(return_value=mock_response)
-
-        with patch("openai_responses_executor.executor.config", self._mock_config(tmp_path)), \
-             patch("openai_responses_executor.executor.AsyncOpenAI", return_value=mock_client):
-            await executor.execute_agent(req)
+        client = _mock_client(_make_text_response("Answer.", response_id="resp-saved-001"))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await self._executor().execute_agent(_request())
 
         assert (tmp_path / "conv-123" / "response_id").read_text() == "resp-saved-001"
 
     @pytest.mark.asyncio
+    async def test_unthreaded_query_does_not_persist_session(self, tmp_path):
+        client = _mock_client(_make_text_response("Answer."))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await self._executor().execute_agent(_request(conversation_id=None))
+
+        # No conversationId: no session dir keyed on the agent name (that
+        # would leak previous_response_id state across unrelated queries).
+        assert not (tmp_path / "test-agent").exists()
+        assert "previous_response_id" not in client.captured[0]
+
+    @pytest.mark.asyncio
+    async def test_file_ids_attached_on_first_turn(self, tmp_path):
+        req = _request(query_annotations={FILE_IDS_ANNOTATION_KEY: json.dumps(["file-abc"])})
+        client = _mock_client(_make_text_response("Read it."))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await self._executor().execute_agent(req)
+
+        user_msg = client.captured[0]["input"][-1]
+        assert {"type": "input_file", "file_id": "file-abc"} in user_msg["content"]
+
+    @pytest.mark.asyncio
+    async def test_new_file_ids_attached_on_continuation(self, tmp_path):
+        session_dir = tmp_path / "conv-123"
+        session_dir.mkdir()
+        (session_dir / "response_id").write_text("resp-prev-001")
+        (session_dir / "file_ids").write_text(json.dumps(["file-old"]))
+
+        req = _request(
+            query_annotations={FILE_IDS_ANNOTATION_KEY: json.dumps(["file-old", "file-new"])}
+        )
+        client = _mock_client(_make_text_response("Got the new file."))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await self._executor().execute_agent(req)
+
+        user_msg = client.captured[0]["input"][0]
+        content = user_msg["content"]
+        assert {"type": "input_file", "file_id": "file-new"} in content
+        # already-sent files are not re-attached
+        assert {"type": "input_file", "file_id": "file-old"} not in content
+
+    @pytest.mark.asyncio
     async def test_function_call_loop(self, tmp_path):
-        executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
-        req = _request(tools=[_tool("search", "Search the web")])
+        client = _mock_client(
+            _make_function_call_response("search", {"query": "python"}, "call-001", "resp-tool-001"),
+            _make_text_response("Python is a programming language.", "resp-final-001"),
+        )
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            messages = await self._executor().execute_agent(
+                _request(tools=[_tool("search", "Search the web")])
+            )
 
-        tool_response = _make_function_call_response("search", {"query": "python"}, "call-001", "resp-tool-001")
-        final_response = _make_text_response("Python is a programming language.", "resp-final-001")
-        call_count = 0
-
-        async def mock_create(**kwargs):
-            nonlocal call_count
-            call_count += 1
-            return tool_response if call_count == 1 else final_response
-
-        mock_client = AsyncMock()
-        mock_client.responses.create = mock_create
-
-        with patch("openai_responses_executor.executor.config", self._mock_config(tmp_path)), \
-             patch("openai_responses_executor.executor.AsyncOpenAI", return_value=mock_client):
-            messages = await executor.execute_agent(req)
-
-        assert call_count == 2
+        assert len(client.captured) == 2
         assert messages[0].content == "Python is a programming language."
 
     @pytest.mark.asyncio
     async def test_includes_built_in_tools_from_annotation(self, tmp_path):
-        executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
         tool = {"type": "web_search_preview"}
         req = _request(agent_annotations={ANNOTATION_KEY: json.dumps([tool])})
-        captured = {}
+        client = _mock_client(_make_text_response("Result."))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await self._executor().execute_agent(req)
 
-        async def mock_create(**kwargs):
-            captured.update(kwargs)
-            return _make_text_response("Result.")
-
-        mock_client = AsyncMock()
-        mock_client.responses.create = mock_create
-
-        with patch("openai_responses_executor.executor.config", self._mock_config(tmp_path)), \
-             patch("openai_responses_executor.executor.AsyncOpenAI", return_value=mock_client):
-            await executor.execute_agent(req)
-
-        assert {"type": "web_search_preview"} in captured.get("tools", [])
+        assert {"type": "web_search_preview"} in client.captured[0].get("tools", [])
 
     @pytest.mark.asyncio
     async def test_error_propagates(self, tmp_path):
-        executor = OpenAIResponsesExecutor.__new__(OpenAIResponsesExecutor)
-        req = _request()
-        mock_client = AsyncMock()
-        mock_client.responses.create = AsyncMock(side_effect=RuntimeError("API error"))
-
-        with patch("openai_responses_executor.executor.config", self._mock_config(tmp_path)), \
-             patch("openai_responses_executor.executor.AsyncOpenAI", return_value=mock_client):
+        client = _mock_client(RuntimeError("API error"))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
             with pytest.raises(RuntimeError, match="API error"):
-                await executor.execute_agent(req)
+                await self._executor().execute_agent(_request())
