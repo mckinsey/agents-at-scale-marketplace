@@ -202,7 +202,7 @@ wheels = [
 
 [[package]]
 name = "ark-sdk"
-version = "0.1.60"
+version = "0.1.63"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"] },
@@ -221,7 +221,7 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/94/2593dc1aa331e6a390c137090b200e4fcb36b58260fe657e17072a7823ee/ark_sdk-0.1.60-py3-none-any.whl", hash = "sha256:e2889beb35893b8ee246b45ab9738ccd74e8d5efb718fd4fce7b98a50895d302", size = 206662, upload-time = "2026-04-21T09:35:18.927Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/a1/285efb7722581fc3fba50e31fcb491b685303598892c4252486a96184939/ark_sdk-0.1.63-py3-none-any.whl", hash = "sha256:4695b8ce0e2c8907527bec7205412710680c73e96cef642e0504a52dfc2181bd", size = 219790, upload-time = "2026-05-14T17:25:52.485Z" },
 ]
 
 [[package]]
@@ -546,7 +546,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["http-server"], specifier = ">=0.3.0" },
-    { name = "ark-sdk", specifier = "==0.1.60" },
+    { name = "ark-sdk", specifier = "==0.1.63" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "kubernetes-asyncio", specifier = ">=31.0.0" },
@@ -557,7 +557,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.402" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "urllib3", specifier = ">=2.6.0" },
+    { name = "urllib3", specifier = ">=2.7.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
 ]
 provides-extras = ["dev"]
@@ -1711,11 +1711,11 @@ wheels = [
 
 [[package]]
 name = "urllib3"
-version = "2.6.3"
+version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c7/24/5f1b3bdffd70275f6661c76461e25f024d5a38a46f04aaca912426a2b1d3/urllib3-2.6.3.tar.gz", hash = "sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed", size = 435556, upload-time = "2026-01-07T16:24:43.925Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/0c/06f8b233b8fd13b9e5ee11424ef85419ba0d8ba0b3138bf360be2ff56953/urllib3-2.7.0.tar.gz", hash = "sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c", size = 433602, upload-time = "2026-05-07T16:13:18.596Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/08/aaaad47bc4e9dc8c725e68f9d04865dbcb2052843ff09c97b08904852d84/urllib3-2.6.3-py3-none-any.whl", hash = "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4", size = 131584, upload-time = "2026-01-07T16:24:42.685Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/3e/5db95bcf282c52709639744ca2a8b149baccf648e39c8cc87553df9eae0c/urllib3-2.7.0-py3-none-any.whl", hash = "sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897", size = 131087, upload-time = "2026-05-07T16:13:17.151Z" },
 ]
 
 [[package]]
