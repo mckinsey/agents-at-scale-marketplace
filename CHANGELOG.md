@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.38](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.37...v0.1.38) (2026-06-15)
+
+
+### Features
+
+* file inputs for the OpenAI Responses executor ([#258](https://github.com/mckinsey/agents-at-scale-marketplace/issues/258)) ([fa66686](https://github.com/mckinsey/agents-at-scale-marketplace/commit/fa66686b12e0c5edf011d7231799216e75a3b71d))
+
+
+### Bug Fixes
+
+* **kyc-onboarding-bundle:** make ensure-output-dirs-script fail loudly ([#283](https://github.com/mckinsey/agents-at-scale-marketplace/issues/283)) ([94cc72c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/94cc72c22c497969043adc571e5ec3ffd9267f8d))
+* Noah status ([#291](https://github.com/mckinsey/agents-at-scale-marketplace/issues/291)) ([b73f2dc](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b73f2dc42d255b4078f9c27669013ba9e6c1f1c0))
+* **openai-responses:** pin kubernetes&lt;36.0.0 to fix system:anonymous auth failure ([#292](https://github.com/mckinsey/agents-at-scale-marketplace/issues/292)) ([6424bf7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6424bf7f5a37d2df6148ccad5272ec8afd810c6e))
+
 ## [0.1.37](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.36...v0.1.37) (2026-05-12)
 
 

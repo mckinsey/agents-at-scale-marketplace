@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.16](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.15...marketplace-docs-v0.1.16) (2026-06-15)
+
+
+### Features
+
+* file inputs for the OpenAI Responses executor ([#258](https://github.com/mckinsey/agents-at-scale-marketplace/issues/258)) ([fa66686](https://github.com/mckinsey/agents-at-scale-marketplace/commit/fa66686b12e0c5edf011d7231799216e75a3b71d))
+
 ## [0.1.15](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.14...marketplace-docs-v0.1.15) (2026-04-16)
 
 
