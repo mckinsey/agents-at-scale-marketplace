@@ -1,0 +1,43 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "telegram-channel.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "telegram-channel.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - agents
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - queries
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - update
+  resourceNames:
+  - {{ .Values.channel.telegramTokenSecret }}
+# create can't be restricted by resourceNames (name unknown at auth time)
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+{{- end }}

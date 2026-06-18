@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+uv.lock
+.devspace/
+.pytest_cache/
+.coverage
+htmlcov/
+scratch/
+.DS_Store

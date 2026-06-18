@@ -1,0 +1,13 @@
+apiVersion: v2
+name: telegram-channel
+description: Telegram channel for Ark - connects agents to Telegram
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+maintainers:
+  - name: Ark Team
+sources:
+  - https://github.com/mckinsey/agents-at-scale-ark
+annotations:
+  ark.mckinsey.com/service: telegram-channel
+  ark.mckinsey.com/resources: service,channel

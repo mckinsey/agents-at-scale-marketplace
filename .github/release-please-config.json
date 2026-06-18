@@ -151,6 +151,19 @@
           "jsonpath": "$.appVersion"
         }
       ]
+    },
+    "channels/telegram-channel": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "telegram-channel",
+      "extra-files": [
+        "chart/Chart.yaml",
+        {
+          "type": "yaml",
+          "path": "chart/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
+      ]
     }
   }
 }

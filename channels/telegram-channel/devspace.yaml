@@ -1,0 +1,79 @@
+version: v2beta1
+
+images:
+  telegram-channel:
+    image: telegram-channel
+    dockerfile: Dockerfile
+    context: .
+
+pipelines:
+  deploy: |-
+    build_images --all
+    create_deployments --all
+  dev: |-
+    build_images --all
+    create_deployments --all
+    start_dev --all
+
+deployments:
+  telegram-channel:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart
+      values:
+        image:
+          repository: ${runtime.images.telegram-channel.image}
+          tag: ${runtime.images.telegram-channel.tag}
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        # DevSpace needs write access to /.devspace/ for its start signal
+        podSecurityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          fsGroup: 0
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+        httpRoute:
+          enabled: true
+
+dev:
+  telegram-channel:
+    imageSelector: telegram-channel
+    ports:
+      - port: "8352:8352"
+    command:
+      [
+        "sh",
+        "-c",
+        "cd /app && rm -rf .venv && uv sync && uv run python -m telegram_channel",
+      ]
+    namespace: default
+    logs:
+      lastLines: 50
+    sync:
+      - path: .:/app
+        startContainer: true
+        disableDownload: true
+        uploadExcludeFile: .dockerignore
+    ssh:
+      enabled: true
+
+hooks:
+  - command: |-
+      echo ""
+      echo "=== Telegram Channel ==="
+      echo ""
+      echo "Web UI (gateway): http://telegram.default.127.0.0.1.nip.io:8080"
+      echo "Web UI (direct):  http://localhost:8352"
+      echo ""
+      echo "If no bot token is configured, open the Web UI to set one up."
+      echo ""
+    events: ["after:deploy:telegram-channel"]

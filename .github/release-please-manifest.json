@@ -14,5 +14,6 @@
   "executors/langchain": "0.1.7",
   "executors/claude-agent-sdk": "0.1.11",
   "demos/cobol-modernization-bundle/examples/data": "1.0.1",
-  "executors/openai-responses": "0.1.6"
+  "executors/openai-responses": "0.1.6",
+  "channels/telegram-channel": "0.1.0"
 }
