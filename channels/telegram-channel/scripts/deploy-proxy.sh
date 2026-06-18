@@ -3,6 +3,29 @@ set -euo pipefail
 
 # Deploys a tiny Telegram API proxy on EC2 (t3.micro, free tier eligible).
 # Usage: ./scripts/deploy-proxy.sh [--teardown]
+#
+# Why this is here
+# ----------------
+# Some networks (corporate firewalls, certain country-level filters) block
+# api.telegram.org. The widely-documented workaround is to stand up an HTTP
+# reverse-proxy on a network that can reach Telegram, then point the bot at
+# the proxy. Telegram itself documents this pattern (MTProto + HTTP relays)
+# and it is reproduced in dozens of public repos and tutorials. Nothing in
+# this script is a non-public technique.
+#
+# Use at your own risk
+# --------------------
+# - The CloudFormation template opens port 80 to 0.0.0.0/0. Anyone who finds
+#   the proxy URL can route their own Telegram traffic through it and your AWS
+#   account picks up the bill. Lock the SecurityGroup down to your own egress
+#   CIDR before any non-demo use.
+# - No TLS in the default template. Tokens transit in plaintext between the
+#   bot and the proxy. Front it with ALB + ACM (or terminate TLS on the
+#   instance via Let's Encrypt) before sending real credentials.
+# - Standing up a proxy to bypass a corporate firewall may violate your
+#   employer's acceptable-use policy. Check first.
+# - Always run `--teardown` when finished. AWS bills idle EC2 the same as
+#   busy EC2, and an abandoned open relay is a liability.
 
 STACK_NAME="ark-telegram-proxy"
 REGION="${AWS_REGION:-us-east-1}"

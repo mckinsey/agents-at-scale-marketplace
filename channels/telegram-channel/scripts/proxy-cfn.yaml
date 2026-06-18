@@ -1,5 +1,21 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Telegram API reverse proxy for Ark channel development
+# Why this is here
+# ----------------
+# Some networks block api.telegram.org. The standard workaround is an HTTP
+# reverse-proxy on a network that can reach Telegram — a pattern documented
+# by Telegram itself and reproduced in many public tutorials. Nothing in this
+# template is a non-public technique.
+#
+# Use at your own risk
+# --------------------
+# - SecurityGroup opens port 80 to the world. Lock down to your own egress
+#   CIDR before any non-demo use; an open relay gets abused fast.
+# - No TLS. Tokens cross the proxy in plaintext. Front with ALB + ACM (or
+#   terminate TLS on the instance) before real credentials.
+# - May violate your employer's acceptable-use policy. Check first.
+# - Tear down with `aws cloudformation delete-stack` when finished. Idle EC2
+#   still bills.
 
 Parameters:
   InstanceType:
