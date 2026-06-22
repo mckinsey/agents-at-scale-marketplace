@@ -9,7 +9,7 @@ from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
 
 from . import sessions
 from .config import config
-from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_file_ids, resolve_output_schema
+from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_file_ids, resolve_output_schema, resolve_max_tool_calls
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
         # reasoning only supported on gpt-5+; temperature not supported on gpt-5+
         reasoning = resolve_reasoning(request) if model_config.model_name.startswith("gpt-5") else None
         output_schema = resolve_output_schema(request)
+        max_tool_calls = resolve_max_tool_calls(request)
         previous_response_id = (
             await sessions.get_previous_response_id(conversation_id) if conversation_id else None
         )
@@ -104,6 +105,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 tools=tools or None,
                 reasoning=reasoning,
                 text=output_schema,
+                max_tool_calls=max_tool_calls,
             )
         else:
             params = ResponsesCreateParams.first_turn(
@@ -113,6 +115,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 tools=tools or None,
                 reasoning=reasoning,
                 text=output_schema,
+                max_tool_calls=max_tool_calls,
             )
 
         try:
@@ -178,6 +181,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 previous_response_id=response.id,
                 input=tool_outputs,
                 tools=tools or None,
+                max_tool_calls=params.max_tool_calls,
             )
 
         logger.warning(f"Agent {request.agent.name} reached max tool iterations ({config.max_tool_iterations})")
