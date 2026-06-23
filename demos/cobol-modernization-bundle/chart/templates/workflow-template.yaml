@@ -27,6 +27,13 @@ spec:
   templates:
     - name: main
       steps:
+        - - name: init-output-dirs
+            template: init-output-dirs
+            arguments:
+              parameters:
+                - name: output-dir
+                  value: "{{ "{{workflow.parameters.output-dir}}" }}"
+
         - - name: list-cobol-files
             template: list-files
             arguments:
@@ -57,7 +64,9 @@ spec:
             withParam: "{{ "{{steps.list-cobol-files.outputs.parameters.files}}" }}"
 
         - - name: transcribe-audio
-            template: query-agent-with-retry
+            template: query-agent
+            continueOn:
+              failed: true
             arguments:
               parameters:
                 - name: agent-name
@@ -144,14 +153,26 @@ spec:
                 - name: workflow-status
                   value: "{{ "{{workflow.status}}" }}"
 
+    - name: init-output-dirs
+      inputs:
+        parameters:
+          - name: output-dir
+      script:
+        image: curlimages/curl:latest
+        command: [sh]
+        source: |
+          set -e
+          OUTPUT_DIR="{{ "{{inputs.parameters.output-dir}}" }}"
+          for subdir in pseudocode transcription diagrams python; do
+            echo "placeholder" > /tmp/placeholder
+            curl -sf -X POST \
+              -F "file=@/tmp/placeholder;filename=.gitkeep" \
+              -F "prefix=${OUTPUT_DIR}/${subdir}/" \
+              "http://file-gateway-api/files" || echo "Warning: could not create ${subdir} dir"
+          done
+          echo "Output directories initialized"
+
     - name: list-files
-      retryStrategy:
-        limit: 3
-        retryPolicy: "Always"
-        backoff:
-          duration: "15s"
-          factor: 2
-          maxDuration: "2m"
       inputs:
         parameters:
           - name: directory
@@ -162,40 +183,17 @@ spec:
         source: |
           set -e
 
-          QUERY_NAME="list-files-$(date +%s%N)"
+          DIRECTORY="{{ "{{inputs.parameters.directory}}" }}"
+          PATTERN="{{ "{{inputs.parameters.pattern}}" }}"
+          EXT="${PATTERN#\*}"
 
-          cat > /tmp/query.yaml <<EOF
-          apiVersion: ark.mckinsey.com/v1alpha1
-          kind: Query
-          metadata:
-            name: $QUERY_NAME
-          spec:
-            input: |
-              List all files in the directory: {{ "{{inputs.parameters.directory}}" }}
-              Return ONLY the filenames (not full paths) that match pattern: {{ "{{inputs.parameters.pattern}}" }}
-              Format the output as a JSON array of strings, like: ["file1.cbl", "file2.cbl"]
-            target:
-              type: agent
-              name: cobol-pseudocode-documenter
-            serviceAccount: {{ .Release.Name }}-argo-workflow
-            timeout: 5m
-            ttl: 1h
-          EOF
+          curl -sf "http://file-gateway-api/files?prefix=${DIRECTORY}/" > /tmp/gateway-response.json
 
-          kubectl apply -n {{ .Release.Namespace }} -f /tmp/query.yaml
-          kubectl wait --for=condition=Completed --timeout=5m -n {{ .Release.Namespace }} query/$QUERY_NAME || true
-
-          kubectl get query $QUERY_NAME -n {{ .Release.Namespace }} -o json > /tmp/query.json
-
-          CONTENT=$(jq -r '.status.response.content // .status.responses[0].content // empty' /tmp/query.json)
-
-          echo "$CONTENT" | grep -oE '\[("[^"]*"(,\s*"[^"]*")*)?\]' | head -1 > /tmp/files.json
-
-          jq -c '.' /tmp/files.json > /tmp/validated.json 2>/dev/null && mv /tmp/validated.json /tmp/files.json || echo '[]' > /tmp/files.json
+          jq -c '[.files[].key | split("/") | last | select(endswith("'"$EXT"'"))]' /tmp/gateway-response.json > /tmp/files.json
 
           FILE_COUNT=$(jq '. | length' /tmp/files.json)
           if [ "$FILE_COUNT" -eq 0 ]; then
-            echo "Error: No files found matching pattern '{{ "{{inputs.parameters.pattern}}" }}' in directory '{{ "{{inputs.parameters.directory}}" }}'"
+            echo "Error: No files found matching pattern '${PATTERN}' in directory '${DIRECTORY}'"
             exit 1
           fi
 
@@ -206,28 +204,6 @@ spec:
           - name: files
             valueFrom:
               path: /tmp/files.json
-
-    - name: query-agent-with-retry
-      retryStrategy:
-        limit: 3
-        retryPolicy: "Always"
-        backoff:
-          duration: "30s"
-          factor: 2
-          maxDuration: "5m"
-      inputs:
-        parameters:
-          - name: agent-name
-          - name: task-description
-      steps:
-        - - name: run
-            template: query-agent
-            arguments:
-              parameters:
-                - name: agent-name
-                  value: "{{ "{{inputs.parameters.agent-name}}" }}"
-                - name: task-description
-                  value: "{{ "{{inputs.parameters.task-description}}" }}"
 
     - name: query-agent
       inputs:
@@ -240,7 +216,8 @@ spec:
         source: |
           set -eux
 
-          QUERY_NAME="cobol-mod-{{ "{{workflow.name}}" }}-{{ "{{inputs.parameters.agent-name}}" }}-$(date +%s%N)"
+          POD_SUFFIX=$(hostname | sed 's/.*-//')
+          QUERY_NAME="cobol-mod-{{ "{{workflow.name}}" }}-{{ "{{inputs.parameters.agent-name}}" }}-${POD_SUFFIX}"
           AGENT_NAME="{{ "{{inputs.parameters.agent-name}}" }}"
 
           cat > /tmp/task-description.txt <<'TASKEOF'
@@ -267,9 +244,15 @@ spec:
             ttl: 24h
           EOF
 
-          kubectl apply -n {{ .Release.Namespace }} -f /tmp/query.yaml
+          kubectl create -n {{ .Release.Namespace }} -f /tmp/query.yaml
 
-          kubectl wait --for=condition=Completed --timeout=35m -n {{ .Release.Namespace }} query/$QUERY_NAME || true
+          for i in $(seq 1 420); do
+            PHASE=$(kubectl get query $QUERY_NAME -n {{ .Release.Namespace }} -o jsonpath='{.status.phase}' 2>/dev/null)
+            if [ "$PHASE" = "done" ] || [ "$PHASE" = "error" ]; then
+              break
+            fi
+            sleep 5
+          done
 
           kubectl get query $QUERY_NAME -n {{ .Release.Namespace }} -o json > /tmp/query.json
           PHASE=$(jq -r '.status.phase' /tmp/query.json)
