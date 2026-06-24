@@ -647,6 +647,40 @@
                 "k8sServicePort": 8000,
                 "k8sDeploymentName": "executor-langchain"
             }
+        },
+        {
+            "name": "telegram-channel",
+            "type": "channel",
+            "displayName": "Telegram Channel",
+            "description": "Connects Ark agents to Telegram. Bot polls Telegram, discovers Agent CRDs, dispatches messages as Queries.",
+            "version": "0.1.0",
+            "author": "ARK Marketplace",
+            "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "license": "Apache-2.0",
+            "tags": [
+                "channel",
+                "telegram",
+                "messaging",
+                "chat"
+            ],
+            "category": "channels",
+            "icon": "https://example.com/telegram-channel-icon.png",
+            "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/channels/telegram-channel/",
+            "support": {
+                "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+            },
+            "ark": {
+                "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/telegram-channel",
+                "namespace": "default",
+                "helmReleaseName": "telegram-channel",
+                "installArgs": [
+                    "--create-namespace"
+                ],
+                "k8sServiceName": "telegram-channel",
+                "k8sServicePort": 8352,
+                "k8sDeploymentName": "telegram-channel"
+            }
         }
     ]
 }
