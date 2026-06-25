@@ -40,7 +40,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: argo-workflows-edit
+  name: argo-aggregate-to-edit
 subjects:
   - kind: ServiceAccount
     name: {{ .Values.argoWorkflows.serviceAccountName }}
