@@ -201,6 +201,7 @@ spec:
               },
               spec: {
                 input: $input,
+                sessionId: $wf,
                 target: {name: $target_name, type: $target_type},
                 timeout: $timeout,
                 ttl: "1h"

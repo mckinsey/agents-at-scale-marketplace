@@ -234,6 +234,7 @@ spec:
               agent: "$AGENT_NAME"
               use-case: cobol-modernization
           spec:
+            sessionId: "{{ "{{workflow.name}}" }}"
             input: |
           $(cat /tmp/task-description.txt | sed 's/^/      /')
             target:
