@@ -169,8 +169,13 @@ def resolve_max_tool_calls(request: ExecutionEngineRequest) -> Optional[int]:
     """Resolve max_tool_calls from annotations.
 
     Cascade: Query > Agent > ExecutionEngine. The first source (highest
-    priority) with a valid value wins. Sources with malformed or negative
-    values are skipped, allowing lower-priority sources to take effect.
+    priority) with a valid value wins. Sources with malformed or
+    out-of-range values are skipped, allowing lower-priority sources to
+    take effect.
+
+    The Responses API enforces ``max_tool_calls >= 1`` (it rejects 0 with
+    HTTP 400 ``integer_below_min_value``), so values below 1 are treated as
+    invalid here rather than passed through.
     """
     for source in [
         request.query_annotations,
@@ -181,8 +186,8 @@ def resolve_max_tool_calls(request: ExecutionEngineRequest) -> Optional[int]:
         if raw:
             try:
                 value = int(raw)
-                if value < 0:
-                    logger.warning("max-tool-calls annotation must be >= 0, got %d", value)
+                if value < 1:
+                    logger.warning("max-tool-calls annotation must be >= 1, got %d", value)
                     continue
                 return value
             except (TypeError, ValueError) as exc:

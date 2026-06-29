@@ -252,9 +252,20 @@ class TestResolveMaxToolCalls:
     def test_no_annotation_returns_none(self):
         assert resolve_max_tool_calls(_request()) is None
 
-    def test_zero_is_valid(self):
+    def test_zero_is_rejected_and_skipped(self):
+        # The Responses API requires max_tool_calls >= 1 (it rejects 0 with
+        # HTTP 400 integer_below_min_value), so 0 is invalid; skip it and
+        # fall through to the next source.
+        req = _request(
+            execution_engine_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "5"},
+            agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "0"},
+        )
+        # Agent's 0 is rejected; should fall back to engine's 5.
+        assert resolve_max_tool_calls(req) == 5
+
+    def test_zero_with_no_fallback_returns_none(self):
         req = _request(agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "0"})
-        assert resolve_max_tool_calls(req) == 0
+        assert resolve_max_tool_calls(req) is None
 
     def test_negative_value_is_rejected_and_skipped(self):
         # Negative is invalid; skip it and fall through to the next source.
