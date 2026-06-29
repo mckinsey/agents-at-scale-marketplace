@@ -25,6 +25,12 @@ resources:
 dataVolume:
   claimName: ""
 
+prefetch:
+  enabled: false
+  fileGatewayUrl: "http://file-gateway-api"
+  image: "curlimages/curl:latest"
+  files: []
+
 env:
   baseDateDir: /data/aas-files
   cacheDir: /data/whisper-cache
