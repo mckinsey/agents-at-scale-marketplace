@@ -67,6 +67,8 @@ jobs:
           - { name: ark-sandbox, path: services/ark-sandbox, namespace: default, run-deployment-test: false }
           # disable noah deployment tests for PRs to avoid hitting 5m limit
           - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
+          # disable argo-make-author deployment tests for PRs to avoid hitting 5m limit
+          - { name: argo-make-author, path: agents/argo-make-author, namespace: default, run-deployment-test: false }
           # disable kyc-demo-bundle deployment tests for PRs to avoid hitting 5m limit
           - { name: kyc-demo-bundle, path: demos/kyc-demo-bundle, namespace: default, run-deployment-test: false }
           # disable file-gateway deployment tests for PRs to avoid hitting 5m limit
