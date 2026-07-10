@@ -457,6 +457,39 @@
             }
         },
         {
+            "name": "kubernetes-mcp-server",
+            "type": "mcp",
+            "displayName": "Kubernetes MCP Server",
+            "description": "Read-only kubernetes-mcp-server registered with Ark for grounding agents on cluster resources",
+            "version": "0.1.0",
+            "author": "ARK Marketplace",
+            "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "license": "Apache-2.0",
+            "tags": [
+                "mcp",
+                "kubernetes",
+                "read-only",
+                "cluster",
+                "grounding"
+            ],
+            "category": "mcps",
+            "icon": "https://example.com/kubernetes-mcp-icon.png",
+            "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/kubernetes-mcp-server/",
+            "support": {
+                "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+            },
+            "ark": {
+                "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/kubernetes-mcp-server",
+                "namespace": "default",
+                "helmReleaseName": "kubernetes-mcp-server",
+                "installArgs": [
+                    "--create-namespace"
+                ],
+                "k8sDeploymentName": "kubernetes-mcp-server"
+            }
+        },
+        {
             "name": "cobol-modernization-bundle",
             "type": "demo",
             "displayName": "COBOL Modernization Bundle",

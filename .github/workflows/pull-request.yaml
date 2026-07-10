@@ -73,6 +73,8 @@ jobs:
           - { name: file-gateway, path: services/file-gateway, namespace: default, run-deployment-test: false }
           # disable filesystem-mcp-server deployment tests for PRs to avoid hitting 5m limit
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server, namespace: default, run-deployment-test: false }
+          # disable kubernetes-mcp-server deployment tests for PRs to avoid hitting 5m limit
+          - { name: kubernetes-mcp-server, path: mcps/kubernetes-mcp-server, namespace: default, run-deployment-test: false }
           # disable cobol-modernization-bundle deployment tests for PRs to avoid hitting 5m limit
           - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default, run-deployment-test: false }
           # disable executor-langchain deployment tests for PRs to avoid hitting 5m limit
