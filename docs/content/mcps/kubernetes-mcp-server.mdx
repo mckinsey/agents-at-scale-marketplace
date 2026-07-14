@@ -1,0 +1,68 @@
+---
+title: Kubernetes MCP Server
+description: Read-only kubernetes-mcp-server registered with Ark for grounding agents on cluster resources
+---
+
+# Kubernetes MCP Server
+
+The Kubernetes MCP Server is a read-only [kubernetes-mcp-server](https://github.com/containers/kubernetes-mcp-server) registered with Ark. It grounds agents on live cluster resources without granting any write access. The chart wraps the upstream chart and layers Ark configuration: read-only mode, namespace-scoped read-only RBAC, a `localhost-gateway` HTTPRoute, and an Ark `MCPServer` registration.
+
+## Available Tools
+
+In read-only mode the server exposes resource inspection tools (prefixed with `kubernetes-mcp-server-`):
+
+- `kubernetes-mcp-server-resources-list` - List resources of a given kind
+- `kubernetes-mcp-server-resources-get` - Get a specific resource
+
+## What it deploys
+
+- The upstream `kubernetes-mcp-server` chart from `oci://ghcr.io/containers/charts`, in read-only mode.
+- A namespace-scoped read-only `Role`/`RoleBinding` (`ark-reader`) granting `get`/`list`/`watch` on `ark.mckinsey.com` resources and `argoproj.io` workflows / workflow templates.
+- A `localhost-gateway` `HTTPRoute`, with Ingress disabled.
+- An Ark `MCPServer` resource so the server's tools are discovered. The address defaults to the in-cluster service of this release, so the chart is namespace-portable.
+
+## Quick Start
+
+### Installation
+
+**Using Ark CLI (Recommended):**
+
+The server is registered as an optional Ark service. Enable it in your Ark CLI config, then install:
+
+```bash
+ark install
+```
+
+**Using DevSpace (for development):**
+
+```bash
+cd mcps/kubernetes-mcp-server
+devspace deploy
+```
+
+## Configuration
+
+Helm chart options (`chart/values.yaml`):
+
+- `kubernetes-mcp-server.config.read_only`: read-only mode (default `true`).
+- `kubernetes-mcp-server.rbac.extraRoles`: read-only roles granted to the server.
+- `kubernetes-mcp-server.httpRoute`: Gateway API routing configuration.
+- `mcpServer.create`: register the Ark `MCPServer` (default `true`).
+- `mcpServer.address`: override the server address (defaults to the in-cluster service).
+
+## Using with Ark
+
+The chart registers an `MCPServer` named `kubernetes-mcp-server`, which auto-generates `Tool` resources. Reference them from an agent:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: cluster-inspector
+spec:
+  tools:
+    - name: kubernetes-mcp-server-resources-list
+      type: custom
+    - name: kubernetes-mcp-server-resources-get
+      type: custom
+```
