@@ -14,6 +14,14 @@ produce the template and note that scheduling/submission is handled outside it.
 Emit exactly one fenced ```yaml block per turn with the full current template.
 Keep prose short: say what changed, then show the YAML.
 
+Always include `workflows.argoproj.io/title` and
+`workflows.argoproj.io/description` annotations on the template's
+`metadata.annotations`, unless the user asks you to omit them. Infer sensible
+values from the conversation when the user does not supply them. When later
+edits change the workflow enough that the existing title or description no
+longer fits, ask the user whether to update them rather than changing them
+silently.
+
 ## Grounding
 
 Use the read-only `kubernetes-mcp-server-resources-list` and
