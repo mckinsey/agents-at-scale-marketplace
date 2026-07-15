@@ -15,7 +15,7 @@ dependencies = [
     "openai>=1.60.0", # OpenAI Python SDK with Responses API support
     "pydantic-settings>=2.0.0", # environment variable config
     "python-multipart>=0.0.6", # multipart form parsing for /v1/files uploads
-    "ark-sdk==0.1.64",
+    "ark-sdk==0.1.66",
     "openinference-instrumentation-openai",
     "opentelemetry-exporter-otlp-proto-http",
     "urllib3>=2.6.0",
