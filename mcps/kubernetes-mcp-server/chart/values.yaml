@@ -2,9 +2,32 @@
 # the upstream chart from ghcr.io/containers/charts, which is a dependency of
 # our own chart. It mirrors the Ark configuration the devspace deployment uses.
 kubernetes-mcp-server:
-  # Read-only mode. The server only exposes resources_list / resources_get.
+  # Restrict the exposed tool surface to the generic resources_list /
+  # resources_get pair. Combined with the namespace-scoped RBAC below, this
+  # keeps the server's blast radius aligned with what Ark actually needs.
+  # read_only alone still discovers ~14 tools (pods_list, namespaces_list,
+  # nodes_top, ...) that hit core Kubernetes APIs the SA has no permission for.
   config:
     read_only: true
+    enabled_tools:
+      - resources_list
+      - resources_get
+    # Descriptions are injected verbatim into the LLM tool schema. Steer the
+    # model toward the correct apiVersion for Ark CRDs so users can wire the
+    # tools into an agent without extra prompt engineering.
+    tool_overrides:
+      resources_list:
+        description: |
+          List Kubernetes resources of a given kind. For Ark CRDs use
+          apiVersion "ark.mckinsey.com/v1alpha1" with kinds: Agent, Team,
+          Query, Model, MCPServer, A2AServer, A2ATask, Tool, Memory,
+          ExecutionEngine, ArkConfig. For Argo use "argoproj.io/v1alpha1"
+          with kinds Workflow, WorkflowTemplate. Pass a namespace when the
+          resource is namespaced.
+      resources_get:
+        description: |
+          Get a single Kubernetes resource by name. Same apiVersion
+          conventions as resources_list.
 
   # Expose the server through the localhost-gateway Gateway API, not Ingress.
   ingress:
