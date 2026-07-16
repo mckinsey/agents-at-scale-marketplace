@@ -5,15 +5,11 @@ Read-only [kubernetes-mcp-server](https://github.com/containers/kubernetes-mcp-s
 ## Quickstart
 
 ```bash
-# Show all available recipes.
-make help
+# Deploy with Helm
+helm install kubernetes-mcp-server ./chart -n default --create-namespace
 
-# Install/uninstall - sets up your local machine or cluster.
-make install
-make uninstall
-
-# Run in development mode. May require extra tools and setup, check the README.
-make dev
+# Verify
+kubectl get mcpserver kubernetes-mcp-server
 ```
 
 **Using DevSpace (for development):**
