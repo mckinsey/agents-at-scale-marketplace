@@ -105,6 +105,19 @@
         }
       ]
     },
+    "mcps/kubernetes-mcp-server": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "kubernetes-mcp-server",
+      "extra-files": [
+        "chart/Chart.yaml",
+        {
+          "type": "yaml",
+          "path": "chart/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
+      ]
+    },
     "demos/cobol-modernization-bundle": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
