@@ -5,6 +5,7 @@ UK Companies House API integration for company search and beneficial ownership (
 ## Features
 
 - **get_uk_company_number**: Search for a UK company by name, returns matching company numbers, status, and addresses
+- **resolve_uk_company**: Resolve a company name to its single registered entity — exact normalized-name match (handles `P.L.C.`/`PLC`/`Ltd`/`Limited`) enriched with the registered-office **town** (`locality`) and **SIC codes** from the company profile. Returns `matched: false` (echoing the input name + candidate list) when there is no exact registered match. Designed to anchor a downstream web search to the correct company rather than a famous homonym (e.g. `METRO LIMITED` → Leigh-on-Sea lighting company, not the newspaper).
 - **get_uk_person_in_control**: Get persons with significant control (PSC / beneficial owners) for a company
 
 ## Quick Start
