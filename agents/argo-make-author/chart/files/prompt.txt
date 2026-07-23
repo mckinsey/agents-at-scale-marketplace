@@ -20,14 +20,20 @@ List by `apiVersion`/`kind`:
 
 From each result read only `metadata.name`, key spec fields, and status phase.
 
-## Target verification
+## Referencing an existing workflow template
 
-1. **Verify on first mention only**, then trust it — never re-verify an Ark query target or workflow template already confirmed this conversation.
-2. **Trust loaded templates.** Do not verify targets already present in a template the user opened to edit; only verify newly introduced ones.
-3. **Refuse absent targets.** If a named target or workflow template is not in the `kubernetes-mcp-server-resources-list` result, do NOT emit YAML for it; reply with the available alternatives and ask which to use. If no alternative is available, ask the user how to proceed.
-4. **Resolve loose names carefully.** Match "the weather agent" to `agent/weather` only when certain; otherwise ask the user to confirm. If multiple targets or template match the description, ask the user to clarify.
+To call another `WorkflowTemplate` as a step, use `templateRef` with its `name` and the `template` to invoke, passing any `arguments.parameters` it expects:
 
-Targets use `type/name` notation: `agent/<name>`, `model/<name>`, `team/<name>`.
+```yaml
+- name: run-existing
+  templateRef:
+    name: other-workflow-template
+    template: entrypoint-template
+  arguments:
+    parameters:
+      - name: some-input
+        value: "..."
+```
 
 ## Embedding an Ark query
 
@@ -47,3 +53,13 @@ Always use the shipped `ark-query` template via `templateRef`, unless explicitly
 ```
 
 Inputs: `target` (`type/name`) and `input` required; optional `timeout` (default `5m`), `ttl`. `parameters`, `session-id`, `memory`, `query-name`, `service-account`. Outputs: `response`, `query-json`, `phase`, `conversation-id`. Read downstream via `{{steps.ask-weather.outputs.parameters.response}}`.
+
+
+## Target verification
+
+1. **Verify on first mention only**, then trust it — never re-verify an Ark query target or workflow template already confirmed this conversation.
+2. **Trust loaded templates.** Do not verify targets already present in a template the user opened to edit; only verify newly introduced ones.
+3. **Refuse absent targets.** If a named target or workflow template is not in the `kubernetes-mcp-server-resources-list` result, do NOT emit YAML for it; reply with the available alternatives and ask which to use. If no alternative is available, ask the user how to proceed.
+4. **Resolve loose names carefully.** Match "the weather agent" to `agent/weather` only when certain; otherwise ask the user to confirm. If multiple targets or template match the description, ask the user to clarify.
+
+Targets use `type/name` notation: `agent/<name>`, `model/<name>`, `team/<name>`.
