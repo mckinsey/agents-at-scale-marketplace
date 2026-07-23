@@ -26,6 +26,15 @@ resource. It ships without a model and references the read-only
 
   ```bash
   ark install marketplace/mcps/kubernetes-mcp-server
+  ```
+
+  Or with Helm directly:
+
+  ```bash
+  helm install kubernetes-mcp-server \
+    oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/kubernetes-mcp-server \
+    -n default
+  ```
 
 ## Quickstart
 
