@@ -19,6 +19,7 @@ spec:
       serviceAccountName: {{ include "file-gateway.versitygw.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.versitygw.podSecurityContext | nindent 8 }}
+      {{- if ne .Values.versitygw.backend "s3" }}
       initContainers:
       - name: fix-data-permissions
         image: busybox:1.37.0
@@ -31,6 +32,7 @@ spec:
           capabilities:
             drop:
               - ALL
+      {{- end }}
       containers:
       - name: versitygw
         securityContext:
@@ -38,8 +40,12 @@ spec:
         image: "{{ .Values.versitygw.image.repository }}:{{ .Values.versitygw.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.versitygw.image.pullPolicy }}
         args:
+        {{- if eq .Values.versitygw.backend "s3" }}
+          - "s3"
+        {{- else }}
           - "posix"
           - {{ .Values.versitygw.config.dataPath | quote }}
+        {{- end }}
         ports:
         - name: s3
           containerPort: {{ .Values.versitygw.config.port | int }}
@@ -57,15 +63,47 @@ spec:
               key: secret-access-key
         - name: VGW_PORT
           value: {{ printf ":%s" .Values.versitygw.config.port | quote }}
+        {{- if eq .Values.versitygw.backend "s3" }}
+        - name: VGW_S3_REGION
+          value: {{ .Values.versitygw.s3Backend.region | quote }}
+        {{- if .Values.versitygw.s3Backend.endpoint }}
+        - name: VGW_S3_ENDPOINT
+          value: {{ .Values.versitygw.s3Backend.endpoint | quote }}
+        {{- end }}
+        # HOME is needed by the AWS SDK for optional shared config lookups.
+        - name: HOME
+          value: /tmp
+        {{- if .Values.versitygw.s3Backend.credentialsSecret }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.versitygw.s3Backend.credentialsSecret }}
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.versitygw.s3Backend.credentialsSecret }}
+              key: AWS_SECRET_ACCESS_KEY
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.versitygw.s3Backend.credentialsSecret }}
+              key: AWS_SESSION_TOKEN
+              optional: true
+        {{- end }}
+        {{- else }}
         - name: VGW_REGION
           value: {{ .Values.versitygw.config.region | quote }}
         volumeMounts:
         - name: data
           mountPath: {{ .Values.versitygw.config.dataPath }}
+        {{- end }}
         resources:
           {{- toYaml .Values.versitygw.resources | nindent 12 }}
+      {{- if ne .Values.versitygw.backend "s3" }}
       volumes:
       - name: data
         persistentVolumeClaim:
           claimName: {{ include "file-gateway.pvcName" . }}
+      {{- end }}
 {{- end }}

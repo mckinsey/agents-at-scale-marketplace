@@ -26,6 +26,11 @@ versitygw:
   enabled: true
   replicaCount: 1
 
+  # Storage backend for the gateway:
+  #   posix - store objects on the shared PVC at config.dataPath (default)
+  #   s3    - proxy to an existing S3 service (e.g. real AWS S3); no PVC used
+  backend: posix
+
   image:
     repository: ghcr.io/versity/versitygw
     pullPolicy: IfNotPresent
@@ -63,6 +68,16 @@ versitygw:
     region: "us-east-1"
     port: "7070"
     dataPath: "/data"
+
+  # Used only when backend: s3 - upstream S3 service the gateway proxies to.
+  s3Backend:
+    # Upstream S3 endpoint. Empty = AWS default (https://s3.<region>.amazonaws.com).
+    endpoint: ""
+    region: "us-east-1"
+    # Optional secret holding upstream credentials as keys:
+    #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and optionally AWS_SESSION_TOKEN.
+    # Leave empty to use the pod's AWS default credential chain (IRSA / pod identity).
+    credentialsSecret: ""
 
   s3SecretName: "file-gateway-s3-credentials"
 
