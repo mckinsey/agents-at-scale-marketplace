@@ -1,0 +1,25 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agent.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "argo-make-author.labels" . | nindent 4 }}
+    ark.mckinsey.com/skip-webhook-validation: "true"
+spec:
+  description: >-
+    Conversational author for Argo WorkflowTemplate resources that compose
+    generic Argo steps with the user's existing Ark agents, models, and teams.
+    Grounds every query target on the live cluster and refuses to reference
+    resources it cannot find.
+  {{- with .Values.agent.modelRef }}
+  modelRef:
+    name: {{ . }}
+  {{- end }}
+  tools:
+    - type: mcp
+      name: {{ .Values.mcp.resourcesListTool }}
+    - type: mcp
+      name: {{ .Values.mcp.resourcesGetTool }}
+  prompt: |
+{{ .Files.Get "files/prompt.txt" | indent 4 }}
