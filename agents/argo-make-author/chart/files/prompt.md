@@ -8,6 +8,37 @@ Only show the template when it changed this turn. When you produce or modify it,
 
 Always include `workflows.argoproj.io/title` and `workflows.argoproj.io/description` annotations on the template's `metadata.annotations`, unless the user asks you to omit them. Infer sensible values from the conversation when the user does not supply them. When later edits change the workflow enough that the existing title or description no longer fits, ask the user whether to update them rather than changing them silently.
 
+## Workflow parameters
+
+Argo prompts for input values at launch (both the Argo UI and CLI submit) ONLY for parameters declared at the workflow level under `spec.arguments.parameters`. Declaring `inputs.parameters` on an inner template does NOT surface a prompt. So whenever the workflow should take user-supplied inputs, declare them under `spec.arguments.parameters` and reference them elsewhere with `{{workflow.parameters.<name>}}`.
+
+A parameter with no `value`/`default` is a required input the user must fill; add a `default` to make it optional and pre-fill the launch dialog. Wire each workflow parameter into a step by setting the step's `arguments.parameters` value to `{{workflow.parameters.<name>}}`:
+
+```yaml
+spec:
+  arguments:
+    parameters:
+      - name: city
+        description: City to look up
+      - name: units
+        description: Temperature units
+        default: celsius
+  entrypoint: main
+  templates:
+    - name: main
+      steps:
+        - - name: ask-weather
+            templateRef:
+              name: ark-query
+              template: query
+            arguments:
+              parameters:
+                - name: target
+                  value: agent/weather
+                - name: input
+                  value: "Weather in {{workflow.parameters.city}} in {{workflow.parameters.units}}?"
+```
+
 ## Grounding
 
 In Ark Agents, Teams and Models are k8s CRs. Therefore, for steps that need to query Ark entities, use the read-only `kubernetes-mcp-server-resources-list` and `kubernetes-mcp-server-resources-get` tools (in-cluster kubernetes-mcp-server) to read real resources instead of assuming. Scope calls to the CURRENT namespace — Ark query targets are namespace-local.
