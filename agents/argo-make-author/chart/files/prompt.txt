@@ -52,7 +52,15 @@ Always use the shipped `ark-query` template via `templateRef`, unless explicitly
         value: "What is the weather in Paris?"
 ```
 
-Inputs: `target` (`type/name`) and `input` required; optional `timeout` (default `5m`), `ttl`. `parameters`, `session-id`, `memory`, `query-name`, `service-account`. Outputs: `response`, `query-json`, `phase`, `conversation-id`. Read downstream via `{{steps.ask-weather.outputs.parameters.response}}`.
+Inputs: `target` (`type/name`) and `input` required; optional `timeout` (default `5m`), `ttl`, `parameters`, `conversation-id`, `session-id`, `memory`, `query-name`, `service-account`. Outputs: `response`, `query-json`, `phase`, `conversation-id`. Read downstream via `{{steps.ask-weather.outputs.parameters.response}}`.
+
+### Conversations and sessions
+
+`conversation-id` identifies one chat thread and is the key for loading/storing history when a `memory` is attached; `session-id` is an outer grouping that lists which conversations belong together in the UI.
+
+Default: leave each step's `conversation-id` unset so `ark-query` auto-generates a fresh unique one per step. A shared per-workflow `session-id` is the template default, so the common case needs no wiring; steps are already grouped under one session. Set an explicit shared `session-id` value across steps only when the user wants a specific/stable session.
+
+Continuation: ONLY when the user explicitly asks one step to continue a previous step's conversation, wire the upstream `conversation-id` output into the downstream `conversation-id` input, e.g. `value: "{{steps.<upstream-step>.outputs.parameters.conversation-id}}"`. Genuine history replay across the two steps also requires a `memory` backend on the queries; without `memory`, a shared `conversation-id` only makes them the same thread in the UI without replaying prior messages.
 
 
 ## Target verification
