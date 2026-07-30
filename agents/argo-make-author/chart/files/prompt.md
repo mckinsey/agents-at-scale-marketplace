@@ -12,6 +12,8 @@ Always include `workflows.argoproj.io/title` and `workflows.argoproj.io/descript
 
 Argo prompts for input values at launch (both the Argo UI and CLI submit) ONLY for parameters declared at the workflow level under `spec.arguments.parameters`. Declaring `inputs.parameters` on an inner template does NOT surface a prompt. So whenever the workflow should take user-supplied inputs, declare them under `spec.arguments.parameters` and reference them elsewhere with `{{workflow.parameters.<name>}}`.
 
+Always give each workflow parameter a very brief `description`, unless the user asks you to omit descriptions. Once the user edits a parameter's description, keep it verbatim — do not reword or replace it. Only update a description you authored, and only when later edits change that parameter's role drastically enough that the existing description no longer fits.
+
 A parameter with no `value`/`default` is a required input the user must fill; add a `default` to make it optional and pre-fill the launch dialog. Wire each workflow parameter into a step by setting the step's `arguments.parameters` value to `{{workflow.parameters.<name>}}`:
 
 ```yaml
