@@ -12,8 +12,8 @@ A file management system providing S3 file operations through a REST API and MCP
 File Gateway provides:
 - **File API** - FastAPI REST service for S3 file operations (list, upload, download, delete)
 - **MCP Server** - Model Context Protocol server for agent file access
-- **VersityGW** - S3-compatible gateway for object storage backend
-- **Persistent Storage** - Kubernetes PVC-backed storage
+- **VersityGW** - S3-compatible gateway; stores objects on a local PVC (default) or proxies an existing remote S3 bucket
+- **Persistent Storage** - Kubernetes PVC-backed storage (posix backend only)
 
 ### File Size Limitations
 
@@ -72,13 +72,51 @@ S3-compatible gateway for object storage, providing the underlying storage backe
 |-----------|-------------|---------|
 | `fileApi.image.repository` | File API container image | `ghcr.io/mckinsey/agents-at-scale-marketplace/file-api` |
 | `fileApi.service.port` | File API service port | `80` |
-| `filesystemMcp.enabled` | Enable MCP server | `true` |
+| `fileApi.config.bucketName` | Bucket File API serves; empty falls back to `filesystemMcp.config.bucketName` | `""` |
+| `filesystemMcp.enabled` | Enable MCP server (must be `false` when `versitygw.backend=s3`) | `true` |
 | `filesystemMcp.config.bucketName` | S3 bucket name | `aas-files` |
 | `versitygw.enabled` | Enable VersityGW | `true` |
+| `versitygw.backend` | Storage backend: `posix` (local PVC) or `s3` (remote bucket) | `posix` |
+| `versitygw.s3Backend.endpoint` | Upstream S3 endpoint; empty = AWS default | `""` |
+| `versitygw.s3Backend.region` | Upstream S3 region | `us-east-1` |
+| `versitygw.s3Backend.credentialsSecret` | Secret with `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/optional `AWS_SESSION_TOKEN` | `""` |
+| `versitygw.s3Backend.allowDefaultCredentialChain` | Allow IRSA/pod identity when no `credentialsSecret` | `false` |
 | `versitygw.service.port` | VersityGW service port | `80` |
-| `storage.enabled` | Enable persistent storage | `true` |
+| `storage.enabled` | Enable persistent storage (posix backend only) | `true` |
 | `storage.size` | Storage size | `1Gi` |
 | `httpRoute.enabled` | Enable Gateway API HTTPRoute | `true` |
+
+## Remote S3 backend
+
+By default VersityGW stores objects on a local PVC (`backend: posix`). To back the gateway with an existing S3 bucket (e.g. real AWS S3), set `versitygw.backend=s3`. VersityGW proxies the bucket and no PVC is used.
+
+Create the credentials secret:
+
+```bash
+kubectl create secret generic my-s3-creds \
+  --from-literal=AWS_ACCESS_KEY_ID=... \
+  --from-literal=AWS_SECRET_ACCESS_KEY=...
+  # optional, for temporary credentials:
+  # --from-literal=AWS_SESSION_TOKEN=...
+```
+
+Install:
+
+```bash
+helm install file-gateway ./chart \
+  --set versitygw.backend=s3 \
+  --set versitygw.s3Backend.region=us-east-1 \
+  --set versitygw.s3Backend.credentialsSecret=my-s3-creds \
+  --set fileApi.config.bucketName=my-existing-bucket \
+  --set filesystemMcp.enabled=false \
+  --set storage.enabled=false
+```
+
+Constraints (enforced at install time):
+- **`filesystemMcp.enabled` must be `false`.** The MCP server is a POSIX filesystem server on the local PVC and cannot read or write the remote bucket, so the two would back different stores.
+- **The bucket must already exist.** The chart does not create it; the default `aas-files` will not exist in a real account.
+- **Credentials are required.** Set `credentialsSecret`, or set `versitygw.s3Backend.allowDefaultCredentialChain=true` to use IRSA / pod identity.
+- Leave `versitygw.s3Backend.endpoint` empty for AWS; set it for S3-compatible providers.
 
 ## Usage with Agents
 

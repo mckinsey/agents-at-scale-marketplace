@@ -1,0 +1,17 @@
+{{- /*
+Install-time configuration validation for file-gateway.
+This template renders no resources; it only fails fast on incompatible or
+incomplete configuration so misconfigurations surface at install time rather
+than as silent data splits or runtime 403s.
+*/ -}}
+{{- if not (has .Values.versitygw.backend (list "posix" "s3")) }}
+{{-   fail (printf "versitygw.backend must be 'posix' or 's3', got %q" .Values.versitygw.backend) }}
+{{- end }}
+{{- if eq .Values.versitygw.backend "s3" }}
+{{-   if .Values.filesystemMcp.enabled }}
+{{-     fail "versitygw.backend=s3 is incompatible with filesystemMcp.enabled=true: filesystem-mcp is a POSIX filesystem server backed by the local PVC (BASE_DATA_DIR on /data) and cannot read/write the remote S3 bucket that file-api/VersityGW use, so the two would back different stores. Set filesystemMcp.enabled=false when using the s3 backend." }}
+{{-   end }}
+{{-   if and (not .Values.versitygw.s3Backend.credentialsSecret) (not .Values.versitygw.s3Backend.allowDefaultCredentialChain) }}
+{{-     fail "versitygw.backend=s3 requires versitygw.s3Backend.credentialsSecret (a secret with keys AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / optional AWS_SESSION_TOKEN). To rely on IRSA / pod identity instead, set versitygw.s3Backend.allowDefaultCredentialChain=true." }}
+{{-   end }}
+{{- end }}

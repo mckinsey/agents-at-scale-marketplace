@@ -28,7 +28,9 @@ versitygw:
 
   # Storage backend for the gateway:
   #   posix - store objects on the shared PVC at config.dataPath (default)
-  #   s3    - proxy to an existing S3 service (e.g. real AWS S3); no PVC used
+  #   s3    - proxy to an existing S3 service (e.g. real AWS S3). VersityGW mounts
+  #           no PVC in this mode; also set storage.enabled=false to skip
+  #           provisioning the (otherwise unused) PVC. Requires filesystemMcp.enabled=false.
   backend: posix
 
   image:
@@ -76,8 +78,13 @@ versitygw:
     region: "us-east-1"
     # Optional secret holding upstream credentials as keys:
     #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and optionally AWS_SESSION_TOKEN.
-    # Leave empty to use the pod's AWS default credential chain (IRSA / pod identity).
+    # Leave empty to use the pod's AWS default credential chain (IRSA / pod identity),
+    # but you must then also set allowDefaultCredentialChain=true (see below).
     credentialsSecret: ""
+    # Guard: when credentialsSecret is empty, install fails unless this is true.
+    # Prevents silently deploying with no upstream credentials (pod reports Ready
+    # but every S3 request 403s). Set true only when using IRSA / pod identity.
+    allowDefaultCredentialChain: false
 
   s3SecretName: "file-gateway-s3-credentials"
 
@@ -172,6 +179,11 @@ fileApi:
   config:
     host: "0.0.0.0"
     port: "8080"
+    # S3 bucket file-api serves. Empty = fall back to filesystemMcp.config.bucketName.
+    # IMPORTANT: when versitygw.backend=s3 this MUST name an existing upstream bucket
+    # (nothing in the chart auto-creates it); the default "aas-files" will not exist
+    # in a real S3 account and requests will fail with NoSuchBucket.
+    bucketName: ""
 
   cors:
     origins: "http://localhost:3000"
