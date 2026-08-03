@@ -22,9 +22,7 @@ jobs:
   jfrog-xray-scan:
     name: JFrog Xray Dependency Scan
     runs-on: ubuntu-latest
-    # Job-level permissions replace the workflow-level block entirely, so every
-    # scope this job needs must be listed here: issues:write to open the CVE
-    # issue, actions:read to download the previous scan artifact.
+    # Replaces the workflow-level block entirely, so every needed scope is listed.
     permissions:
       contents: read
       actions: read
@@ -40,9 +38,9 @@ jobs:
       - name: Export uv lockfiles to requirements.txt
         shell: bash
         run: |
-          # jf audit reads requirements.txt for Python. Without this it resolves
-          # uv projects fresh from PyPI and misses the locked versions.
-          for dir in agents/noah services/ark-sandbox executors/claude-agent-sdk; do
+          # jf audit reads requirements.txt; without it uv projects resolve fresh from PyPI.
+          for dir in agents/noah services/ark-sandbox executors/claude-agent-sdk \
+                     services/file-gateway/services/file-api; do
             if [ ! -f "$dir/uv.lock" ]; then
               echo "::warning::skipping $dir (no uv.lock)"
               continue
@@ -72,6 +70,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ github.repository }}
         run: |
+          # status=success is load-bearing: a failed run still uploads its empty scan file.
           LAST_RUN_ID=$(gh api \
             "/repos/$TARGET_REPO/actions/workflows/main-push.yaml/runs?branch=main&status=success&per_page=1" \
             --jq '.workflow_runs[0].id // empty')
@@ -103,18 +102,14 @@ jobs:
           set -uo pipefail
           WHITELIST=".github/actions/jfrog-xray-scan/tolerated_violations.txt"
 
-          # The scan step runs with continue-on-error, and its `>` redirect
-          # creates the file before jf runs. So a failed scan leaves an empty or
-          # truncated file behind. Without this guard the diff below finds no
-          # violations and the job passes green having scanned nothing.
+          # A failed scan leaves an empty file behind; without this the diff below
+          # finds nothing and the job passes green having scanned nothing.
           if [ ! -s "$SCAN_JSON" ] || ! jq -e 'type == "array"' "$SCAN_JSON" >/dev/null 2>&1; then
             echo "::error::$SCAN_JSON is empty or not valid Xray output; the scan did not complete"
             exit 1
           fi
 
-          # Exact match on the first field of each non-comment whitelist line.
-          # Substring matching would let an entry for XRAY-1000 silently
-          # tolerate XRAY-100012.
+          # Exact match: a substring match would let XRAY-1000 tolerate XRAY-100012.
           is_tolerated() {
             awk '!/^[[:space:]]*#/ {print $1}' "$WHITELIST" | grep -qxF "$1"
           }
@@ -147,8 +142,7 @@ jobs:
           done <<< "$NEW_VIOLATIONS"
 
           if [ -n "$BLOCKING" ]; then
-            # Published for the next step, which opens the CVE issue even though
-            # this step fails the job.
+            # Read by the next step, which opens the issue even though this one fails.
             {
               echo "NEW_VIOLATIONS<<XRAY_EOF"
               printf '%s' "$BLOCKING"
@@ -358,10 +352,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-    # Deliberately not `needs: build-docker-images`: that job runs with
-    # push-to-registry: false, which builds and discards the image, so there is
-    # nothing to pull afterwards. This job builds its own single-platform image
-    # with load: true so jf docker scan can read it from the local daemon.
+    # Not `needs: build-docker-images`: that job discards its image (push-to-registry:
+    # false), so this builds its own with load: true for jf docker scan to read locally.
     strategy:
       fail-fast: false
       matrix:

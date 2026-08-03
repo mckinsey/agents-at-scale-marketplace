@@ -34,9 +34,7 @@ runs:
         JF_URL: ${{ inputs.jfrog_url }}
 
     - name: Run Xray scan
-      # Scan may find violations; remove once policy is enforced or all
-      # violations are resolved. The diff step in the calling workflow is
-      # what actually fails the build on *new* violations.
+      # The caller's diff step is what fails the build, and only on new violations.
       continue-on-error: true
       shell: bash
       run: |
@@ -53,6 +51,19 @@ runs:
       if: always()
       shell: bash
       run: |
+        # A failed scan leaves an empty file, and every jq below would then print a
+        # blank count that reads as zero. The caller's diff step still fails the job.
+        if [ ! -s "$SCAN_JSON" ] || ! jq -e 'type == "array"' "$SCAN_JSON" >/dev/null 2>&1; then
+          echo "Scan produced no valid output; skipping the summary table."
+          {
+            echo "## JFrog Xray Scan"
+            echo ""
+            echo "The scan did not complete, so there are no results to report."
+            echo "See the \`Run Xray scan\` step for the underlying error."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
         VIOLATIONS_COUNT=$(jq '[.[] | select(.violations != null) | .violations | length] | add // 0' "$SCAN_JSON")
 
         echo "Total violations found: $VIOLATIONS_COUNT"
@@ -97,8 +108,7 @@ runs:
         echo "|----|-------------------|-------------|------|-------|" >> summary-table.md
 
         if [ -n "$TABLE" ]; then
-          # -F'\t' is required: with awk's default separator a component name
-          # containing a space would shift every following column.
+          # -F'\t' keeps columns aligned when a component name contains a space.
           echo "$TABLE" | awk -F'\t' '{print "| " $1 " | " $2 " | " $3 " | " $4 " | " $5 " |"}' >> summary-table.md
         else
           echo "| No violations found | - | - | - | - |" >> summary-table.md
