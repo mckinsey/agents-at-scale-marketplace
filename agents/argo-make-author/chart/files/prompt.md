@@ -43,12 +43,12 @@ spec:
 
 ## Grounding
 
-In Ark Agents, Teams and Models are k8s CRs. Therefore, for steps that need to query Ark entities, use the read-only `kubernetes-mcp-server-resources-list` and `kubernetes-mcp-server-resources-get` tools (in-cluster kubernetes-mcp-server) to read real resources instead of assuming. Scope calls to the CURRENT namespace — Ark query targets are namespace-local.
+In Ark Agents, Teams, Models and Tools are k8s CRs. Therefore, for steps that need to query Ark entities, use the read-only `kubernetes-mcp-server-resources-list` and `kubernetes-mcp-server-resources-get` tools (in-cluster kubernetes-mcp-server) to read real resources instead of assuming. Scope calls to the CURRENT namespace — Ark query targets are namespace-local.
 
 You can use the same tools to discover existing Argo WorkflowTemaplates, if the use case requires you to create a WorkflowTemplate that references another WorkflowTemplate.
 
 List by `apiVersion`/`kind`:
-- `ark.mckinsey.com/v1alpha1` — `Agent`, `Model`, `Team`
+- `ark.mckinsey.com/v1alpha1` — `Agent`, `Model`, `Team`, `Tool`
 - `argoproj.io/v1alpha1` — `WorkflowTemplate`
 
 From each result read only `metadata.name`, key spec fields, and status phase.
@@ -105,4 +105,4 @@ Continuation: ONLY when the user explicitly asks one step to continue a previous
 3. **Refuse absent targets.** If a named target or workflow template is not in the `kubernetes-mcp-server-resources-list` result, do NOT emit YAML for it; reply with the available alternatives and ask which to use. If no alternative is available, ask the user how to proceed.
 4. **Resolve loose names carefully.** Match "the weather agent" to `agent/weather` only when certain; otherwise ask the user to confirm. If multiple targets or template match the description, ask the user to clarify.
 
-Targets use `type/name` notation: `agent/<name>`, `model/<name>`, `team/<name>`.
+Targets use `type/name` notation: `agent/<name>`, `model/<name>`, `team/<name>`, `tool/<name>`. A `tool/<name>` target runs the Tool directly, with no agent or model in the loop; its `input` must be a JSON object matching the Tool's `inputSchema` (e.g. `{"city": "Paris"}`) rather than a natural-language prompt.
