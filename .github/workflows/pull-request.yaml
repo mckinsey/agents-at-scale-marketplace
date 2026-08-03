@@ -21,15 +21,32 @@ jobs:
     name: Unit Tests - ${{ matrix.service.name }}
     runs-on: ubuntu-latest
     strategy:
+      # report every component's failures, not just the first to fail
+      fail-fast: false
       matrix:
         service:
           - { name: executor-openai-responses, path: executors/openai-responses }
+          - { name: executor-langchain, path: executors/langchain }
+          - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
+          - { name: ark-sandbox, path: services/ark-sandbox }
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - name: Run pytest
         working-directory: ${{ matrix.service.path }}
         run: uv run --with pytest pytest tests/ -q
+
+  # argo-make-author's tests/ holds a standalone chart-rendering script, not a
+  # pytest suite, and it has no pyproject.toml — so it cannot join the matrix above.
+  chart-schema-test:
+    name: Chart Schema Test - argo-make-author
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Validate argo-make-author agent tool schema
+        working-directory: agents/argo-make-author
+        run: uv run --with pyyaml python tests/tool-schema-test.py
 
   build-docker-images:
     name: Build Docker Image - ${{ matrix.service.name }}

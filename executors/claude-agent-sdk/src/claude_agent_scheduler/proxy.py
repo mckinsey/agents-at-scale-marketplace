@@ -100,6 +100,19 @@ def extract_context_id(body: bytes) -> tuple[str, bytes, bool]:
         return str(uuid.uuid4()), body, True
 
 
+async def _best_effort_phase(status_updater, phase: str, reason: str, message: str) -> None:
+    """Report a query phase without letting the report fail the query.
+
+    QueryStatusUpdater already swallows its own Kubernetes errors, but it is
+    called from inside the sandbox-creation try below, so if that ever changed a
+    status failure would surface as a 502 labelled "Sandbox creation failed".
+    """
+    try:
+        await status_updater.update_query_phase(phase, reason, message)
+    except Exception:
+        logger.warning("Query status update to %s failed; continuing", phase, exc_info=True)
+
+
 def create_proxy_app(
     sandbox_manager: SandboxManager,
     http_client: httpx.AsyncClient,
@@ -149,12 +162,12 @@ def create_proxy_app(
                 # Route to sandbox based on session type
                 try:
                     if is_new:
-                        await status_updater.update_query_phase(
-                            "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
+                        await _best_effort_phase(
+                            status_updater, "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
                         )
                         info = await sandbox_manager.create_sandbox(conversation_id)
-                        await status_updater.update_query_phase(
-                            "running", "QueryRunning", "Query is running",
+                        await _best_effort_phase(
+                            status_updater, "running", "QueryRunning", "Query is running",
                         )
                     else:
                         info = await sandbox_manager.get_sandbox(conversation_id)
