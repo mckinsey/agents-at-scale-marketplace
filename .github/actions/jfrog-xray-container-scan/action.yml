@@ -2,7 +2,8 @@ name: 'JFrog Xray Container Scan'
 description: 'Scans a locally-built container image using JFrog Xray'
 # Report-only, mirroring agents-at-scale-ark: findings reach the summary and an
 # artifact, never the exit code. To gate later, read violations_count — Critical only,
-# since base images carry unfixable Highs.
+# since base images carry unfixable Highs. Check scan_completed first: a failed scan
+# reports no counts at all, which must not be read as a clean image.
 inputs:
   image:
     description: 'Full image reference, already present in the local docker daemon'
@@ -24,8 +25,11 @@ outputs:
     description: 'Path to the scan results JSON file'
     value: ${{ steps.scan.outputs.scan_file }}
   violations_count:
-    description: 'Number of vulnerabilities found'
+    description: 'Number of vulnerabilities found, empty if the scan did not complete'
     value: ${{ steps.parse-scan.outputs.violations_count }}
+  scan_completed:
+    description: 'true when the scan produced valid output; false otherwise'
+    value: ${{ steps.parse-scan.outputs.scan_completed }}
 runs:
   using: 'composite'
   steps:
@@ -53,6 +57,26 @@ runs:
       shell: bash
       run: |
         SCAN_FILE="xray-container-scan-${{ inputs.image_name }}.json"
+
+        # A failed scan leaves an empty or invalid file behind. Without this the
+        # summary below reports all zeros, which reads as a clean image — and
+        # nothing downstream gates this scan, so no one would notice.
+        if [ ! -s "$SCAN_FILE" ] || ! jq -e 'type == "array"' "$SCAN_FILE" >/dev/null 2>&1; then
+          echo "::warning::container scan for ${{ inputs.image_name }} did not complete"
+          {
+            echo "scan_completed=false"
+            echo "violations_count="
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Container Scan: ${{ inputs.image_name }}"
+            echo ""
+            echo "The scan did not complete, so there are no results to report."
+            echo "See the \`Scan container image\` step for the underlying error."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        echo "scan_completed=true" >> "$GITHUB_OUTPUT"
 
         VULN_COUNT=$(jq '[.[] | select(.vulnerabilities != null) | .vulnerabilities | length] | add // 0' "$SCAN_FILE" 2>/dev/null || echo "0")
 
