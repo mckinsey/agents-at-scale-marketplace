@@ -23,8 +23,10 @@ from openai_responses_executor.models import (
     ModelConfig,
     ResponsesCreateParams,
     resolve_built_in_tools,
+    resolve_max_tool_calls,
     ANNOTATION_KEY,
     FILE_IDS_ANNOTATION_KEY,
+    MAX_TOOL_CALLS_ANNOTATION_KEY,
 )
 
 
@@ -217,6 +219,89 @@ class TestResolveBuiltInTools:
         req = _request(agent_annotations={ANNOTATION_KEY: json.dumps([tool])})
         result = resolve_built_in_tools(req)
         assert result[0]["user_location"]["country"] == "GB"
+
+
+# ---------------------------------------------------------------------------
+# resolve_max_tool_calls (annotation cascade)
+# ---------------------------------------------------------------------------
+
+
+class TestResolveMaxToolCalls:
+    def test_agent_annotation_returns_int(self):
+        req = _request(agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "3"})
+        assert resolve_max_tool_calls(req) == 3
+
+    def test_engine_annotation_is_base(self):
+        req = _request(execution_engine_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "5"})
+        assert resolve_max_tool_calls(req) == 5
+
+    def test_agent_overrides_engine(self):
+        req = _request(
+            execution_engine_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "10"},
+            agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "3"},
+        )
+        assert resolve_max_tool_calls(req) == 3
+
+    def test_query_overrides_agent(self):
+        req = _request(
+            agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "3"},
+            query_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "1"},
+        )
+        assert resolve_max_tool_calls(req) == 1
+
+    def test_no_annotation_returns_none(self):
+        assert resolve_max_tool_calls(_request()) is None
+
+    def test_zero_is_rejected_and_skipped(self):
+        # The Responses API requires max_tool_calls >= 1 (it rejects 0 with
+        # HTTP 400 integer_below_min_value), so 0 is invalid; skip it and
+        # fall through to the next source.
+        req = _request(
+            execution_engine_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "5"},
+            agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "0"},
+        )
+        # Agent's 0 is rejected; should fall back to engine's 5.
+        assert resolve_max_tool_calls(req) == 5
+
+    def test_zero_with_no_fallback_returns_none(self):
+        req = _request(agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "0"})
+        assert resolve_max_tool_calls(req) is None
+
+    def test_negative_value_is_rejected_and_skipped(self):
+        # Negative is invalid; skip it and fall through to the next source.
+        req = _request(
+            execution_engine_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "5"},
+            agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "-1"},
+        )
+        # Agent's -1 is rejected; should fall back to engine's 5.
+        assert resolve_max_tool_calls(req) == 5
+
+    def test_non_integer_string_returns_none(self):
+        req = _request(agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: "not-a-number"})
+        assert resolve_max_tool_calls(req) is None
+
+    def test_empty_string_returns_none(self):
+        req = _request(agent_annotations={MAX_TOOL_CALLS_ANNOTATION_KEY: ""})
+        assert resolve_max_tool_calls(req) is None
+
+    def test_passes_through_to_api_kwargs(self):
+        params = ResponsesCreateParams(
+            model="gpt-5-mini",
+            instructions="t",
+            input=[{"role": "user", "content": "t"}],
+            max_tool_calls=2,
+        )
+        kwargs = params.to_api_kwargs()
+        assert kwargs["max_tool_calls"] == 2
+
+    def test_omitted_from_api_kwargs_when_unset(self):
+        params = ResponsesCreateParams(
+            model="gpt-5-mini",
+            instructions="t",
+            input=[{"role": "user", "content": "t"}],
+        )
+        kwargs = params.to_api_kwargs()
+        assert "max_tool_calls" not in kwargs
 
 
 # ---------------------------------------------------------------------------

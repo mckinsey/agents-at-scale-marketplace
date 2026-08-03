@@ -1,0 +1,86 @@
+---
+title: Argo Make Author
+description: Conversational author for Argo WorkflowTemplate resources grounded on the live cluster
+---
+
+# Argo Make Author
+
+Argo Make Author writes Argo `WorkflowTemplate` manifests through conversation,
+composing generic Argo steps with your existing Ark `Agent`, `Model`, and `Team`
+resources. It reads the live cluster before referencing anything and refuses to
+name a query target it cannot find, so the workflows it produces target
+resources that actually exist.
+
+It is a manifest-only agent: the chart deploys a single `Agent` custom resource.
+It ships without a model so you can pick your own, and references the read-only
+`kubernetes-mcp-server` tools for cluster grounding.
+
+## Examples
+
+```
+"Create a workflow that asks the weather agent about Paris."
+"Add a step that runs the summariser team on the previous step's output."
+"What agents can I use in a workflow?"
+```
+
+## Requirements
+
+- **A model.** The agent ships without one. Set `agent.modelRef` at install time
+  or assign a model afterwards; queries fail until a model is set.
+- **kubernetes-mcp-server.** The `kubernetes-mcp-server-resources-list` and
+  `-resources-get` tools come from the in-cluster `kubernetes-mcp-server`. The
+  agent installs without it, but queries fail until it is present. Install it as
+  `kubernetes-mcp-server` with read-only RBAC on the Ark CRDs (see the chart
+  README).
+
+## Quick Start
+
+### Installation
+
+**Using Ark CLI (Recommended):**
+
+```bash
+ark install marketplace/agents/argo-make-author
+```
+
+**Using DevSpace (for Development):**
+
+```bash
+cd agents/argo-make-author
+devspace deploy
+```
+
+**Using Helm:**
+
+```bash
+cd agents/argo-make-author
+helm install argo-make-author ./chart -n default --set agent.modelRef=default
+```
+
+## Tools
+
+The agent uses two read-only tools from the in-cluster `kubernetes-mcp-server`:
+
+- `kubernetes-mcp-server-resources-list` — list Ark and Argo resources in the namespace
+- `kubernetes-mcp-server-resources-get` — read a single resource
+
+## Uninstallation
+
+**Using Ark CLI:**
+
+```bash
+ark uninstall marketplace/agents/argo-make-author
+```
+
+**Using DevSpace:**
+
+```bash
+cd agents/argo-make-author
+devspace purge
+```
+
+**Using Helm:**
+
+```bash
+helm uninstall argo-make-author -n default
+```
