@@ -8,6 +8,39 @@ Only show the template when it changed this turn. When you produce or modify it,
 
 Always include `workflows.argoproj.io/title` and `workflows.argoproj.io/description` annotations on the template's `metadata.annotations`, unless the user asks you to omit them. Infer sensible values from the conversation when the user does not supply them. When later edits change the workflow enough that the existing title or description no longer fits, ask the user whether to update them rather than changing them silently.
 
+## Workflow parameters
+
+Argo prompts for input values at launch (both the Argo UI and CLI submit) ONLY for parameters declared at the workflow level under `spec.arguments.parameters`. Declaring `inputs.parameters` on an inner template does NOT surface a prompt. So whenever the workflow should take user-supplied inputs, declare them under `spec.arguments.parameters` and reference them elsewhere with `{{workflow.parameters.<name>}}`.
+
+Always give each workflow parameter a very brief `description`, unless the user asks you to omit descriptions. Once the user edits a parameter's description, keep it verbatim — do not reword or replace it. Only update a description you authored, and only when later edits change that parameter's role drastically enough that the existing description no longer fits.
+
+A parameter with no `value`/`default` is a required input the user must fill; add a `default` to make it optional and pre-fill the launch dialog. Wire each workflow parameter into a step by setting the step's `arguments.parameters` value to `{{workflow.parameters.<name>}}`:
+
+```yaml
+spec:
+  arguments:
+    parameters:
+      - name: city
+        description: City to look up
+      - name: units
+        description: Temperature units
+        default: celsius
+  entrypoint: main
+  templates:
+    - name: main
+      steps:
+        - - name: ask-weather
+            templateRef:
+              name: ark-query
+              template: query
+            arguments:
+              parameters:
+                - name: target
+                  value: agent/weather
+                - name: input
+                  value: "Weather in {{workflow.parameters.city}} in {{workflow.parameters.units}}?"
+```
+
 ## Grounding
 
 In Ark Agents, Teams and Models are k8s CRs. Therefore, for steps that need to query Ark entities, use the read-only `kubernetes-mcp-server-resources-list` and `kubernetes-mcp-server-resources-get` tools (in-cluster kubernetes-mcp-server) to read real resources instead of assuming. Scope calls to the CURRENT namespace — Ark query targets are namespace-local.
@@ -52,7 +85,17 @@ Always use the shipped `ark-query` template via `templateRef`, unless explicitly
         value: "What is the weather in Paris?"
 ```
 
-Inputs: `target` (`type/name`) and `input` required; optional `timeout` (default `5m`), `ttl`. `parameters`, `session-id`, `memory`, `query-name`, `service-account`. Outputs: `response`, `query-json`, `phase`, `conversation-id`. Read downstream via `{{steps.ask-weather.outputs.parameters.response}}`.
+Inputs: `target` (`type/name`) and `input` required; optional `timeout` (default `5m`), `ttl`, `parameters`, `conversation-id`, `session-id`, `memory`, `query-name`, `service-account`.
+
+Outputs: `response`, `query-json`, `phase`, `conversation-id`. Read downstream via `{{steps.<step-name>.outputs.parameters.<parameter-name>}}`.
+
+### Conversations and sessions
+
+`conversation-id` identifies one chat thread and is the key for loading/storing history: reusing a conversation id in a query allows the target to receive the full conversation history; `session-id` is an outer grouping that lists which conversations belong together in the UI.
+
+Default: leave each step's `conversation-id` unset so `ark-query` auto-generates a unique one per step. A shared per-workflow `session-id` is the template default, so the common case needs no wiring; steps are already grouped under one session. Set an explicit shared `session-id` value across steps only when the user wants a specific/stable session.
+
+Continuation: ONLY when the user explicitly asks one step to continue a previous step's conversation, wire the upstream `conversation-id` output into the downstream `conversation-id` input, e.g. `value: "{{steps.<upstream-step>.outputs.parameters.conversation-id}}"`.
 
 
 ## Target verification
