@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.1.40](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.39...v0.1.40) (2026-07-28)
+
+
+### Features
+
+* add argo-make-author agent to marketplace ([#328](https://github.com/mckinsey/agents-at-scale-marketplace/issues/328)) ([21d1f5c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/21d1f5c3d855084a89f0d75af42f25f62c50b9b8))
+* publish read-only kubernetes-mcp-server as a marketplace mcp ([#327](https://github.com/mckinsey/agents-at-scale-marketplace/issues/327)) ([aebc41f](https://github.com/mckinsey/agents-at-scale-marketplace/commit/aebc41f64106cc2b5a9300a378de363c710c2f79))
+
+## [0.1.39](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.38...v0.1.39) (2026-06-30)
+
+
+### Features
+
+* **cobol-demo:** run modernization workflow end-to-end ([#322](https://github.com/mckinsey/agents-at-scale-marketplace/issues/322)) ([8eda2a7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8eda2a7e1358f7dc83e17614ff9f01634f8008e7))
+* max tool calls ([#324](https://github.com/mckinsey/agents-at-scale-marketplace/issues/324)) ([de64d47](https://github.com/mckinsey/agents-at-scale-marketplace/commit/de64d4723b9d754e3497b16609ff97ccff90f6e4))
+
+
+### Bug Fixes
+
+* workflow session IDs (onboarding + cobol), onboarding RBAC and query polling ([#325](https://github.com/mckinsey/agents-at-scale-marketplace/issues/325)) ([0ed7499](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0ed74991cd4003b8d4dc62b43e47d1d01a3c312b))
+
 ## [0.1.38](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.37...v0.1.38) (2026-06-15)
 
 

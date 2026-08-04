@@ -5,4 +5,5 @@ export default {
   'web-research-mcp': 'Web Research MCP',
   'perplexity-ask-mcp': 'Perplexity Ask MCP',
   'companies-house-mcp': 'Companies House MCP',
+  'kubernetes-mcp-server': 'Kubernetes MCP Server',
 }

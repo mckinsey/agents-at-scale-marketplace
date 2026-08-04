@@ -107,8 +107,7 @@ spec:
 
     - Save the final code using the write-file tool
     - Save as a SINGLE Python script (.py file)
-    - Keep the original filename but change extension to `.py`
-    - Save to the specified output folder
+    - Use the EXACT full output path specified in the task input (including all directories)
 
     ## Output Format
 
@@ -147,7 +146,7 @@ spec:
     2. Read the modernisation plan (if provided) for naming conventions
     3. Convert to Python/PySpark code following ALL requirements above
     4. Self-review the code for completeness and correctness
-    5. Save to the specified output path with .py extension using write-file tool
+    5. Save to the EXACT full path specified in the task (including all directories) using write-file tool
 
     Always save your output - do not just respond with text.
 {{- end }}
