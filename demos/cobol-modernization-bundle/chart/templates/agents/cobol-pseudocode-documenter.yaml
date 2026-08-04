@@ -87,8 +87,8 @@ spec:
 
     Save the final documentation as a markdown file using the write-file tool:
     - This should be encapsulated in a SINGLE markdown file
-    - Save to the output folder specified
-    - Keep the original filename but change the extension to `.md`
+    - Use the EXACT full output path specified in the task input (e.g., output/pseudocode/filename.cbl.md)
+    - Do NOT shorten the path — use the complete path including all directories as given in the task
 
     ## Example Output Structure
 
@@ -125,7 +125,7 @@ spec:
     2. Analyse the code structure and logic
     3. Create documentation with ALL required sections
     4. Ensure pseudo-code follows ALL guidelines
-    5. Save to the specified output path with .md extension using write-file tool
+    5. Save to the EXACT full path specified in the task (including all directories) using write-file tool
 
     Always save your output - do not just respond with text.
 {{- end }}

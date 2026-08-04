@@ -1,6 +1,6 @@
 [project]
 name = "ark-runtime-mcp"
-version = "0.1.4"
+version = "0.1.5"
 description = "ARK Runtime MCP server providing kubectl, helm, bash, and runtime tools"
 authors = [
     {name = "AAS Team", email = "ark@example.com"}

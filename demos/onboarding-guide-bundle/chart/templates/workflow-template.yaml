@@ -201,6 +201,7 @@ spec:
               },
               spec: {
                 input: $input,
+                sessionId: $wf,
                 target: {name: $target_name, type: $target_type},
                 timeout: $timeout,
                 ttl: "1h"
@@ -208,11 +209,11 @@ spec:
             }' | kubectl apply -f -
 
           # Wait until the query leaves the 'running' phase. If it errored, fail this step so Argo surfaces it.
-          until [ "$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.phase}' 2>/dev/null)" != "running" ] \
-                && [ -n "$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.phase}' 2>/dev/null)" ]; do
+          while true; do
+            PHASE=$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.phase}' 2>/dev/null)
+            [ -n "$PHASE" ] && [ "$PHASE" != "running" ] && break
             sleep 3
           done
-          PHASE=$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.phase}')
           DURATION=$(kubectl get query "$SAFE_NAME" -o jsonpath='{.status.duration}')
           echo ""
           echo "query $SAFE_NAME finished phase=$PHASE duration=$DURATION"

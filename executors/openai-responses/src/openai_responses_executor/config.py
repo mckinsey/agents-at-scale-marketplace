@@ -13,5 +13,28 @@ class ExecutorConfig(BaseSettings):
     sessions_dir: Path = Field(default=Path("/data/sessions"), validation_alias="SESSIONS_DIR")
     max_tool_iterations: int = Field(default=10, validation_alias="MAX_TOOL_ITERATIONS")
 
+    # Files API (used by /v1/files endpoints and the /files upload UI). When a
+    # request specifies ?agent=<name>, credentials come from the agent's Model
+    # CR instead and these values act as a cluster-wide fallback.
+    openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
+    openai_base_url: str = Field(default="", validation_alias="OPENAI_BASE_URL")
+    # Uploads buffer in pod memory before reaching the provider; keep the cap
+    # well under the container memory limit (512Mi in the default chart).
+    max_upload_bytes: int = Field(default=50 * 1024 * 1024, validation_alias="MAX_UPLOAD_BYTES")
+    # When true (default), GET /v1/files only returns files uploaded through
+    # this executor for the requesting agent. On a shared gateway key the raw
+    # upstream listing is the whole org's files — leaking those to every UI
+    # user is rarely what you want, so turning this off is an explicit opt-in.
+    uploaded_files_only: bool = Field(default=True, validation_alias="UPLOADED_FILES_ONLY")
+
+    # Defaults used by the /chat endpoint when no ?agent= is specified or the
+    # agent can't be resolved from k8s (e.g. local dev without a cluster). When
+    # ?agent= resolves successfully, the agent's Model + prompt override these.
+    default_chat_model: str = Field(default="gpt-4o-mini", validation_alias="DEFAULT_CHAT_MODEL")
+    default_chat_instructions: str = Field(
+        default="You are a helpful assistant. When the user attaches files, read them and answer based on their contents.",
+        validation_alias="DEFAULT_CHAT_INSTRUCTIONS",
+    )
+
 
 config = ExecutorConfig()

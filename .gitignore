@@ -28,5 +28,13 @@ downloaded-outputs/
 # Helm dependency artifacts
 **/chart/charts/
 
+# Local dev artifacts
+.devspace/
+vendor/
+wheels/
+
 # Claude Code
 .claude/
+
+# Scratch/temporary files
+scratch/

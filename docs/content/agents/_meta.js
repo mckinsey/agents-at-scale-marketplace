@@ -1,3 +1,4 @@
 export default {
-  noah: 'Noah'
+  noah: 'Noah',
+  'argo-make-author': 'Argo Make Author'
 }

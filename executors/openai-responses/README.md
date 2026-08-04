@@ -124,6 +124,88 @@ client.responses.create(
 # → https://adamgroomingatelier.com/
 ```
 
+## Executor UI
+
+This executor serves a built-in chat + file-upload UI at `GET /` on the pod, backed by:
+
+- `POST /chat` — SSE stream of text deltas, with conversation threading via `previous_response_id` saved under `SESSIONS_DIR/<conversationId>/`.
+- `POST /chat/reset` — drop the saved `previous_response_id` for a conversation.
+- `/v1/files` (POST/GET/DELETE) — OpenAI-compatible Files API. Uploads here can be attached to queries via the `executor-openai-responses.ark.mckinsey.com/file-ids` annotation (a JSON array of file IDs, e.g. `["file-abc123"]`).
+
+### Attaching files to queries
+
+Set the annotation on the Query (or Agent, or ExecutionEngine — Query wins) and the executor passes each ID as an `input_file` content part to the Responses API:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/file-ids: '["file-abc123"]'
+spec:
+  input: Summarise the attached document.
+  target: {type: agent, name: my-responses-agent}
+```
+
+File IDs come from this executor's `/v1/files` endpoint or from uploading directly to the OpenAI Files API with the same credentials the agent's Model uses.
+
+### Programmatic use
+
+End-to-end: upload → attach to a Query → read the answer.
+
+```bash
+kubectl port-forward svc/executor-openai-responses 8000:8000 &
+
+FILE_ID=$(curl -s -X POST "http://localhost:8000/v1/files?agent=default/my-agent" \
+    -F "file=@report.pdf" | jq -r .id)
+
+kubectl apply -f - <<EOF
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: report-summary
+  annotations:
+    executor-openai-responses.ark.mckinsey.com/file-ids: '["$FILE_ID"]'
+spec:
+  input: Summarise the attached report.
+  target: {type: agent, name: my-agent}
+EOF
+
+kubectl wait --for=jsonpath='{.status.phase}'=done query/report-summary --timeout=120s
+kubectl get query report-summary -o jsonpath='{.status.response.content}'
+```
+
+Or via the `/chat` SSE endpoint (UI shortcut, bypasses the Ark control plane); `file_ids` selects exactly what to attach, omitting it attaches the agent's uploads:
+
+```bash
+curl -N -X POST "http://localhost:8000/chat?agent=default/my-agent" \
+    -H "Content-Type: application/json" \
+    -d '{"message": "Summarise the attached report.", "conversationId": "c1", "file_ids": ["'$FILE_ID'"]}'
+```
+
+> Conversation threading uses `previous_response_id`, which OpenAI rejects for Zero Data Retention orgs — the executor returns a clear error, resets the conversation, and a retry runs as a fresh turn.
+
+### Scoping uploads to an agent
+
+All `/v1/files` endpoints accept `?agent=<namespace>/<name>` (or just `<name>`). When set:
+
+- Credentials come from the named agent's `modelRef.config.openai.{apiKey,baseUrl}`, so uploads land in the same OpenAI project the agent's Responses calls use. An agent that fails to resolve is a `400` — there is no silent fallback to the env key.
+- `GET /v1/files` only returns files this agent uploaded (a per-agent index lives at `SESSIONS_DIR/file_index.json` on the executor's PVC).
+
+Without `?agent=`, the executor uses the cluster-wide `OPENAI_API_KEY` env var; uploads are indexed under a shared env-mode key and `GET /v1/files` returns only those uploads.
+
+> **IMPORTANT**: by default (`UPLOADED_FILES_ONLY=true`) the file listing only shows files uploaded *through this executor* for the requesting agent. The raw OpenAI Files listing is everything the API key can see — on a shared LLM gateway key that is the entire org's uploads (easily thousands of files belonging to other teams). Set `UPLOADED_FILES_ONLY=false` only if you understand you are exposing the full upstream listing to every UI user. Chat attachment always uses the per-agent uploads regardless of this setting.
+
+Files attach on the turn after upload: the first message carries everything uploaded so far, later uploads attach with the next message of the same conversation (already-sent files are tracked per conversation and not re-attached).
+
+| Env Var | Default | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | — | Cluster-wide fallback for Files API |
+| `OPENAI_BASE_URL` | — | Optional override for the fallback |
+| `MAX_UPLOAD_BYTES` | `52428800` (50MB) | Upload size limit (uploads buffer in pod memory) |
+| `UPLOADED_FILES_ONLY` | `true` | List only files uploaded through this executor (see IMPORTANT note above). Helm: `--set files.uploadedOnly=false` |
+| `SESSIONS_DIR` | `/data/sessions` | Persistence for response IDs, attached-file tracking, and the per-agent file index |
+
 ## Deployment
 
 ```bash

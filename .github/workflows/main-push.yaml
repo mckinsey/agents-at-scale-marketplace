@@ -55,12 +55,16 @@ jobs:
           - { name: ark-sandbox, path: services/ark-sandbox, namespace: default, run-deployment-test: false }
           # disable noah deployment tests for PRs to avoid hitting 5m limit
           - { name: noah, path: agents/noah, namespace: noah, run-deployment-test: false }
+          # disable argo-make-author deployment tests for PRs to avoid hitting 5m limit
+          - { name: argo-make-author, path: agents/argo-make-author, namespace: default, run-deployment-test: false }
           # disable kyc-demo-bundle deployment tests for PRs to avoid hitting 5m limit
           - { name: kyc-demo-bundle, path: demos/kyc-demo-bundle, namespace: default, run-deployment-test: false }
           # disable file-gateway deployment tests for PRs to avoid hitting 5m limit
           - { name: file-gateway, path: services/file-gateway, namespace: default, run-deployment-test: false }
           # disable filesystem-mcp-server deployment tests for PRs to avoid hitting 5m limit
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server, namespace: default, run-deployment-test: false }
+          # disable kubernetes-mcp-server deployment tests for PRs to avoid hitting 5m limit
+          - { name: kubernetes-mcp-server, path: mcps/kubernetes-mcp-server, namespace: default, run-deployment-test: false }
           # disable cobol-modernization-bundle deployment tests for PRs to avoid hitting 5m limit
           - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default, run-deployment-test: false }
           # disable executor-langchain deployment tests for PRs to avoid hitting 5m limit
@@ -180,9 +184,11 @@ jobs:
           - { name: mcp-inspector, path: services/mcp-inspector, namespace: default }
           - { name: ark-sandbox, path: services/ark-sandbox, namespace: default }
           - { name: noah, path: agents/noah, namespace: noah }
+          - { name: argo-make-author, path: agents/argo-make-author, namespace: default }
           - { name: kyc-demo-bundle, path: demos/kyc-demo-bundle, namespace: default }
           - { name: file-gateway, path: services/file-gateway, namespace: default }
           - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server, namespace: default }
+          - { name: kubernetes-mcp-server, path: mcps/kubernetes-mcp-server, namespace: default }
           - { name: cobol-modernization-bundle, path: demos/cobol-modernization-bundle, namespace: default }
           - { name: executor-langchain, path: executors/langchain, namespace: default }
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk, namespace: default }

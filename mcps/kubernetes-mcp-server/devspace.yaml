@@ -1,0 +1,15 @@
+# DevSpace configuration for kubernetes-mcp-server
+version: v2beta1
+
+pipelines:
+  deploy: |-
+    create_deployments --all
+  dev: |-
+    create_deployments --all
+
+deployments:
+  kubernetes-mcp-server:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart

@@ -6,10 +6,10 @@ import os
 
 import uvicorn
 
+from .app import create_app
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-from .app import create_app
 
 
 def main() -> None:

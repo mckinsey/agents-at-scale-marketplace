@@ -23,10 +23,12 @@ COPY src/ ./src/
 # Install dependencies
 RUN uv sync --no-install-project
 
-# Set up directories for non-root user
-RUN mkdir -p /data/sessions && \
+# Set up directories for non-root user. /.devspace is pre-created so the
+# DevSpace restart helper (used by `devspace dev` file sync) can write its
+# start marker despite the container running non-root.
+RUN mkdir -p /data/sessions /.devspace && \
     chown -R executor:nogroup /app && \
-    chown -R executor:nogroup /data/sessions
+    chown -R executor:nogroup /data/sessions /.devspace
 
 # Switch to non-root user
 USER executor

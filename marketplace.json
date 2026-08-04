@@ -209,6 +209,36 @@
             }
         },
         {
+            "name": "argo-make-author",
+            "type": "agent",
+            "displayName": "Argo Make Author",
+            "description": "Conversational author for Argo WorkflowTemplate resources, grounding query targets on the live cluster",
+            "version": "0.1.0",
+            "author": "ARK Marketplace",
+            "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "license": "Apache-2.0",
+            "tags": [
+                "agent",
+                "argo",
+                "workflow",
+                "authoring"
+            ],
+            "category": "agents",
+            "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/agents/argo-make-author/",
+            "support": {
+                "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+            },
+            "ark": {
+                "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/argo-make-author",
+                "namespace": "default",
+                "helmReleaseName": "argo-make-author",
+                "installArgs": [
+                    "--create-namespace"
+                ]
+            }
+        },
+        {
             "name": "file-gateway",
             "type": "service",
             "displayName": "File Gateway",
@@ -457,6 +487,39 @@
             }
         },
         {
+            "name": "kubernetes-mcp-server",
+            "type": "mcp",
+            "displayName": "Kubernetes MCP Server",
+            "description": "Read-only kubernetes-mcp-server registered with Ark for grounding agents on cluster resources",
+            "version": "0.1.0",
+            "author": "ARK Marketplace",
+            "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "license": "Apache-2.0",
+            "tags": [
+                "mcp",
+                "kubernetes",
+                "read-only",
+                "cluster",
+                "grounding"
+            ],
+            "category": "mcps",
+            "icon": "https://example.com/kubernetes-mcp-icon.png",
+            "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/mcps/kubernetes-mcp-server/",
+            "support": {
+                "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+            },
+            "ark": {
+                "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/kubernetes-mcp-server",
+                "namespace": "default",
+                "helmReleaseName": "kubernetes-mcp-server",
+                "installArgs": [
+                    "--create-namespace"
+                ],
+                "k8sDeploymentName": "kubernetes-mcp-server"
+            }
+        },
+        {
             "name": "cobol-modernization-bundle",
             "type": "demo",
             "displayName": "COBOL Modernization Bundle",
@@ -579,7 +642,7 @@
             "name": "executor-openai-responses",
             "type": "executor",
             "displayName": "OpenAI Responses Executor",
-            "description": "OpenAI Responses API executor with built-in tools (web search, code interpreter), CFG/grammar-constrained output, structured JSON output, and multi-turn conversation threading",
+            "description": "OpenAI Responses API executor with built-in tools (web search, code interpreter), structured JSON output, multi-turn threading, file attachments via the executor-openai-responses.ark.mckinsey.com/file-ids annotation, and a built-in file upload UI backed by an OpenAI-compatible /v1/files API",
             "version": "0.1.0",
             "author": "ARK Marketplace",
             "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
@@ -591,6 +654,8 @@
                 "execution-engine",
                 "web-search",
                 "structured-output",
+                "file-inputs",
+                "attachments",
                 "gpt-5"
             ],
             "category": "development",

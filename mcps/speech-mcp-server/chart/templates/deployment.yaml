@@ -16,6 +16,25 @@ spec:
     spec:
       serviceAccountName: {{ include "speech-mcp.fullname" . }}-sa
       automountServiceAccountToken: false
+      {{- if and .Values.prefetch.enabled .Values.prefetch.files }}
+      initContainers:
+        - name: prefetch-files
+          image: {{ .Values.prefetch.image | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              BASE="{{ .Values.env.baseDateDir }}"
+              {{- range .Values.prefetch.files }}
+              mkdir -p "$BASE/$(dirname "{{ . }}")"
+              curl -sf "{{ $.Values.prefetch.fileGatewayUrl }}/files/{{ . }}/download" -o "$BASE/{{ . }}"
+              echo "Prefetched: {{ . }}"
+              {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      {{- end }}
       containers:
         - name: speech-mcp
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -53,5 +72,9 @@ spec:
               mountPath: /data
       volumes:
         - name: data
+          {{- if .Values.dataVolume.claimName }}
           persistentVolumeClaim:
-            claimName: {{ .Values.dataVolume.claimName | default "file-gateway-storage" }}
+            claimName: {{ .Values.dataVolume.claimName }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

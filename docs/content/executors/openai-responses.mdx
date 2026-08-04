@@ -119,6 +119,17 @@ Effort values: `"low"`, `"medium"`, `"high"`. Omitting the annotation defaults t
 
 Use `"low"` for focused single-task agents (e.g. find one URL). Use `"medium"` or higher for agents that must gather multiple pieces of information (e.g. structured lookup with web search across several fields) — lower effort may not perform enough searches to find all required data.
 
+### File Attachments
+
+Attach OpenAI file IDs to a query; the executor passes each as an `input_file` content part. File IDs come from the executor's `/v1/files` API (below) or direct upload to the OpenAI Files API with the same credentials the agent's Model uses.
+
+```yaml
+annotations:
+  executor-openai-responses.ark.mckinsey.com/file-ids: '["file-abc123"]'
+```
+
+Files attach on the turn they are new to the conversation: already-attached IDs are tracked per conversation and not re-sent (the threaded response state retains them).
+
 ### Structured Output
 
 Constrains the response to a JSON object matching the schema — enforced at token level:
@@ -136,6 +147,18 @@ annotations:
       "additionalProperties": false
     }
 ```
+
+## Files API and UI
+
+The executor serves an OpenAI-compatible Files API and a chat + upload UI at `GET /` on the pod:
+
+- `POST /v1/files` — multipart upload (`file`, `purpose`); proxied to the OpenAI Files API
+- `GET /v1/files` — list; `DELETE /v1/files/{id}` — delete
+- `POST /chat` — SSE chat with optional `file_ids` selection (UI shortcut, bypasses the Ark control plane)
+
+All endpoints accept `?agent=<namespace>/<name>`: credentials resolve from that agent's Model CRD, so uploads land in the OpenAI project the agent's Responses calls use, and listings are scoped to that agent's uploads (`UPLOADED_FILES_ONLY`, see the [README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/openai-responses)).
+
+> **Note**: conversation threading uses `previous_response_id`, which OpenAI does not support for Zero Data Retention organizations. On ZDR orgs each turn runs fresh — the executor detects the provider error, resets the stored conversation state, and returns a clear message telling the caller to retry.
 
 ## Examples
 
@@ -177,3 +200,35 @@ python3 examples/demo_local.py
 | `MAX_TOOL_ITERATIONS` | `10` | Max function-call loop iterations before returning |
 | `OTEL_INSTRUMENTATION_ENABLED` | `false` | Enable OpenAI OTEL instrumentation |
 | `PORT` | `8000` | HTTP server port |
+
+## Data Flow and Encryption
+
+This section covers data surfaces specific to the OpenAI Responses executor. For platform-level surfaces (etcd, Kubernetes Secrets, broker, OTel collector, pod logs), see the [Data Flow and Encryption](https://mckinsey.github.io/agents-at-scale-ark/operations-guide/data-flow-and-encryption) operations guide.
+
+### Data at rest
+
+| Surface | What lands there | Encrypted by default? | How to protect |
+|---------|------------------|-----------------------|----------------|
+| **Session response IDs** (`/data/sessions/<conversationId>/response_id`) | A single OpenAI response UUID per conversation. No message content — just the ID used for `previous_response_id` threading. | No. Plaintext file on the PVC. | Use an encrypted PersistentVolume. Note: response IDs alone do not contain message content, but they can be used to retrieve conversation history from the OpenAI API. |
+| **OpenAI server-side state** | Full conversation history, tool outputs, file search indexes, code interpreter state. Retained server-side by OpenAI and linked by `response_id`. | Managed by OpenAI. | Review OpenAI's data retention and encryption policies. The executor does not control server-side storage. |
+
+### Data in transit
+
+| Hop | Protocol | TLS by default? | Notes |
+|-----|----------|-----------------|-------|
+| Executor → OpenAI API | HTTPS | Yes. The OpenAI Python SDK enforces HTTPS by default. | Custom `baseUrl` from the Model CRD can override — ensure any proxy or Azure endpoint uses HTTPS. |
+| Executor → OpenAI built-in tools | HTTPS | Yes. Tool execution (web search, code interpreter, file search) happens server-side within OpenAI's infrastructure. | User location data (`country`, `city`, `region`) is sent to OpenAI for `web_search_preview` context. |
+| Controller → executor (A2A) | HTTP | No. | Deploy a service mesh for mTLS between pods. |
+
+### Logging
+
+- The executor logs agent name, model name, conversation ID, and tool types at info level.
+- **Function tool arguments are logged unmasked** at info level when tool calls are executed. If tools receive sensitive inputs, configure your log aggregator to filter these entries.
+- API keys are retrieved at runtime from Model CRDs and passed directly to the SDK client — they are not logged except in unhandled error tracebacks.
+
+### Data retention and disposal
+
+The executor does not manage data lifecycle — retention and cleanup are deployment configuration.
+
+- **Session response IDs**: Files in `/data/sessions/` accumulate indefinitely on the PVC. Schedule a CronJob to prune entries older than your retention window. The PVC survives `helm uninstall` — delete it explicitly when decommissioning.
+- **OpenAI server-side state**: Conversation history linked by `response_id` is retained by OpenAI according to their data retention policies. The executor has no mechanism to request deletion. Deleting the local `response_id` file breaks the threading link but does not remove data from OpenAI's servers. Review OpenAI's data retention terms for your usage tier.
