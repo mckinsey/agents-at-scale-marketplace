@@ -3,19 +3,25 @@ updates:
   # uv, not pip: these directories have a uv.lock that pip would leave stale.
   - package-ecosystem: "uv"
     directories:
+      - "/agents/noah"
       - "/executors/langchain"
       - "/executors/claude-agent-sdk"
       - "/executors/openai-responses"
+      - "/services/ark-sandbox"
+      - "/services/file-gateway/services/file-api"
     schedule:
       interval: "daily"
-    allow:
-      - dependency-name: "ark-sdk"
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps)"
     groups:
+      # First matching group wins, so ark-sdk stays a standalone one-line PR.
       ark-sdk:
         patterns:
           - "ark-sdk"
+      python-dependencies:
+        patterns:
+          - "*"
 
   # Base image tags only. Packages inside the image are covered by Xray.
   - package-ecosystem: "docker"
@@ -42,6 +48,21 @@ updates:
       prefix: "chore(deps)"
     groups:
       docker:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directories:
+      - "/docs"
+      - "/mcps/filesystem-mcp-server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-dependencies:
         patterns:
           - "*"
 
