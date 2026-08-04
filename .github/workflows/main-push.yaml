@@ -19,6 +19,150 @@ jobs:
     name: Validate Documentation
     uses: ./.github/workflows/_reusable-docs-cicd.yaml
 
+  jfrog-xray-scan:
+    name: JFrog Xray Dependency Scan
+    runs-on: ubuntu-latest
+    # Replaces the workflow-level block entirely, so every needed scope is listed.
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    env:
+      XRAY_WATCH_NAME: 'ark-marketplace-security-watch'
+      SCAN_JSON: "xray-scan-agents-at-scale-marketplace-${{ github.run_number }}.json"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Export uv lockfiles to requirements.txt
+        shell: bash
+        run: |
+          # jf audit reads requirements.txt; without it uv projects resolve fresh from PyPI.
+          for dir in agents/noah services/ark-sandbox executors/claude-agent-sdk \
+                     services/file-gateway/services/file-api; do
+            if [ ! -f "$dir/uv.lock" ]; then
+              echo "::warning::skipping $dir (no uv.lock)"
+              continue
+            fi
+            echo "Exporting $dir"
+            if ! (cd "$dir" && uv export --format requirements-txt --no-hashes --no-dev --no-sources > requirements.txt); then
+              echo "::warning::uv export failed for $dir; jf audit will fall back to pyproject.toml"
+              rm -f "$dir/requirements.txt"
+            fi
+          done
+
+      - name: Run JFrog Xray scan
+        uses: ./.github/actions/jfrog-xray-scan
+        with:
+          github_repo: ${{ github.repository }}
+          build_name: 'agents-at-scale-marketplace'
+          build_number: ${{ github.run_number }}
+          watch_name: ${{ env.XRAY_WATCH_NAME }}
+          jfrog_user: ${{ secrets.DOCKER_CICD_CACHE_REGISTRY_USERNAME }}
+          jfrog_password: ${{ secrets.DOCKER_CICD_CACHE_REGISTRY_PASSWORD }}
+          jfrog_url: ${{ vars.JFROG_PLATFORM_URL }}
+
+      - name: Download baseline scan from last successful main run
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPO: ${{ github.repository }}
+        run: |
+          # status=success is load-bearing: a failed run still uploads its empty scan file.
+          LAST_RUN_ID=$(gh api \
+            "/repos/$TARGET_REPO/actions/workflows/main-push.yaml/runs?branch=main&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id // empty')
+
+          BASELINE=""
+          if [ -n "$LAST_RUN_ID" ]; then
+            echo "Last successful main run: $LAST_RUN_ID"
+            mkdir -p artifacts
+            if gh run download "$LAST_RUN_ID" --repo "$TARGET_REPO" \
+                 --pattern "xray-scan-results-agents-at-scale-marketplace-*" \
+                 --dir ./artifacts; then
+              # find, not **: globstar is off by default in non-interactive bash
+              BASELINE=$(find ./artifacts -name 'xray-scan-*.json' -type f | head -1)
+            fi
+          fi
+
+          if [ -n "$BASELINE" ]; then
+            echo "Baseline: $BASELINE"
+            cp "$BASELINE" last-main-scan.json
+          else
+            echo "::warning::no baseline scan found; every violation counts as new"
+            echo '[]' > last-main-scan.json
+          fi
+
+      - name: Detect new violations
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          WHITELIST=".github/actions/jfrog-xray-scan/tolerated_violations.txt"
+
+          # A failed scan leaves an empty file behind; without this the diff below
+          # finds nothing and the job passes green having scanned nothing.
+          if [ ! -s "$SCAN_JSON" ] || ! jq -e 'type == "array"' "$SCAN_JSON" >/dev/null 2>&1; then
+            echo "::error::$SCAN_JSON is empty or not valid Xray output; the scan did not complete"
+            exit 1
+          fi
+
+          # Exact match: a substring match would let XRAY-1000 tolerate XRAY-100012.
+          is_tolerated() {
+            awk '!/^[[:space:]]*#/ {print $1}' "$WHITELIST" | grep -qxF "$1"
+          }
+
+          jq -r '.[].violations[]?.issue_id' last-main-scan.json | sort -u > old.txt
+          jq -r '.[].violations[]?.issue_id' "$SCAN_JSON" | sort -u > new.txt
+
+          NEW_VIOLATIONS=$(comm -13 old.txt new.txt)
+          REMOVED_VIOLATIONS=$(comm -23 old.txt new.txt)
+
+          if [ -n "$REMOVED_VIOLATIONS" ]; then
+            echo "Violations no longer present:"
+            echo "$REMOVED_VIOLATIONS"
+          fi
+
+          if [ -z "$NEW_VIOLATIONS" ]; then
+            echo "No new violations."
+            exit 0
+          fi
+
+          BLOCKING=""
+          while read -r violation; do
+            [ -z "$violation" ] && continue
+            if is_tolerated "$violation"; then
+              echo "Tolerated (in whitelist): $violation"
+            else
+              echo "New violation: $violation"
+              BLOCKING="${BLOCKING}${violation}"$'\n'
+            fi
+          done <<< "$NEW_VIOLATIONS"
+
+          if [ -n "$BLOCKING" ]; then
+            # Read by the next step, which opens the issue even though this one fails.
+            {
+              echo "NEW_VIOLATIONS<<XRAY_EOF"
+              printf '%s' "$BLOCKING"
+              echo "XRAY_EOF"
+            } >> "$GITHUB_ENV"
+
+            echo "::error::new unwhitelisted Xray violations found"
+            printf '%s' "$BLOCKING"
+            exit 1
+          fi
+
+          echo "All new violations are whitelisted."
+
+      - name: Create GitHub issue for new CVE violations
+        if: always() && env.NEW_VIOLATIONS != ''
+        uses: ./.github/actions/create-cve-issues
+        with:
+          new_violations: ${{ env.NEW_VIOLATIONS }}
+          scan_json: ${{ env.SCAN_JSON }}
+
   build-docker-images:
     name: Build Docker Image - ${{ matrix.service.name }}
     strategy:
@@ -202,3 +346,50 @@ jobs:
       deploy-to-registry: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--release_created', matrix.chart.path)] == 'true' }}
       run-deployment-test: false # deployments already tested in validate-charts job
       release-tag: ${{ fromJSON(needs.release-please.outputs.rp_outputs)[format('{0}--tag_name', matrix.chart.path)] }}
+
+  xray-container-scan:
+    name: JFrog Xray Container Scan - ${{ matrix.service.name }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    # Not `needs: build-docker-images`: that job discards its image (push-to-registry:
+    # false), so this builds its own with load: true for jf docker scan to read locally.
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { name: noah, path: agents/noah }
+          - { name: ark-sandbox, path: services/ark-sandbox }
+          - { name: file-api, path: services/file-gateway/services/file-api }
+          - { name: filesystem-mcp-server, path: mcps/filesystem-mcp-server }
+          - { name: cobol-demo-data-seeder, path: demos/cobol-modernization-bundle/examples/data }
+          - { name: executor-langchain, path: executors/langchain }
+          - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
+          - { name: executor-openai-responses, path: executors/openai-responses }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image locally for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.path }}
+          file: ${{ matrix.service.path }}/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: xray-scan/${{ matrix.service.name }}:${{ github.sha }}
+          # Read-only reuse of the cache build-docker-images writes for the same
+          # image in this run. No cache-to, to avoid two jobs writing one scope.
+          cache-from: type=gha,scope=${{ matrix.service.name }}-linux-amd64
+
+      - name: Scan image
+        uses: ./.github/actions/jfrog-xray-container-scan
+        with:
+          image: xray-scan/${{ matrix.service.name }}:${{ github.sha }}
+          image_name: ${{ matrix.service.name }}
+          jfrog_user: ${{ secrets.DOCKER_CICD_CACHE_REGISTRY_USERNAME }}
+          jfrog_password: ${{ secrets.DOCKER_CICD_CACHE_REGISTRY_PASSWORD }}
+          jfrog_url: ${{ vars.JFROG_PLATFORM_URL }}
