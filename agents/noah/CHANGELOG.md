@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.15](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.14...noah-v0.1.15) (2026-06-15)
+
+
+### Bug Fixes
+
+* Noah status ([#291](https://github.com/mckinsey/agents-at-scale-marketplace/issues/291)) ([b73f2dc](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b73f2dc42d255b4078f9c27669013ba9e6c1f1c0))
+
 ## [0.1.14](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.13...noah-v0.1.14) (2026-04-21)
 
 

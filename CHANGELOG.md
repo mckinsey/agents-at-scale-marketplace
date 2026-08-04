@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.1.40](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.39...v0.1.40) (2026-07-28)
+
+
+### Features
+
+* add argo-make-author agent to marketplace ([#328](https://github.com/mckinsey/agents-at-scale-marketplace/issues/328)) ([21d1f5c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/21d1f5c3d855084a89f0d75af42f25f62c50b9b8))
+* publish read-only kubernetes-mcp-server as a marketplace mcp ([#327](https://github.com/mckinsey/agents-at-scale-marketplace/issues/327)) ([aebc41f](https://github.com/mckinsey/agents-at-scale-marketplace/commit/aebc41f64106cc2b5a9300a378de363c710c2f79))
+
+## [0.1.39](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.38...v0.1.39) (2026-06-30)
+
+
+### Features
+
+* **cobol-demo:** run modernization workflow end-to-end ([#322](https://github.com/mckinsey/agents-at-scale-marketplace/issues/322)) ([8eda2a7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8eda2a7e1358f7dc83e17614ff9f01634f8008e7))
+* max tool calls ([#324](https://github.com/mckinsey/agents-at-scale-marketplace/issues/324)) ([de64d47](https://github.com/mckinsey/agents-at-scale-marketplace/commit/de64d4723b9d754e3497b16609ff97ccff90f6e4))
+
+
+### Bug Fixes
+
+* workflow session IDs (onboarding + cobol), onboarding RBAC and query polling ([#325](https://github.com/mckinsey/agents-at-scale-marketplace/issues/325)) ([0ed7499](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0ed74991cd4003b8d4dc62b43e47d1d01a3c312b))
+
+## [0.1.38](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.37...v0.1.38) (2026-06-15)
+
+
+### Features
+
+* file inputs for the OpenAI Responses executor ([#258](https://github.com/mckinsey/agents-at-scale-marketplace/issues/258)) ([fa66686](https://github.com/mckinsey/agents-at-scale-marketplace/commit/fa66686b12e0c5edf011d7231799216e75a3b71d))
+
+
+### Bug Fixes
+
+* **kyc-onboarding-bundle:** make ensure-output-dirs-script fail loudly ([#283](https://github.com/mckinsey/agents-at-scale-marketplace/issues/283)) ([94cc72c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/94cc72c22c497969043adc571e5ec3ffd9267f8d))
+* Noah status ([#291](https://github.com/mckinsey/agents-at-scale-marketplace/issues/291)) ([b73f2dc](https://github.com/mckinsey/agents-at-scale-marketplace/commit/b73f2dc42d255b4078f9c27669013ba9e6c1f1c0))
+* **openai-responses:** pin kubernetes&lt;36.0.0 to fix system:anonymous auth failure ([#292](https://github.com/mckinsey/agents-at-scale-marketplace/issues/292)) ([6424bf7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6424bf7f5a37d2df6148ccad5272ec8afd810c6e))
+
 ## [0.1.37](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.36...v0.1.37) (2026-05-12)
 
 

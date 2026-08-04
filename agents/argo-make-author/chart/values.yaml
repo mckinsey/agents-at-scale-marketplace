@@ -1,0 +1,14 @@
+# argo-make-author agent configuration
+
+agent:
+  name: argo-make-author
+  # Set a model for the agent. Leave empty to ship without one and set your own
+  # later; queries fail until a model is assigned.
+  modelRef: ""
+
+# MCP tool references. The tools are provided by the in-cluster
+# kubernetes-mcp-server and carry its install name as a prefix, so override
+# these if the server is installed under a different name.
+mcp:
+  resourcesListTool: kubernetes-mcp-server-resources-list
+  resourcesGetTool: kubernetes-mcp-server-resources-get

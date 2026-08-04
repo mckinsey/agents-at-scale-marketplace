@@ -22,6 +22,11 @@ OUTPUT_SCHEMA_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/outpu
 # OpenAI Files API) attach to queries via this annotation; the value is a JSON
 # array of IDs, resolved with the Query > Agent > ExecutionEngine cascade.
 FILE_IDS_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/file-ids"
+# Caps the number of tool calls the model can make inside a single Response.
+# Bounds worst-case latency for agents whose tool loop can fan out (e.g. web
+# search on ambiguous inputs). Passed through to the Responses API as the
+# `max_tool_calls` request parameter.
+MAX_TOOL_CALLS_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/max-tool-calls"
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +165,36 @@ def resolve_reasoning(request: ExecutionEngineRequest) -> Optional[dict[str, Any
     return None
 
 
+def resolve_max_tool_calls(request: ExecutionEngineRequest) -> Optional[int]:
+    """Resolve max_tool_calls from annotations.
+
+    Cascade: Query > Agent > ExecutionEngine. The first source (highest
+    priority) with a valid value wins. Sources with malformed or
+    out-of-range values are skipped, allowing lower-priority sources to
+    take effect.
+
+    The Responses API enforces ``max_tool_calls >= 1`` (it rejects 0 with
+    HTTP 400 ``integer_below_min_value``), so values below 1 are treated as
+    invalid here rather than passed through.
+    """
+    for source in [
+        request.query_annotations,
+        (getattr(request.agent, "annotations", None) or {}),
+        request.execution_engine_annotations,
+    ]:
+        raw = source.get(MAX_TOOL_CALLS_ANNOTATION_KEY, "")
+        if raw:
+            try:
+                value = int(raw)
+                if value < 1:
+                    logger.warning("max-tool-calls annotation must be >= 1, got %d", value)
+                    continue
+                return value
+            except (TypeError, ValueError) as exc:
+                logger.warning("Failed to parse max-tool-calls annotation %r: %s", raw, exc)
+    return None
+
+
 def resolve_output_schema(request: ExecutionEngineRequest) -> Optional[dict[str, Any]]:
     """Resolve JSON output schema from annotations. Returns text.format dict or None."""
     for source in [
@@ -243,6 +278,7 @@ class ResponsesCreateParams(BaseModel):
     previous_response_id: Optional[str] = None
     reasoning: Optional[dict[str, Any]] = None
     text: Optional[dict[str, Any]] = None
+    max_tool_calls: Optional[int] = None
 
     def to_api_kwargs(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
@@ -264,6 +300,7 @@ class ResponsesCreateParams(BaseModel):
         tools: Optional[list[dict[str, Any]]],
         reasoning: Optional[dict[str, Any]] = None,
         text: Optional[dict[str, Any]] = None,
+        max_tool_calls: Optional[int] = None,
     ) -> "ResponsesCreateParams":
         file_ids = resolve_file_ids(request)
         input_messages = [
@@ -277,6 +314,7 @@ class ResponsesCreateParams(BaseModel):
             tools=tools or None,
             reasoning=reasoning,
             text=text,
+            max_tool_calls=max_tool_calls,
         )
 
     @classmethod
@@ -289,6 +327,7 @@ class ResponsesCreateParams(BaseModel):
         tools: Optional[list[dict[str, Any]]],
         reasoning: Optional[dict[str, Any]] = None,
         text: Optional[dict[str, Any]] = None,
+        max_tool_calls: Optional[int] = None,
     ) -> "ResponsesCreateParams":
         return cls(
             model=model_config.model_name,
@@ -298,4 +337,5 @@ class ResponsesCreateParams(BaseModel):
             previous_response_id=previous_response_id,
             reasoning=reasoning,
             text=text,
+            max_tool_calls=max_tool_calls,
         )

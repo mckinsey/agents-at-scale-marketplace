@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.17](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.16...marketplace-docs-v0.1.17) (2026-07-28)
+
+
+### Features
+
+* add argo-make-author agent to marketplace ([#328](https://github.com/mckinsey/agents-at-scale-marketplace/issues/328)) ([21d1f5c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/21d1f5c3d855084a89f0d75af42f25f62c50b9b8))
+* publish read-only kubernetes-mcp-server as a marketplace mcp ([#327](https://github.com/mckinsey/agents-at-scale-marketplace/issues/327)) ([aebc41f](https://github.com/mckinsey/agents-at-scale-marketplace/commit/aebc41f64106cc2b5a9300a378de363c710c2f79))
+
+## [0.1.16](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.15...marketplace-docs-v0.1.16) (2026-06-15)
+
+
+### Features
+
+* file inputs for the OpenAI Responses executor ([#258](https://github.com/mckinsey/agents-at-scale-marketplace/issues/258)) ([fa66686](https://github.com/mckinsey/agents-at-scale-marketplace/commit/fa66686b12e0c5edf011d7231799216e75a3b71d))
+
 ## [0.1.15](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.14...marketplace-docs-v0.1.15) (2026-04-16)
 
 

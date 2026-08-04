@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.6...cobol-modernization-bundle-v0.1.7) (2026-06-30)
+
+
+### Features
+
+* **cobol-demo:** run modernization workflow end-to-end ([#322](https://github.com/mckinsey/agents-at-scale-marketplace/issues/322)) ([8eda2a7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/8eda2a7e1358f7dc83e17614ff9f01634f8008e7))
+
+
+### Bug Fixes
+
+* workflow session IDs (onboarding + cobol), onboarding RBAC and query polling ([#325](https://github.com/mckinsey/agents-at-scale-marketplace/issues/325)) ([0ed7499](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0ed74991cd4003b8d4dc62b43e47d1d01a3c312b))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/cobol-modernization-bundle-v0.1.5...cobol-modernization-bundle-v0.1.6) (2026-04-16)
 
 
