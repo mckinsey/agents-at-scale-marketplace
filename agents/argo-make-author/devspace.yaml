@@ -1,0 +1,15 @@
+# DevSpace configuration for the argo-make-author agent
+version: v2beta1
+
+pipelines:
+  deploy: |-
+    create_deployments --all
+  dev: |-
+    create_deployments --all
+
+deployments:
+  argo-make-author:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart

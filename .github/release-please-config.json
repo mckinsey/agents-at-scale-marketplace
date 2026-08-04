@@ -74,6 +74,19 @@
         }
       ]
     },
+    "agents/argo-make-author": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "argo-make-author",
+      "extra-files": [
+        "chart/Chart.yaml",
+        {
+          "type": "yaml",
+          "path": "chart/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
+      ]
+    },
     "services/file-gateway": {
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
@@ -96,6 +109,19 @@
       "changelog-path": "CHANGELOG.md",
       "release-type": "helm",
       "package-name": "filesystem-mcp-server",
+      "extra-files": [
+        "chart/Chart.yaml",
+        {
+          "type": "yaml",
+          "path": "chart/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
+      ]
+    },
+    "mcps/kubernetes-mcp-server": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "helm",
+      "package-name": "kubernetes-mcp-server",
       "extra-files": [
         "chart/Chart.yaml",
         {
