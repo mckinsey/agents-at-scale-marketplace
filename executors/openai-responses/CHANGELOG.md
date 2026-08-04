@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-openai-responses-v0.1.6...executor-openai-responses-v0.1.7) (2026-06-30)
+
+
+### Features
+
+* max tool calls ([#324](https://github.com/mckinsey/agents-at-scale-marketplace/issues/324)) ([de64d47](https://github.com/mckinsey/agents-at-scale-marketplace/commit/de64d4723b9d754e3497b16609ff97ccff90f6e4))
+
 ## [0.1.6](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-openai-responses-v0.1.5...executor-openai-responses-v0.1.6) (2026-06-15)
 
 
