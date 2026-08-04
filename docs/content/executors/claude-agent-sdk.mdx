@@ -338,6 +338,40 @@ Note: The PVC is not deleted on uninstall. To remove session data:
 kubectl delete pvc executor-claude-agent-sdk-sessions -n default
 ```
 
+## Data Flow and Encryption
+
+This section covers data surfaces specific to the Claude Agent SDK executor. For platform-level surfaces (etcd, Kubernetes Secrets, broker, OTel collector, pod logs), see the [Data Flow and Encryption](https://mckinsey.github.io/agents-at-scale-ark/operations-guide/data-flow-and-encryption) operations guide.
+
+### Data at rest
+
+| Surface | What lands there | Encrypted by default? | How to protect |
+|---------|------------------|-----------------------|----------------|
+| **Session working directories** (`/data/sessions/<conversationId>/`) | Agent-created files, tool outputs, any data the agent writes during execution | No. Plaintext on the PVC. | Use an encrypted PersistentVolume. In scheduler mode, data lives on the sandbox pod's ephemeral filesystem and is deleted when the sandbox expires. |
+| **SDK session state** (`~/.claude/projects/.../\<session-id\>.jsonl`) | Conversation turns, tool call history, session metadata managed by `ClaudeSDKClient` | No. Plaintext JSONL on the pod filesystem. | Same encrypted PV. In scheduler mode, ephemeral by default. |
+| **MCP server auth headers** | Authorization tokens and API keys from MCPServer CRD `spec.headers` | Resolved from Kubernetes Secrets at runtime; not written to disk by the executor. | Ensure the backing Secrets are encrypted via etcd encryption or an external secrets operator. |
+
+### Data in transit
+
+| Hop | Protocol | TLS by default? | Notes |
+|-----|----------|-----------------|-------|
+| Executor → Anthropic API | HTTPS | Yes. The Anthropic Python SDK enforces HTTPS. | Custom `baseUrl` from the Model CRD can override — ensure any proxy endpoint uses HTTPS. |
+| Executor → MCP servers | HTTP(S) | No enforcement. Depends on the MCPServer `spec.address` scheme. | Use HTTPS addresses for MCP servers handling sensitive data. Auth headers are sent in the clear over HTTP. |
+| Controller → executor (A2A) | HTTP | No. | Deploy a service mesh for mTLS, or use scheduler mode where traffic stays node-local. |
+
+### Logging
+
+- The executor logs agent name, model name, and conversation ID at info level.
+- Tool call inputs/outputs are not logged by the executor itself, but the Claude Agent SDK may emit them at debug level.
+- API keys are passed via environment variables and are not logged.
+
+### Data retention and disposal
+
+The executor does not manage data lifecycle — retention and cleanup are deployment configuration.
+
+- **Standalone mode**: Session directories on the PVC accumulate indefinitely. Schedule a CronJob to prune `/data/sessions/` entries older than your retention window. The PVC itself survives `helm uninstall` — delete it explicitly when decommissioning.
+- **Scheduler mode**: Set `shutdownPolicy: Delete` and tune `sessionIdleTTL` to bound sandbox lifetime. When a sandbox is deleted, its ephemeral filesystem is discarded with it.
+- **Anthropic API**: Conversation data retained by Anthropic is governed by their data retention policies, not by Ark. Review Anthropic's terms for your usage tier.
+
 ## Additional Resources
 
 - [Claude Agent SDK Executor README](https://github.com/mckinsey/agents-at-scale-marketplace/tree/main/executors/claude-agent-sdk)
