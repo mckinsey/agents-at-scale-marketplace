@@ -1,0 +1,51 @@
+{{- $ns := include "argo-workflow-runner.namespace" . -}}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: {{ .Values.tools.retryName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "argo-workflow-runner.labels" . | nindent 4 }}
+spec:
+  type: http
+  description: >-
+    Retry an existing, finished Argo Workflow in the {{ $ns }} namespace,
+    re-running its failed nodes in place. Acts only on a workflow that already
+    exists, referenced by name.
+  annotations:
+    title: "Retry Argo Workflow"
+    readOnlyHint: false
+    destructiveHint: false
+    idempotentHint: false
+    openWorldHint: true
+  inputSchema:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Name of the existing Workflow to retry.
+      restartSuccessful:
+        type: boolean
+        description: >-
+          If true, also restart nodes that previously succeeded; if false, only
+          the failed and errored nodes are retried. Use false unless you need a
+          full rerun.
+    required:
+      - name
+      - restartSuccessful
+  http:
+    url: {{ .Values.argoServer.baseUrl }}/api/v1/workflows/{{ $ns }}/{name}/retry
+    method: PUT
+    timeout: {{ .Values.timeout }}
+    headers:
+      - name: Authorization
+        value:
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.auth.secretName }}
+              key: {{ .Values.auth.key }}
+      - name: Content-Type
+        value:
+          value: "application/json"
+    body: |
+      {"name":"{{ "{{.input.name}}" }}","namespace":"{{ $ns }}","restartSuccessful":{{ "{{.input.restartSuccessful}}" }}}

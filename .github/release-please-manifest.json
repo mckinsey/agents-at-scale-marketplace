@@ -16,5 +16,6 @@
   "executors/langchain": "0.1.7",
   "executors/claude-agent-sdk": "0.1.11",
   "demos/cobol-modernization-bundle/examples/data": "1.0.1",
-  "executors/openai-responses": "0.1.7"
+  "executors/openai-responses": "0.1.7",
+  "tools/argo-workflow-runner": "0.1.0"
 }

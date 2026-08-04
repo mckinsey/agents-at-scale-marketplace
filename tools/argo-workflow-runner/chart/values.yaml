@@ -1,0 +1,34 @@
+# argo-workflow-runner tool configuration
+
+# Argo Workflows API server the tools call. The tools only ever hit the
+# submit / retry / resubmit endpoints under this base URL.
+argoServer:
+  # Base URL of the Argo API server. Argo serves HTTPS with a self-signed cert
+  # by default; see the README for the TLS options (trusted cert, in-cluster
+  # TLS termination, or running argo-server with --secure=false).
+  baseUrl: "https://argo-server.argo.svc.cluster.local:2746"
+  # Namespace the tools submit into. Empty defaults to the release namespace.
+  # This is fixed at install time and is never a model-controlled argument, so
+  # the tools cannot reach templates or workflows in other namespaces.
+  namespace: ""
+
+# Bearer-token authentication for the Argo API server. The tools send the
+# secret value verbatim as the Authorization header, so it must be the full
+# header value including the "Bearer " prefix.
+auth:
+  # Secret holding the Authorization header value.
+  secretName: "argo-workflow-runner-auth"
+  key: "authorization"
+  # If set, the chart creates the Secret above holding "Bearer <token>".
+  # Leave empty to reference a Secret you manage yourself.
+  token: ""
+
+# Names of the generated Tool resources. These are the names agents reference
+# in spec.tools (type: http).
+tools:
+  submitName: "argo-submit-workflow-template"
+  retryName: "argo-retry-workflow"
+  resubmitName: "argo-resubmit-workflow"
+
+# Per-request timeout applied to every tool.
+timeout: "30s"

@@ -1,0 +1,15 @@
+# DevSpace configuration for the argo-workflow-runner tools
+version: v2beta1
+
+pipelines:
+  deploy: |-
+    create_deployments --all
+  dev: |-
+    create_deployments --all
+
+deployments:
+  argo-workflow-runner:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart

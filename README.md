@@ -71,6 +71,14 @@ Tool providers registered as `MCPServer` CRDs. Agents reference individual tools
 | [`companies-house-mcp`](./mcps/companies-house-mcp)             | UK Companies House API for company search and beneficial ownership     | [Chart](./mcps/companies-house-mcp/chart)         |
 | [`kubernetes-mcp-server`](./mcps/kubernetes-mcp-server)         | Read-only Kubernetes access for grounding agents on cluster resources  | [Chart](./mcps/kubernetes-mcp-server/chart)       |
 
+## Tools
+
+Standalone Ark `Tool` CRDs that agents attach via `spec.tools`.
+
+| Tool                                                        | Description                                                                       | Chart                                          |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [`argo-workflow-runner`](./tools/argo-workflow-runner)      | HTTP tools to submit existing Argo WorkflowTemplates and retry/resubmit workflows | [Chart](./tools/argo-workflow-runner/chart)    |
+
 ## Quick Start
 
 ### Install with Ark CLI (Recommended)
@@ -96,6 +104,9 @@ ark install marketplace/agents/argo-make-author
 
 # MCP Servers
 ark install marketplace/mcps/kubernetes-mcp-server
+
+# Tools
+ark install marketplace/tools/argo-workflow-runner
 ```
 
 ### Deploy with Helm
@@ -148,7 +159,7 @@ Detailed documentation for marketplace services can be found in the [`docs/`](./
 
 ## Contributing
 
-1. Choose the appropriate directory (`executors/`, `services/`, `mcps/`, `agents/`, `demos/`)
+1. Choose the appropriate directory (`executors/`, `services/`, `mcps/`, `agents/`, `demos/`, `tools/`)
 2. Each component needs: Helm chart in `chart/`, `README.md`, `devspace.yaml`
 3. Add an entry to `marketplace.json`
 4. Test locally with DevSpace or Helm

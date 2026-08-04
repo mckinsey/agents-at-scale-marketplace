@@ -6,5 +6,6 @@ export default {
   mcps: 'MCP Servers',
   agents: 'Agents',
   demos: 'Demos',
+  tools: 'Tools',
   contributors: 'Contributors',
 }

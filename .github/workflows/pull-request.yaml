@@ -85,6 +85,8 @@ jobs:
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk, namespace: default, run-deployment-test: false }
           # disable executor-openai-responses deployment tests for PRs to avoid hitting 5m limit
           - { name: executor-openai-responses, path: executors/openai-responses, namespace: default, run-deployment-test: false }
+          # disable argo-workflow-runner deployment tests for PRs to avoid hitting 5m limit
+          - { name: argo-workflow-runner, path: tools/argo-workflow-runner, namespace: default, run-deployment-test: false }
     uses: ./.github/workflows/_reusable-charts-cicd.yaml
     with:
       chart-name: ${{ matrix.chart.name }}

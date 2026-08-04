@@ -1,0 +1,53 @@
+{{- $ns := include "argo-workflow-runner.namespace" . -}}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: {{ .Values.tools.resubmitName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "argo-workflow-runner.labels" . | nindent 4 }}
+spec:
+  type: http
+  description: >-
+    Resubmit an existing Argo Workflow in the {{ $ns }} namespace, creating a
+    fresh Workflow from the same spec. Acts only on a workflow that already
+    exists, referenced by name.
+  annotations:
+    title: "Resubmit Argo Workflow"
+    readOnlyHint: false
+    destructiveHint: false
+    idempotentHint: false
+    openWorldHint: true
+  inputSchema:
+    type: object
+    properties:
+      name:
+        type: string
+        description: >-
+          Name of the existing Workflow to resubmit. A new Workflow is created
+          from the same spec.
+      memoized:
+        type: boolean
+        description: >-
+          If true, reuse cached (memoized) outputs from the previous run where
+          possible instead of re-executing those steps. Use false for a clean
+          rerun.
+    required:
+      - name
+      - memoized
+  http:
+    url: {{ .Values.argoServer.baseUrl }}/api/v1/workflows/{{ $ns }}/{name}/resubmit
+    method: PUT
+    timeout: {{ .Values.timeout }}
+    headers:
+      - name: Authorization
+        value:
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.auth.secretName }}
+              key: {{ .Values.auth.key }}
+      - name: Content-Type
+        value:
+          value: "application/json"
+    body: |
+      {"name":"{{ "{{.input.name}}" }}","namespace":"{{ $ns }}","memoized":{{ "{{.input.memoized}}" }}}

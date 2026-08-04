@@ -1,0 +1,98 @@
+---
+title: Argo Workflow Runner
+description: Ark HTTP tools that run existing Argo workflows without allowing arbitrary workflow definitions
+---
+
+# Argo Workflow Runner
+
+Argo Workflow Runner is a set of three standalone Ark `Tool` resources
+(`spec.type: http`) that call the Argo Workflows API server to **run** workflows
+a model cannot define. It is the "run" counterpart to
+[Argo Make Author](../agents/argo-make-author), which only authors templates.
+
+The tools let an agent:
+
+- **submit** an existing `WorkflowTemplate` by name,
+- **retry** an existing `Workflow` in place,
+- **resubmit** an existing `Workflow` as a fresh run.
+
+There is no MCP server and no image, just `Tool` CRDs that any agent attaches
+through `spec.tools`.
+
+## Why it cannot run arbitrary workflows
+
+The security boundary is the set of endpoints the tools call, not a prompt:
+
+1. Only `submit`, `retry`, and `resubmit` are ever called. The create-Workflow
+   endpoint, which accepts a full `Workflow` manifest, is never exposed.
+2. `resourceKind` is a literal `WorkflowTemplate` baked into the submit body, so
+   a model cannot submit an arbitrary `Workflow` or `CronWorkflow` kind.
+3. The target namespace is fixed at install time, never a model argument.
+4. As an outer backstop, scope the bearer token's RBAC to `create` on
+   `workflows` and `get` / `list` on `workflowtemplates` in the target namespace.
+
+The model only supplies the name of an already-existing resource plus launch
+options, never a spec.
+
+## Tools
+
+| Tool                             | Method & endpoint                          | Inputs                      |
+| -------------------------------- | ------------------------------------------ | --------------------------- |
+| `argo-submit-workflow-template`  | `POST .../workflows/<ns>/submit`           | `name`, `parameters`        |
+| `argo-retry-workflow`            | `PUT .../workflows/<ns>/<name>/retry`      | `name`, `restartSuccessful` |
+| `argo-resubmit-workflow`         | `PUT .../workflows/<ns>/<name>/resubmit`   | `name`, `memoized`          |
+
+`parameters` is a JSON array of `key=value` strings, for example
+`["risk-level=high", "mode=sequential"]`. Use `[]` to accept the template's
+declared defaults.
+
+## Requirements
+
+- **Argo Workflows with the API server enabled.** This chart does not install
+  Argo; it is a cluster prerequisite.
+- **An authentication token** for the Argo API server.
+
+## Quick Start
+
+### Installation
+
+**Using Ark CLI (Recommended):**
+
+```bash
+ark install marketplace/tools/argo-workflow-runner
+```
+
+**Using DevSpace (for Development):**
+
+```bash
+cd tools/argo-workflow-runner
+devspace deploy
+```
+
+**Using Helm:**
+
+```bash
+cd tools/argo-workflow-runner
+helm install argo-workflow-runner ./chart -n default --set auth.token=<argo-api-token>
+```
+
+## TLS
+
+Argo's API server defaults to HTTPS with a self-signed certificate, and Ark's
+HTTP tool has no skip-verify option. Point `argoServer.baseUrl` at an endpoint
+with a trusted certificate, terminate TLS in-cluster, or run argo-server with
+`--secure=false` behind a plain `http://` URL reachable only inside the cluster.
+
+## Uninstallation
+
+**Using Ark CLI:**
+
+```bash
+ark uninstall marketplace/tools/argo-workflow-runner
+```
+
+**Using Helm:**
+
+```bash
+helm uninstall argo-workflow-runner -n default
+```

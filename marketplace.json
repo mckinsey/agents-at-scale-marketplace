@@ -710,6 +710,36 @@
                 "k8sServicePort": 8000,
                 "k8sDeploymentName": "executor-langchain"
             }
+        },
+        {
+            "name": "argo-workflow-runner",
+            "type": "tool",
+            "displayName": "Argo Workflow Runner",
+            "description": "Ark HTTP tools to submit existing Argo WorkflowTemplates and retry or resubmit existing workflows by name, without allowing arbitrary workflow definitions",
+            "version": "0.1.0",
+            "author": "ARK Marketplace",
+            "homepage": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "repository": "https://github.com/mckinsey/agents-at-scale-marketplace",
+            "license": "Apache-2.0",
+            "tags": [
+                "tool",
+                "argo",
+                "workflow",
+                "http"
+            ],
+            "category": "tools",
+            "documentation": "https://mckinsey.github.io/agents-at-scale-marketplace/tools/argo-workflow-runner/",
+            "support": {
+                "url": "https://github.com/mckinsey/agents-at-scale-marketplace/issues"
+            },
+            "ark": {
+                "chartPath": "oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/argo-workflow-runner",
+                "namespace": "default",
+                "helmReleaseName": "argo-workflow-runner",
+                "installArgs": [
+                    "--create-namespace"
+                ]
+            }
         }
     ]
 }

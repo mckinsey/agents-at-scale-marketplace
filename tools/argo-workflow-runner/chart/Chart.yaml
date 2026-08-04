@@ -1,0 +1,22 @@
+apiVersion: v2
+name: argo-workflow-runner
+description: >-
+  Ark HTTP tools that submit existing Argo WorkflowTemplates and retry or
+  resubmit existing workflows via the Argo Workflows API. Cannot create
+  arbitrary workflows: it only references existing resources by name.
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+keywords:
+  - ark
+  - tool
+  - argo
+  - workflow
+home: https://github.com/mckinsey/agents-at-scale-marketplace
+sources:
+  - https://github.com/mckinsey/agents-at-scale-marketplace
+maintainers:
+  - name: ARK Team
+    email: ark-team@mckinsey.com
+annotations:
+  ark.mckinsey.com/marketplace-item-name: tool/argo-workflow-runner

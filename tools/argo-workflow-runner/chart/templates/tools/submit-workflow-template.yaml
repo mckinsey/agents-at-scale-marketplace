@@ -1,0 +1,54 @@
+{{- $ns := include "argo-workflow-runner.namespace" . -}}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: {{ .Values.tools.submitName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "argo-workflow-runner.labels" . | nindent 4 }}
+spec:
+  type: http
+  description: >-
+    Submit an existing Argo WorkflowTemplate in the {{ $ns }} namespace,
+    creating a new Workflow from it. Only pre-existing WorkflowTemplates can be
+    run - this tool cannot define an arbitrary workflow. Pass the template name
+    and, optionally, its launch parameters.
+  annotations:
+    title: "Submit Argo WorkflowTemplate"
+    readOnlyHint: false
+    destructiveHint: false
+    idempotentHint: false
+    openWorldHint: true
+  inputSchema:
+    type: object
+    properties:
+      name:
+        type: string
+        description: >-
+          Name of an existing WorkflowTemplate in the {{ $ns }} namespace to
+          submit.
+      parameters:
+        type: string
+        description: >-
+          JSON array of "key=value" strings for the template's
+          spec.arguments.parameters, e.g. ["risk-level=high","mode=sequential"].
+          Use [] to accept the template's declared defaults.
+        default: "[]"
+    required:
+      - name
+  http:
+    url: {{ .Values.argoServer.baseUrl }}/api/v1/workflows/{{ $ns }}/submit
+    method: POST
+    timeout: {{ .Values.timeout }}
+    headers:
+      - name: Authorization
+        value:
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.auth.secretName }}
+              key: {{ .Values.auth.key }}
+      - name: Content-Type
+        value:
+          value: "application/json"
+    body: |
+      {"namespace":"{{ $ns }}","resourceKind":"WorkflowTemplate","resourceName":"{{ "{{.input.name}}" }}","submitOptions":{"parameters":{{ "{{.input.parameters}}" }}}}
