@@ -52,9 +52,10 @@ Infrastructure add-ons deployed alongside the [Ark platform](https://github.com/
 
 Pre-built agents that can be deployed to your Ark cluster.
 
-| Agent                     | Description                                                         | Chart                        |
-| ------------------------- | ------------------------------------------------------------------- | ---------------------------- |
-| [`noah`](./agents/noah)   | Runtime administration agent with cluster privileges and MCP server | [Chart](./agents/noah/chart) |
+| Agent                                                     | Description                                                                            | Chart                                       |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------- |
+| [`noah`](./agents/noah)                                   | Runtime administration agent with cluster privileges and MCP server                    | [Chart](./agents/noah/chart)                |
+| [`argo-make-author`](./agents/argo-make-author)           | Conversational agent that authors Argo `WorkflowTemplate` resources grounded on the live cluster | [Chart](./agents/argo-make-author/chart) |
 
 ## MCP Servers
 
@@ -68,6 +69,7 @@ Tool providers registered as `MCPServer` CRDs. Agents reference individual tools
 | [`web-research-mcp`](./mcps/web-research-mcp)                   | Web research via Tavily or Perplexity                                  | [Chart](./mcps/web-research-mcp/chart)            |
 | [`perplexity-ask-mcp`](./mcps/perplexity-ask-mcp)               | Conversational AI with real-time web search via Perplexity API         | [Chart](./mcps/perplexity-ask-mcp/chart)          |
 | [`companies-house-mcp`](./mcps/companies-house-mcp)             | UK Companies House API for company search and beneficial ownership     | [Chart](./mcps/companies-house-mcp/chart)         |
+| [`kubernetes-mcp-server`](./mcps/kubernetes-mcp-server)         | Read-only Kubernetes access for grounding agents on cluster resources  | [Chart](./mcps/kubernetes-mcp-server/chart)       |
 
 ## Quick Start
 
@@ -90,6 +92,10 @@ ark install marketplace/services/mcp-inspector
 
 # Agents
 ark install marketplace/agents/noah
+ark install marketplace/agents/argo-make-author
+
+# MCP Servers
+ark install marketplace/mcps/kubernetes-mcp-server
 ```
 
 ### Deploy with Helm

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.40](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.39...v0.1.40) (2026-07-28)
+
+
+### Features
+
+* add argo-make-author agent to marketplace ([#328](https://github.com/mckinsey/agents-at-scale-marketplace/issues/328)) ([21d1f5c](https://github.com/mckinsey/agents-at-scale-marketplace/commit/21d1f5c3d855084a89f0d75af42f25f62c50b9b8))
+* publish read-only kubernetes-mcp-server as a marketplace mcp ([#327](https://github.com/mckinsey/agents-at-scale-marketplace/issues/327)) ([aebc41f](https://github.com/mckinsey/agents-at-scale-marketplace/commit/aebc41f64106cc2b5a9300a378de363c710c2f79))
+
 ## [0.1.39](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.38...v0.1.39) (2026-06-30)
 
 
