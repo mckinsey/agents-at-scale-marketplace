@@ -41,9 +41,22 @@ helm install mcp-filesystem ./chart \
 
 Environment variables (configured in `chart/values.yaml`):
 - `PORT`: Server port (default: 8080)
-- `BASE_DATA_DIR`: Base directory for all filesystem operations (default: /data)
+- `STORAGE_BACKEND`: Storage adapter, `filesystem` (default) or `s3`
+- `BASE_DATA_DIR`: Base directory for all filesystem operations, `filesystem` backend (default: /data)
 - `SESSION_FILE`: Path to session metadata storage (default: /data/sessions/sessions.json)
 - `MAX_SESSIONS`: Maximum concurrent sessions (default: 1000)
+
+### Storage backends
+
+The server selects a storage adapter at startup via `STORAGE_BACKEND`. Both adapters
+expose the identical MCP tool set, so consumers are unaffected by the choice.
+
+- `filesystem` (default) — local disk under `BASE_DATA_DIR` (PVC-backed).
+- `s3` — an S3 bucket via `@aws-sdk/client-s3` (objects keyed by path; "directories"
+  are key prefixes). Used by the `file-gateway` service when VersityGW runs its `s3`
+  backend, so the MCP and file-api share one bucket. Extra env vars: `AWS_ENDPOINT_URL`,
+  `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (`AWS_SESSION_TOKEN` honoured),
+  `AWS_REGION`, `BUCKET_NAME`, and optional `S3_KEY_PREFIX` (defaults to the bucket root).
 
 Helm chart options:
 - `persistence.size`: Storage size for persistent volume (default: 10Gi)

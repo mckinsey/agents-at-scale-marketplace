@@ -26,6 +26,15 @@ versitygw:
   enabled: true
   replicaCount: 1
 
+  # Storage backend for the gateway:
+  #   posix - store objects on the shared PVC at config.dataPath (default)
+  #   s3    - proxy to an existing S3 service (e.g. real AWS S3). No PVC is
+  #           provisioned or mounted in this mode (storage.enabled is ignored when
+  #           backend=s3). filesystemMcp may stay enabled: in s3 mode it runs the S3
+  #           storage adapter (STORAGE_BACKEND=s3) against VersityGW and shares the
+  #           bucket with file-api.
+  backend: posix
+
   image:
     repository: ghcr.io/versity/versitygw
     pullPolicy: IfNotPresent
@@ -34,6 +43,11 @@ versitygw:
   serviceAccount:
     create: true
     name: ""
+    # Annotations for the VersityGW ServiceAccount, e.g. IRSA role binding:
+    #   eks.amazonaws.com/role-arn: arn:aws:iam::<account>:role/<role>
+    # Required to actually use s3Backend.allowDefaultCredentialChain=true with
+    # IRSA / pod identity (the default credential chain reads the role from the SA).
+    annotations: {}
 
   podSecurityContext:
     runAsNonRoot: true
@@ -63,6 +77,28 @@ versitygw:
     region: "us-east-1"
     port: "7070"
     dataPath: "/data"
+
+  # Used only when backend: s3 - upstream S3 service the gateway proxies to.
+  s3Backend:
+    # Upstream S3 endpoint. Empty = AWS default (https://s3.<region>.amazonaws.com).
+    endpoint: ""
+    region: "us-east-1"
+    # Force path-style addressing to the upstream (VGW_S3_USE_PATH_STYLE). AWS uses
+    # virtual-host addressing (the VersityGW default, false); set true for
+    # S3-compatible providers such as MinIO or Ceph RGW that require path-style.
+    usePathStyle: false
+    # Optional secret holding upstream credentials as keys:
+    #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and optionally AWS_SESSION_TOKEN
+    #   (for temporary / STS credentials).
+    # These are injected as AWS_* env vars and consumed via the AWS default credential
+    # chain (which is the only path that honours a session token). Leave empty to
+    # instead rely on ambient identity (IRSA / pod identity); you must then also set
+    # allowDefaultCredentialChain=true (see below) and annotate the service account.
+    credentialsSecret: ""
+    # Guard: when credentialsSecret is empty, install fails unless this is true.
+    # Prevents silently deploying with no upstream credentials (pod reports Ready
+    # but every S3 request 403s). Set true only when using IRSA / pod identity.
+    allowDefaultCredentialChain: false
 
   s3SecretName: "file-gateway-s3-credentials"
 
@@ -113,6 +149,15 @@ filesystemMcp:
     port: "8000"
     dataPath: "/data"
     bucketName: "aas-files"
+    # s3 mode only: optional key prefix the MCP prepends to keys. This is a namespacing
+    # convenience, NOT a security boundary — the MCP holds bucket-wide gateway
+    # credentials, and set_base_directory does not isolate workspaces from each other.
+    # Empty (default) = bucket root, sharing the keyspace with file-api so files an
+    # agent writes via MCP are visible through the file-api and in S3. Set a prefix
+    # (e.g. "agents/") to keep MCP objects under one path; the bucket (or that prefix)
+    # is the boundary. In s3 mode the MCP ignores the PVC and talks S3 to the in-cluster
+    # VersityGW (STORAGE_BACKEND=s3).
+    keyPrefix: ""
 
   # When set, MCPServer metadata.name is this value so ARK discovers tools under this name
   # (e.g. "mcp-filesystem" so agents that expect mcp-filesystem-* tools work without standalone MCP).
@@ -157,6 +202,11 @@ fileApi:
   config:
     host: "0.0.0.0"
     port: "8080"
+    # S3 bucket file-api serves. Empty = fall back to filesystemMcp.config.bucketName.
+    # IMPORTANT: when versitygw.backend=s3 this MUST name an existing upstream bucket
+    # (nothing in the chart auto-creates it); the default "aas-files" will not exist
+    # in a real S3 account and requests will fail with NoSuchBucket.
+    bucketName: ""
 
   cors:
     origins: "http://localhost:3000"
