@@ -79,7 +79,7 @@ S3-compatible gateway for object storage, providing the underlying storage backe
 | `versitygw.backend` | Storage backend: `posix` (local PVC) or `s3` (remote bucket) | `posix` |
 | `versitygw.s3Backend.endpoint` | Upstream S3 endpoint; empty = AWS default | `""` |
 | `versitygw.s3Backend.region` | Upstream S3 region | `us-east-1` |
-| `versitygw.s3Backend.credentialsSecret` | Secret with `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` (long-lived keys) | `""` |
+| `versitygw.s3Backend.credentialsSecret` | Secret with `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/optional `AWS_SESSION_TOKEN` | `""` |
 | `versitygw.s3Backend.usePathStyle` | Force path-style addressing upstream (needed by MinIO/Ceph and similar) | `false` |
 | `versitygw.s3Backend.allowDefaultCredentialChain` | Allow IRSA/pod identity when no `credentialsSecret` | `false` |
 | `versitygw.serviceAccount.annotations` | Annotations for the VersityGW ServiceAccount (e.g. IRSA `eks.amazonaws.com/role-arn`) | `{}` |
@@ -99,9 +99,11 @@ Create the credentials secret:
 kubectl create secret generic my-s3-creds \
   --from-literal=AWS_ACCESS_KEY_ID=... \
   --from-literal=AWS_SECRET_ACCESS_KEY=...
+  # optional, for temporary / STS credentials:
+  # --from-literal=AWS_SESSION_TOKEN=...
 ```
 
-These are long-lived keys, passed to the gateway as `VGW_S3_ACCESS_KEY` / `VGW_S3_SECRET_KEY`. For temporary / auto-rotating credentials use IRSA or pod identity instead (see below) rather than a static session token, which cannot refresh in a long-running pod.
+The secret's keys are injected as `AWS_*` environment variables and consumed via the AWS default credential chain — include `AWS_SESSION_TOKEN` when using temporary STS credentials. (VersityGW's explicit `VGW_S3_ACCESS_KEY`/`VGW_S3_SECRET_KEY` flags can't carry a session token, so the chain is used instead.) Alternatively omit the secret entirely and use IRSA / pod identity (see below).
 
 Install:
 
