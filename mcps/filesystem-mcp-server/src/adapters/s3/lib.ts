@@ -9,9 +9,12 @@ import {
 import { createUnifiedDiff, normalizeLineEndings } from "../filesystem/lib.js";
 
 // Objects larger than this are refused for full-content operations (read_text_file
-// full/head/tail, edit_file) to protect the memory-limited pod. Binary/large data
-// should go through byte-range-free media reads or be handled out of band.
+// full/head/tail, edit_file) to protect the memory-limited pod.
 export const MAX_TEXT_BYTES = 50 * 1024 * 1024;
+
+// read_media_file buffers the whole object AND base64-encodes it (~1.33x), so it is
+// capped too. Same ceiling as text keeps the peak footprint bounded.
+export const MAX_MEDIA_BYTES = MAX_TEXT_BYTES;
 
 export interface S3FileInfo {
   size: number;
@@ -63,6 +66,11 @@ export async function getObjectBase64(
     const resp = await client.send(
       new GetObjectCommand({ Bucket: bucket, Key: key })
     );
+    if ((resp.ContentLength || 0) > MAX_MEDIA_BYTES) {
+      throw new Error(
+        `Object ${key} is ${resp.ContentLength} bytes, which exceeds the ${MAX_MEDIA_BYTES}-byte limit for media reads`
+      );
+    }
     const bytes = await (resp.Body as any).transformToByteArray();
     return Buffer.from(bytes).toString("base64");
   } catch (error) {

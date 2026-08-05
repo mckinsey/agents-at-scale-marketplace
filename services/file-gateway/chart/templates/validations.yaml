@@ -16,7 +16,12 @@ is no longer a data split to guard against (the old MCP+s3 guard has been remove
 {{-   if and (not .Values.versitygw.s3Backend.credentialsSecret) (not .Values.versitygw.s3Backend.allowDefaultCredentialChain) }}
 {{-     fail "versitygw.backend=s3 requires versitygw.s3Backend.credentialsSecret (a secret with keys AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY). To rely on IRSA / pod identity instead, set versitygw.s3Backend.allowDefaultCredentialChain=true." }}
 {{-   end }}
-{{-   if and .Values.fileApi.enabled (not .Values.fileApi.config.bucketName) }}
+{{- /*
+Both file-api and the s3-mode MCP resolve BUCKET_NAME via the same
+fileApi.config.bucketName then filesystemMcp.config.bucketName fallback, so the bucket
+must be named whenever either component is enabled.
+*/ -}}
+{{-   if and (or .Values.fileApi.enabled .Values.filesystemMcp.enabled) (not .Values.fileApi.config.bucketName) }}
 {{-     fail "versitygw.backend=s3 requires fileApi.config.bucketName to name an existing upstream bucket; the chart does not create buckets and the filesystemMcp default (aas-files) will not exist in a real S3 account, so every request would fail with NoSuchBucket." }}
 {{-   end }}
 {{- end }}

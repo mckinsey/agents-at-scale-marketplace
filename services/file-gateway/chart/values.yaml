@@ -149,10 +149,14 @@ filesystemMcp:
     port: "8000"
     dataPath: "/data"
     bucketName: "aas-files"
-    # s3 mode only: optional key prefix the MCP scopes all operations under. Empty =
-    # bucket root, so MCP writes share the same keyspace as file-api (files an agent
-    # writes via MCP are visible through the file-api and in S3). In s3 mode the MCP
-    # ignores the PVC and talks S3 to the in-cluster VersityGW (STORAGE_BACKEND=s3).
+    # s3 mode only: optional key prefix the MCP prepends to keys. This is a namespacing
+    # convenience, NOT a security boundary — the MCP holds bucket-wide gateway
+    # credentials, and set_base_directory does not isolate workspaces from each other.
+    # Empty (default) = bucket root, sharing the keyspace with file-api so files an
+    # agent writes via MCP are visible through the file-api and in S3. Set a prefix
+    # (e.g. "agents/") to keep MCP objects under one path; the bucket (or that prefix)
+    # is the boundary. In s3 mode the MCP ignores the PVC and talks S3 to the in-cluster
+    # VersityGW (STORAGE_BACKEND=s3).
     keyPrefix: ""
 
   # When set, MCPServer metadata.name is this value so ARK discovers tools under this name
