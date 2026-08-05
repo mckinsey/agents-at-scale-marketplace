@@ -5,6 +5,7 @@ Provides UK Companies House API tools for KYC workflows.
 """
 import os
 import json
+import re
 import base64
 from typing import Dict, List, Any, Optional
 
@@ -281,6 +282,99 @@ def get_uk_financial_data(
             "filings": [],
             "error": str(e),
         }
+
+
+def _norm_company_name(name: str) -> str:
+    """Normalize a company name for exact comparison.
+
+    Lowercase, drop punctuation ("BP P.L.C." == "BP PLC"), canonicalize
+    "public limited company"->"plc" and "ltd"->"limited", collapse whitespace.
+    Keeps the entity type, so "VICTORIA LIMITED" != "VICTORIA P.L.C." (distinct
+    registered entities must not collapse together).
+    """
+    s = (name or "").lower().replace(".", "")
+    s = re.sub(r"[^a-z0-9 ]", " ", s)
+    s = re.sub(r"\bpublic limited company\b", "plc", s)
+    s = re.sub(r"\bltd\b", "limited", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+@mcp.tool()
+def resolve_uk_company(company_name: str) -> Dict[str, Any]:
+    """
+    Resolve a UK company name to its registered entity for disambiguation.
+
+    Finds an EXACT registered-name match on Companies House (normalizing
+    punctuation and PLC/Ltd forms) and enriches it with the registered-office
+    town and SIC codes from the company profile. Use this to anchor a downstream
+    web search to the correct registered company rather than a famous homonym
+    (e.g. "METRO LIMITED" -> Leigh-on-Sea lighting company, not the newspaper).
+
+    Args:
+        company_name: Company name to resolve (e.g. "METRO LIMITED")
+
+    Returns:
+        Dict with matched (bool), company_name, company_number, company_status,
+        locality, address_snippet, sic_codes. When no exact match is found
+        (matched=false) company_name echoes the input so callers still have a
+        usable search term, and candidates lists the near matches seen.
+    """
+    try:
+        result = _make_request(
+            f"/search/companies?q={company_name}&items_per_page=5"
+        )
+        items = result.get("items", []) or []
+        target = _norm_company_name(company_name)
+        exact = [it for it in items if _norm_company_name(it.get("title", "")) == target]
+
+        if not exact:
+            return {
+                "matched": False,
+                "company_name": company_name,
+                "company_number": "",
+                "company_status": "",
+                "locality": "",
+                "address_snippet": "",
+                "sic_codes": [],
+                "candidates": [it.get("title", "") for it in items[:5]],
+            }
+
+        # Prefer an active company among exact matches.
+        best = max(exact, key=lambda it: it.get("company_status") == "active")
+        number = best.get("company_number", "")
+        anchor = {
+            "matched": True,
+            "company_name": best.get("title", ""),
+            "company_number": number,
+            "company_status": best.get("company_status", ""),
+            "locality": "",
+            "address_snippet": best.get("address_snippet", ""),
+            "sic_codes": [],
+        }
+
+        # The search endpoint's registered_office_address is often null; the
+        # clean locality + SIC live on the company profile.
+        if number:
+            try:
+                profile = _make_request(f"/company/{number}")
+                anchor["locality"] = (
+                    profile.get("registered_office_address") or {}
+                ).get("locality", "") or ""
+                anchor["sic_codes"] = profile.get("sic_codes") or []
+                anchor["company_status"] = profile.get("company_status", anchor["company_status"])
+            except Exception:
+                pass  # profile is best-effort enrichment
+
+        return anchor
+
+    except httpx.HTTPStatusError as e:
+        return {
+            "matched": False,
+            "company_name": company_name,
+            "error": f"API error: {e.response.status_code} - {e.response.text[:200]}",
+        }
+    except Exception as e:
+        return {"matched": False, "company_name": company_name, "error": str(e)}
 
 
 if __name__ == "__main__":
