@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.42](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.41...v0.1.42) (2026-08-05)
+
+
+### Bug Fixes
+
+* **kubernetes-mcp-server:** categorize as mcp in marketplace ([#379](https://github.com/mckinsey/agents-at-scale-marketplace/issues/379)) ([43a8bb5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/43a8bb5296274d6767ff46fe71e9a9f479478865))
+* USe correct image for file-gateway MCP ([#381](https://github.com/mckinsey/agents-at-scale-marketplace/issues/381)) ([4de80a0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4de80a0e3b1aa7e2b18b9d32a8dc48b7e817a0cd))
+
 ## [0.1.41](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.40...v0.1.41) (2026-08-05)
 
 
