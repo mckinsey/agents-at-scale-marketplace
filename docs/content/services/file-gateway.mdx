@@ -37,7 +37,7 @@ devspace deploy
 Or with Helm:
 
 ```bash
-helm install file-gateway ./chart -n default
+helm install file-gateway services/file-gateway/chart -n default
 ```
 
 Access via:
@@ -79,10 +79,13 @@ S3-compatible gateway for object storage, providing the underlying storage backe
 | `versitygw.backend` | Storage backend: `posix` (local PVC) or `s3` (remote bucket) | `posix` |
 | `versitygw.s3Backend.endpoint` | Upstream S3 endpoint; empty = AWS default | `""` |
 | `versitygw.s3Backend.region` | Upstream S3 region | `us-east-1` |
-| `versitygw.s3Backend.credentialsSecret` | Secret with `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/optional `AWS_SESSION_TOKEN` | `""` |
+| `versitygw.s3Backend.credentialsSecret` | Secret with `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` (long-lived keys) | `""` |
+| `versitygw.s3Backend.usePathStyle` | Force path-style addressing upstream (needed by MinIO/Ceph and similar) | `false` |
 | `versitygw.s3Backend.allowDefaultCredentialChain` | Allow IRSA/pod identity when no `credentialsSecret` | `false` |
+| `versitygw.serviceAccount.annotations` | Annotations for the VersityGW ServiceAccount (e.g. IRSA `eks.amazonaws.com/role-arn`) | `{}` |
+| `versitygw.config.dataPath` | Object data path on the PVC (posix backend only) | `/data` |
 | `versitygw.service.port` | VersityGW service port | `80` |
-| `storage.enabled` | Enable persistent storage (posix backend only) | `true` |
+| `storage.enabled` | Enable persistent storage (posix backend only; ignored when `backend=s3`) | `true` |
 | `storage.size` | Storage size | `1Gi` |
 | `httpRoute.enabled` | Enable Gateway API HTTPRoute | `true` |
 
@@ -96,27 +99,28 @@ Create the credentials secret:
 kubectl create secret generic my-s3-creds \
   --from-literal=AWS_ACCESS_KEY_ID=... \
   --from-literal=AWS_SECRET_ACCESS_KEY=...
-  # optional, for temporary credentials:
-  # --from-literal=AWS_SESSION_TOKEN=...
 ```
+
+These are long-lived keys, passed to the gateway as `VGW_S3_ACCESS_KEY` / `VGW_S3_SECRET_KEY`. For temporary / auto-rotating credentials use IRSA or pod identity instead (see below) rather than a static session token, which cannot refresh in a long-running pod.
 
 Install:
 
 ```bash
-helm install file-gateway ./chart \
+helm install file-gateway services/file-gateway/chart \
   --set versitygw.backend=s3 \
   --set versitygw.s3Backend.region=us-east-1 \
   --set versitygw.s3Backend.credentialsSecret=my-s3-creds \
   --set fileApi.config.bucketName=my-existing-bucket \
-  --set filesystemMcp.enabled=false \
-  --set storage.enabled=false
+  --set filesystemMcp.enabled=false
 ```
+
+The PVC is skipped automatically in `s3` mode, so `storage.enabled` does not need to be set.
 
 Constraints (enforced at install time):
 - **`filesystemMcp.enabled` must be `false`.** The MCP server is a POSIX filesystem server on the local PVC and cannot read or write the remote bucket, so the two would back different stores.
 - **The bucket must already exist.** The chart does not create it; the default `aas-files` will not exist in a real account.
-- **Credentials are required.** Set `credentialsSecret`, or set `versitygw.s3Backend.allowDefaultCredentialChain=true` to use IRSA / pod identity.
-- Leave `versitygw.s3Backend.endpoint` empty for AWS; set it for S3-compatible providers.
+- **Credentials are required.** Set `credentialsSecret`, or set `versitygw.s3Backend.allowDefaultCredentialChain=true` to use IRSA / pod identity. For IRSA you must also annotate the gateway service account via `versitygw.serviceAccount.annotations` (e.g. `eks.amazonaws.com/role-arn`), otherwise the pod has no role to assume.
+- Leave `versitygw.s3Backend.endpoint` empty for AWS. For S3-compatible providers (MinIO, Ceph RGW, etc.) set the endpoint and usually `versitygw.s3Backend.usePathStyle=true`, since VersityGW defaults to virtual-host addressing which those services don't support.
 
 ## Usage with Agents
 
