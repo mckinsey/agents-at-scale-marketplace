@@ -7,6 +7,7 @@ appVersion: 0.1.1
 annotations:
   ark.mckinsey.com/service: kubernetes-mcp-server
   ark.mckinsey.com/resources: service
+  ark.mckinsey.com/marketplace-item-name: mcp/kubernetes-mcp-server
 dependencies:
   - name: kubernetes-mcp-server
     version: 0.1.0
