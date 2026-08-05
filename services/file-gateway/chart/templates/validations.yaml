@@ -7,10 +7,12 @@ than as silent data splits or runtime 403s.
 {{- if not (has .Values.versitygw.backend (list "posix" "s3")) }}
 {{-   fail (printf "versitygw.backend must be 'posix' or 's3', got %q" .Values.versitygw.backend) }}
 {{- end }}
+{{- /*
+filesystemMcp may stay enabled in s3 mode: it runs the S3 storage adapter
+(STORAGE_BACKEND=s3) against VersityGW and shares the bucket with file-api, so there
+is no longer a data split to guard against (the old MCP+s3 guard has been removed).
+*/ -}}
 {{- if eq .Values.versitygw.backend "s3" }}
-{{-   if .Values.filesystemMcp.enabled }}
-{{-     fail "versitygw.backend=s3 is incompatible with filesystemMcp.enabled=true: filesystem-mcp is a POSIX filesystem server backed by the local PVC (BASE_DATA_DIR on /data) and cannot read/write the remote S3 bucket that file-api/VersityGW use, so the two would back different stores. Set filesystemMcp.enabled=false when using the s3 backend." }}
-{{-   end }}
 {{-   if and (not .Values.versitygw.s3Backend.credentialsSecret) (not .Values.versitygw.s3Backend.allowDefaultCredentialChain) }}
 {{-     fail "versitygw.backend=s3 requires versitygw.s3Backend.credentialsSecret (a secret with keys AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY). To rely on IRSA / pod identity instead, set versitygw.s3Backend.allowDefaultCredentialChain=true." }}
 {{-   end }}

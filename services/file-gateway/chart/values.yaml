@@ -30,7 +30,9 @@ versitygw:
   #   posix - store objects on the shared PVC at config.dataPath (default)
   #   s3    - proxy to an existing S3 service (e.g. real AWS S3). No PVC is
   #           provisioned or mounted in this mode (storage.enabled is ignored when
-  #           backend=s3). Requires filesystemMcp.enabled=false.
+  #           backend=s3). filesystemMcp may stay enabled: in s3 mode it runs the S3
+  #           storage adapter (STORAGE_BACKEND=s3) against VersityGW and shares the
+  #           bucket with file-api.
   backend: posix
 
   image:
@@ -147,6 +149,11 @@ filesystemMcp:
     port: "8000"
     dataPath: "/data"
     bucketName: "aas-files"
+    # s3 mode only: optional key prefix the MCP scopes all operations under. Empty =
+    # bucket root, so MCP writes share the same keyspace as file-api (files an agent
+    # writes via MCP are visible through the file-api and in S3). In s3 mode the MCP
+    # ignores the PVC and talks S3 to the in-cluster VersityGW (STORAGE_BACKEND=s3).
+    keyPrefix: ""
 
   # When set, MCPServer metadata.name is this value so ARK discovers tools under this name
   # (e.g. "mcp-filesystem" so agents that expect mcp-filesystem-* tools work without standalone MCP).
