@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.8...file-gateway-v0.1.9) (2026-08-05)
+
+
+### Bug Fixes
+
+* Update versitygw config to use s3 backend ([#356](https://github.com/mckinsey/agents-at-scale-marketplace/issues/356)) ([cc724ce](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cc724ce5d772e627956fbe8c11661b40fab60073))
+
 ## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.7...file-gateway-v0.1.8) (2026-04-15)
 
 
