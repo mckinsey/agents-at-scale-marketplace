@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.58](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.57...filesystem-mcp-server-v0.1.58) (2026-08-05)
+
+
+### Bug Fixes
+
+* Update versitygw config to use s3 backend ([#356](https://github.com/mckinsey/agents-at-scale-marketplace/issues/356)) ([cc724ce](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cc724ce5d772e627956fbe8c11661b40fab60073))
+
 ## [0.1.57](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.56...filesystem-mcp-server-v0.1.57) (2026-05-12)
 
 
