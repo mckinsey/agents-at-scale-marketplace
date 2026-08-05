@@ -1,5 +1,11 @@
 # MCP Filesystem Server with Session Management
 
+> **⚠️ Deprecated.** This standalone MCP server is deprecated and will be combined into
+> the [file-gateway](../../services/file-gateway) service. New deployments should use
+> file-gateway, which bundles this MCP alongside the REST file-api and VersityGW and
+> supports both the `filesystem` (PVC) and `s3` storage backends. This standalone chart
+> remains for now but will be removed in a future release.
+
 MCP-compliant filesystem server with persistent session tracking and annotation-driven workspace configuration.
 
 ## Quick Start

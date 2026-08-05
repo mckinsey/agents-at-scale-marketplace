@@ -5,6 +5,12 @@ description: MCP-compliant filesystem server with persistent session tracking an
 
 # Filesystem MCP Server
 
+> **⚠️ Deprecated.** This standalone MCP server is deprecated and will be combined into the
+> [File Gateway](/services/file-gateway) service. File Gateway bundles this MCP alongside
+> the REST file-api and VersityGW and supports both the `filesystem` (PVC) and `s3`
+> storage backends. Use File Gateway for new deployments; this standalone chart will be
+> removed in a future release.
+
 The Filesystem MCP Server is an MCP-compliant server that provides secure filesystem operations. It enables agents to read, write, edit, search, and manage files within controlled workspaces.
 
 ## Available Tools
