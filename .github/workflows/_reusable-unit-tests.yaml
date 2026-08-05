@@ -11,6 +11,7 @@ jobs:
   unit-tests:
     name: Unit Tests - ${{ matrix.service.name }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     strategy:
       # report every component's failures, not just the first to fail
       fail-fast: false
@@ -32,6 +33,7 @@ jobs:
   chart-schema-test:
     name: Chart Schema Test - argo-make-author
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
