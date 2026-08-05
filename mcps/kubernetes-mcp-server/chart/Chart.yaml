@@ -2,11 +2,12 @@ apiVersion: v2
 name: kubernetes-mcp-server
 description: Read-only kubernetes-mcp-server with Ark MCPServer registration
 type: application
-version: 0.1.1
-appVersion: 0.1.1
+version: 0.1.2
+appVersion: 0.1.2
 annotations:
   ark.mckinsey.com/service: kubernetes-mcp-server
   ark.mckinsey.com/resources: service
+  ark.mckinsey.com/marketplace-item-name: mcp/kubernetes-mcp-server
 dependencies:
   - name: kubernetes-mcp-server
     version: 0.1.0
