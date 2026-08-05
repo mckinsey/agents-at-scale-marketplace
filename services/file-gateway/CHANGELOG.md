@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.9...file-gateway-v0.1.10) (2026-08-05)
+
+
+### Bug Fixes
+
+* USe correct image for file-gateway MCP ([#381](https://github.com/mckinsey/agents-at-scale-marketplace/issues/381)) ([4de80a0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4de80a0e3b1aa7e2b18b9d32a8dc48b7e817a0cd))
+
+## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.8...file-gateway-v0.1.9) (2026-08-05)
+
+
+### Bug Fixes
+
+* Update versitygw config to use s3 backend ([#356](https://github.com/mckinsey/agents-at-scale-marketplace/issues/356)) ([cc724ce](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cc724ce5d772e627956fbe8c11661b40fab60073))
+
 ## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.7...file-gateway-v0.1.8) (2026-04-15)
 
 
