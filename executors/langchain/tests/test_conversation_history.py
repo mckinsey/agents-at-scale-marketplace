@@ -2,9 +2,28 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage
 
 from langchain_executor.executor import LangChainExecutor
+
+
+def _streaming_client(*replies):
+    """Chat client mock whose astream yields one reply per call, chunk by chunk.
+
+    The executor streams (`astream`) and concatenates chunk.content, writing the
+    AIMessage to history only once the stream ends. Setting a return_value on
+    ainvoke does nothing: AsyncMock would auto-create astream and return a
+    coroutine, which `async for` cannot iterate.
+    """
+    client = AsyncMock()
+    pending = iter(replies)
+
+    async def astream(_messages):
+        for chunk in next(pending):
+            yield AIMessageChunk(content=chunk)
+
+    client.astream = astream
+    return client
 
 
 def _make_request(conversation_id="conv-1", user_input="hello", use_rag=False):
@@ -28,9 +47,8 @@ def _make_request(conversation_id="conv-1", user_input="hello", use_rag=False):
 @patch("langchain_executor.executor.create_chat_client")
 async def test_new_conversation_creates_history_with_system_prompt(mock_create_client):
     """4.1 - New conversationId gets a ChatMessageHistory with system prompt + user message."""
-    mock_client = AsyncMock()
-    mock_client.ainvoke.return_value = AIMessage(content="hi there")
-    mock_create_client.return_value = mock_client
+    # Two chunks, so the test also covers the executor concatenating them.
+    mock_create_client.return_value = _streaming_client(["hi ", "there"])
 
     executor = LangChainExecutor()
     request = _make_request(conversation_id="new-conv", user_input="hello")
@@ -51,12 +69,7 @@ async def test_new_conversation_creates_history_with_system_prompt(mock_create_c
 @patch("langchain_executor.executor.create_chat_client")
 async def test_existing_conversation_appends_to_history(mock_create_client):
     """4.2 - Subsequent requests with the same conversationId append to existing history."""
-    mock_client = AsyncMock()
-    mock_client.ainvoke.side_effect = [
-        AIMessage(content="first reply"),
-        AIMessage(content="second reply"),
-    ]
-    mock_create_client.return_value = mock_client
+    mock_create_client.return_value = _streaming_client(["first reply"], ["second reply"])
 
     executor = LangChainExecutor()
 
@@ -86,9 +99,7 @@ async def test_existing_conversation_appends_to_history(mock_create_client):
 async def test_rag_augmented_message_stored_in_history(mock_rag, mock_create_client):
     """4.3 - When RAG is enabled, the augmented message (with code context) is stored in history."""
     mock_rag.return_value = "def foo(): pass"
-    mock_client = AsyncMock()
-    mock_client.ainvoke.return_value = AIMessage(content="here is the answer")
-    mock_create_client.return_value = mock_client
+    mock_create_client.return_value = _streaming_client(["here is the answer"])
 
     executor = LangChainExecutor()
     request = _make_request(conversation_id="rag-conv", user_input="explain foo", use_rag=True)

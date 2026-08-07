@@ -108,16 +108,26 @@ def mcp_app(mock_k8s_manager):
     return mcp, mock_k8s_manager
 
 
+async def _tool_fn(mcp, name):
+    """Return a registered tool's underlying function via FastMCP's public API.
+
+    These tests used to walk mcp._tool_manager._tools, which FastMCP dropped;
+    get_tool is the supported equivalent. FunctionTool.fn is public.
+    """
+    tool = await mcp.get_tool(name)
+    return tool.fn
+
+
 class TestMCPToolsRegistration:
     """Tests for MCP tool registration."""
-    
-    def test_tools_are_registered(self, mcp_app):
+
+    async def test_tools_are_registered(self, mcp_app):
         """Test that all expected tools are registered."""
         mcp, _ = mcp_app
-        
+
         # Get registered tool names
-        tool_names = [tool.name for tool in mcp._tool_manager._tools.values()]
-        
+        tool_names = [tool.name for tool in await mcp.list_tools()]
+
         expected_tools = [
             'create_sandbox',
             'get_sandbox_info',
@@ -147,12 +157,8 @@ class TestCreateSandboxTool:
         register_tools(mcp, mock_k8s_manager)
         
         # Get the tool function
-        create_sandbox = None
-        for tool in mcp._tool_manager._tools.values():
-            if tool.name == 'create_sandbox':
-                create_sandbox = tool.fn
-                break
-        
+        create_sandbox = await _tool_fn(mcp, 'create_sandbox')
+
         assert create_sandbox is not None
         
         result = await create_sandbox()
@@ -171,12 +177,8 @@ class TestCreateSandboxTool:
         mcp = FastMCP("Test")
         register_tools(mcp, mock_k8s_manager)
         
-        create_sandbox = None
-        for tool in mcp._tool_manager._tools.values():
-            if tool.name == 'create_sandbox':
-                create_sandbox = tool.fn
-                break
-        
+        create_sandbox = await _tool_fn(mcp, 'create_sandbox')
+
         result = await create_sandbox(pvc_name="workflow-data")
         
         assert result['pvc_name'] == 'workflow-data'
@@ -201,12 +203,8 @@ class TestExecuteCommandTool:
         mcp = FastMCP("Test")
         register_tools(mcp, mock_k8s_manager)
         
-        execute_command = None
-        for tool in mcp._tool_manager._tools.values():
-            if tool.name == 'execute_command':
-                execute_command = tool.fn
-                break
-        
+        execute_command = await _tool_fn(mcp, 'execute_command')
+
         result = await execute_command(
             sandbox_id="test-sandbox",
             command="echo hello world",
@@ -229,12 +227,8 @@ class TestClaimFromPoolTool:
         mcp = FastMCP("Test")
         register_tools(mcp, mock_k8s_manager)
         
-        claim_sandbox = None
-        for tool in mcp._tool_manager._tools.values():
-            if tool.name == 'claim_sandbox_from_pool':
-                claim_sandbox = tool.fn
-                break
-        
+        claim_sandbox = await _tool_fn(mcp, 'claim_sandbox_from_pool')
+
         result = await claim_sandbox(pool_name="python-pool")
         
         assert result['sandbox_id'] == 'pool-sandbox-abc123'

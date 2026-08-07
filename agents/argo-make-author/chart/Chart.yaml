@@ -1,0 +1,23 @@
+apiVersion: v2
+name: argo-make-author
+description: >-
+  Conversational author for Argo WorkflowTemplate resources that compose generic
+  Argo steps with existing Ark agents, models, and teams. Grounds every query
+  target on the live cluster via the kubernetes-mcp-server tools.
+type: application
+version: 0.1.2
+appVersion: 0.1.2
+keywords:
+  - ark
+  - agent
+  - argo
+  - workflow
+  - authoring
+home: https://github.com/mckinsey/agents-at-scale-marketplace
+sources:
+  - https://github.com/mckinsey/agents-at-scale-marketplace
+maintainers:
+  - name: ARK Team
+    email: ark-team@mckinsey.com
+annotations:
+  ark.mckinsey.com/marketplace-item-name: agent/argo-make-author
