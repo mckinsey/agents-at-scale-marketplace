@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.11...executor-claude-agent-sdk-v0.1.12) (2026-08-07)
+
+
+### Bug Fixes
+
+* run unit tests for all components with a tests/ dir ([#367](https://github.com/mckinsey/agents-at-scale-marketplace/issues/367)) ([4453c2d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4453c2d72dda861471114565f929c5ac970aa67f))
+
 ## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.10...executor-claude-agent-sdk-v0.1.11) (2026-05-12)
 
 
