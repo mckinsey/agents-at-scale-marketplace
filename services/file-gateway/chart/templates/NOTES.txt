@@ -45,14 +45,8 @@ To check the Filesystem MCP health (image has no shell tools, so port-forward fr
 {{- end }}
 
 Configuration:
-- Gateway root credentials secret (clients -> VersityGW): {{ include "file-gateway.s3SecretName" . }}
-{{- if .Values.versitygw.createSecret }}
-  - Access Key ID: {{ .Values.versitygw.s3Credentials.accessKeyId }}
-  {{- if not .Values.versitygw.s3Credentials.secretAccessKey }}
-  - Secret Access Key: (auto-generated - retrieve with: kubectl get secret {{ include "file-gateway.s3SecretName" . }} -o jsonpath='{.data.secret-access-key}' | base64 -d)
-  {{- end }}
-{{- end }}
 - Bucket: {{ .Values.fileApi.config.bucketName | default .Values.filesystemMcp.config.bucketName }}
+- Gateway root credentials: stored in secret {{ include "file-gateway.s3SecretName" . }} (keys: access-key-id, secret-access-key)
 {{- if eq .Values.versitygw.backend "s3" }}
-- Upstream S3 credentials secret: {{ .Values.versitygw.s3Backend.credentialsSecret | default "(AWS default credential chain / IRSA)" }}
+- Upstream S3 credentials: {{ if .Values.versitygw.s3Backend.credentialsSecret }}stored in secret {{ .Values.versitygw.s3Backend.credentialsSecret }}{{ else }}AWS default credential chain (IRSA / pod identity){{ end }}
 {{- end }}
