@@ -22,8 +22,8 @@ jobs:
           - { name: executor-claude-agent-sdk, path: executors/claude-agent-sdk }
           - { name: ark-sandbox, path: services/ark-sandbox }
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
       - name: Run pytest
         working-directory: ${{ matrix.service.path }}
         run: uv run --with pytest pytest tests/ -q
@@ -35,8 +35,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
       - name: Validate argo-make-author agent tool schema
         working-directory: agents/argo-make-author
         run: uv run --with pyyaml python tests/tool-schema-test.py
