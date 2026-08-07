@@ -27,6 +27,15 @@ FILE_IDS_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/file-ids"
 # search on ambiguous inputs). Passed through to the Responses API as the
 # `max_tool_calls` request parameter.
 MAX_TOOL_CALLS_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/max-tool-calls"
+# Deterministic MCP prefetch: instead of exposing MCP tools to the model and
+# paying multiple model turns (decide-to-call, then answer), the executor runs a
+# chain of MCP tool calls up front, injects the results, and runs a single
+# no-tool completion. Value is JSON — a step object or a list of steps:
+#   [{"tool": "<server>__<tool>", "args": {"q": "{input}"}, "bind": "ch",
+#     "label": "...", "inject": true}, ...]
+# String args support {input} (the cleaned user text) and {<bind>.<field>} from
+# earlier steps. No app-specific vars — domain semantics live in the agent config.
+MCP_PREFETCH_ANNOTATION_KEY = "executor-openai-responses.ark.mckinsey.com/mcp-prefetch"
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +201,32 @@ def resolve_max_tool_calls(request: ExecutionEngineRequest) -> Optional[int]:
                 return value
             except (TypeError, ValueError) as exc:
                 logger.warning("Failed to parse max-tool-calls annotation %r: %s", raw, exc)
+    return None
+
+
+def resolve_mcp_prefetch(request: ExecutionEngineRequest) -> Optional[list[dict[str, Any]]]:
+    """Resolve the mcp-prefetch chain from annotations (Query > Agent > Engine).
+
+    Returns a list of step dicts (a lone step object is wrapped in a list), or
+    None. Malformed values are logged and skipped.
+    """
+    for source in [
+        request.query_annotations,
+        (getattr(request.agent, "annotations", None) or {}),
+        request.execution_engine_annotations,
+    ]:
+        raw = source.get(MCP_PREFETCH_ANNOTATION_KEY, "")
+        if raw:
+            try:
+                value = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                logger.warning("Failed to parse mcp-prefetch annotation: %s", exc)
+                continue
+            steps = value if isinstance(value, list) else [value]
+            steps = [s for s in steps if isinstance(s, dict) and s.get("tool")]
+            if steps:
+                return steps
+            logger.warning("mcp-prefetch annotation had no valid steps")
     return None
 
 

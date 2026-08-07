@@ -5,6 +5,12 @@ description: MCP-compliant filesystem server with persistent session tracking an
 
 # Filesystem MCP Server
 
+> **⚠️ Deprecated.** This standalone MCP server is deprecated and will be combined into the
+> [File Gateway](/services/file-gateway) service. File Gateway bundles this MCP alongside
+> the REST file-api and VersityGW and supports both the `filesystem` (PVC) and `s3`
+> storage backends. Use File Gateway for new deployments; this standalone chart will be
+> removed in a future release.
+
 The Filesystem MCP Server is an MCP-compliant server that provides secure filesystem operations. It enables agents to read, write, edit, search, and manage files within controlled workspaces.
 
 ## Available Tools
@@ -140,9 +146,25 @@ Configured in `chart/values.yaml`:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | 8080 |
-| `BASE_DATA_DIR` | Base directory for filesystem operations | /data |
+| `STORAGE_BACKEND` | Storage adapter: `filesystem` (local disk) or `s3` | filesystem |
+| `BASE_DATA_DIR` | Base directory for filesystem operations (`filesystem` backend) | /data |
 | `SESSION_FILE` | Path to session metadata storage | /data/sessions/sessions.json |
 | `MAX_SESSIONS` | Maximum concurrent sessions | 1000 |
+
+### Storage backends
+
+The server picks a storage adapter at startup via `STORAGE_BACKEND`. **Both adapters expose the identical tool set**, so agents work unchanged regardless of backend.
+
+- `filesystem` (default) — reads/writes the local filesystem under `BASE_DATA_DIR`, backed by the PVC.
+- `s3` — reads/writes an S3 bucket via the AWS SDK, addressing objects by key ("directories" are key prefixes). This is what [File Gateway](/services/file-gateway) uses when VersityGW runs its `s3` backend, so the MCP and the file-api share one bucket. Extra variables in this mode:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AWS_ENDPOINT_URL` | S3 endpoint (e.g. the in-cluster VersityGW service) | AWS default |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Credentials (`AWS_SESSION_TOKEN` also honoured) | — |
+| `AWS_REGION` | S3 region | us-east-1 |
+| `BUCKET_NAME` | Bucket the MCP operates on | — |
+| `S3_KEY_PREFIX` | Optional key prefix all operations are scoped under | `""` (bucket root) |
 
 ### Helm Chart Options
 
@@ -174,10 +196,16 @@ The server has a clean separation of concerns:
 - Generic and reusable across MCP servers
 
 ### Filesystem Adapter (`src/adapters/filesystem/`)
-- MCP tool definitions and implementations
-- File operations (read, write, edit, search, list, tree)
+- File operations (read, write, edit, search, list, tree) against the local PVC
 - Path validation and security
 - Workspace management via `set_base_directory`
+
+### S3 Adapter (`src/adapters/s3/`)
+- The same MCP tools backed by an S3 bucket via `@aws-sdk/client-s3` (objects addressed by key; "directories" are key prefixes)
+- Selected when `STORAGE_BACKEND=s3`; talks to any S3-compatible endpoint (`AWS_ENDPOINT_URL`), including the in-cluster VersityGW
+
+### Shared Tool Schemas (`src/adapters/shared/`)
+- Both adapters import their tool names and input schemas from one module, guaranteeing the two backends expose an identical tool surface (so Ark generates the same tool names either way)
 
 ### Key Design Principles
 - **MCP sessions ≠ application state**: Sessions track connections, not configuration
