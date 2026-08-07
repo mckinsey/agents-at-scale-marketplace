@@ -1,0 +1,27 @@
+{{- /*
+Install-time configuration validation for file-gateway.
+This template renders no resources; it only fails fast on incompatible or
+incomplete configuration so misconfigurations surface at install time rather
+than as silent data splits or runtime 403s.
+*/ -}}
+{{- if not (has .Values.versitygw.backend (list "posix" "s3")) }}
+{{-   fail (printf "versitygw.backend must be 'posix' or 's3', got %q" .Values.versitygw.backend) }}
+{{- end }}
+{{- /*
+filesystemMcp may stay enabled in s3 mode: it runs the S3 storage adapter
+(STORAGE_BACKEND=s3) against VersityGW and shares the bucket with file-api, so there
+is no longer a data split to guard against (the old MCP+s3 guard has been removed).
+*/ -}}
+{{- if eq .Values.versitygw.backend "s3" }}
+{{-   if and (not .Values.versitygw.s3Backend.credentialsSecret) (not .Values.versitygw.s3Backend.allowDefaultCredentialChain) }}
+{{-     fail "versitygw.backend=s3 requires versitygw.s3Backend.credentialsSecret (a secret with keys AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY). To rely on IRSA / pod identity instead, set versitygw.s3Backend.allowDefaultCredentialChain=true." }}
+{{-   end }}
+{{- /*
+Both file-api and the s3-mode MCP resolve BUCKET_NAME via the same
+fileApi.config.bucketName then filesystemMcp.config.bucketName fallback, so the bucket
+must be named whenever either component is enabled.
+*/ -}}
+{{-   if and (or .Values.fileApi.enabled .Values.filesystemMcp.enabled) (not .Values.fileApi.config.bucketName) }}
+{{-     fail "versitygw.backend=s3 requires fileApi.config.bucketName to name an existing upstream bucket; the chart does not create buckets and the filesystemMcp default (aas-files) will not exist in a real S3 account, so every request would fail with NoSuchBucket." }}
+{{-   end }}
+{{- end }}

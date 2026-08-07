@@ -19,6 +19,7 @@ spec:
       serviceAccountName: {{ include "file-gateway.filesystemMcp.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.filesystemMcp.podSecurityContext | nindent 8 }}
+      {{- if ne .Values.versitygw.backend "s3" }}
       initContainers:
       - name: create-directories
         image: busybox:latest
@@ -29,6 +30,7 @@ spec:
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
+      {{- end }}
       containers:
       - name: filesystem-mcp
         securityContext:
@@ -48,10 +50,38 @@ spec:
           value: {{ .Values.filesystemMcp.config.port | quote }}
         - name: LOG_LEVEL
           value: {{ .Values.filesystemMcp.config.logLevel | quote }}
+        {{- if eq .Values.versitygw.backend "s3" }}
+        # s3 mode: the MCP runs the S3 storage adapter and talks S3 to the in-cluster
+        # VersityGW (same endpoint + gateway creds as file-api), so MCP writes and
+        # file-api share one store. No PVC is used.
+        - name: STORAGE_BACKEND
+          value: "s3"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "file-gateway.s3SecretName" . }}
+              key: access-key-id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "file-gateway.s3SecretName" . }}
+              key: secret-access-key
+        - name: AWS_ENDPOINT_URL
+          value: {{ printf "http://%s-versitygw:%d" (include "file-gateway.fullname" .) (.Values.versitygw.service.port | int) }}
+        - name: AWS_REGION
+          value: {{ .Values.versitygw.config.region | quote }}
+        - name: BUCKET_NAME
+          value: {{ .Values.fileApi.config.bucketName | default .Values.filesystemMcp.config.bucketName | quote }}
+        - name: S3_KEY_PREFIX
+          value: {{ .Values.filesystemMcp.config.keyPrefix | quote }}
+        {{- else }}
+        # posix mode: STORAGE_BACKEND defaults to "filesystem" in the server, so it is
+        # intentionally omitted here to keep the posix deployment byte-identical.
         - name: DATA_PATH
           value: {{ .Values.filesystemMcp.config.dataPath | quote }}
         - name: BASE_DATA_DIR
           value: {{ printf "%s/%s" .Values.filesystemMcp.config.dataPath .Values.filesystemMcp.config.bucketName | quote }}
+        {{- end }}
         volumeMounts:
         - name: data
           mountPath: {{ .Values.filesystemMcp.config.dataPath }}
@@ -75,6 +105,11 @@ spec:
           {{- toYaml .Values.filesystemMcp.resources | nindent 12 }}
       volumes:
       - name: data
+        {{- if eq .Values.versitygw.backend "s3" }}
+        # No PVC in s3 mode; an emptyDir just backs the ephemeral session file.
+        emptyDir: {}
+        {{- else }}
         persistentVolumeClaim:
           claimName: {{ include "file-gateway.pvcName" . }}
+        {{- end }}
 {{- end }}

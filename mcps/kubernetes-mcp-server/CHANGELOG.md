@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/mckinsey/agents-at-scale-marketplace/compare/kubernetes-mcp-server-v0.1.1...kubernetes-mcp-server-v0.1.2) (2026-08-05)
+
+
+### Bug Fixes
+
+* **kubernetes-mcp-server:** categorize as mcp in marketplace ([#379](https://github.com/mckinsey/agents-at-scale-marketplace/issues/379)) ([43a8bb5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/43a8bb5296274d6767ff46fe71e9a9f479478865))
+
 ## [0.1.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/kubernetes-mcp-server-v0.1.0...kubernetes-mcp-server-v0.1.1) (2026-07-28)
 
 

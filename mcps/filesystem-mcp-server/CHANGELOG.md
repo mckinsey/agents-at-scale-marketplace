@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.59](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.58...filesystem-mcp-server-v0.1.59) (2026-08-05)
+
+
+### Bug Fixes
+
+* USe correct image for file-gateway MCP ([#381](https://github.com/mckinsey/agents-at-scale-marketplace/issues/381)) ([4de80a0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4de80a0e3b1aa7e2b18b9d32a8dc48b7e817a0cd))
+
+## [0.1.58](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.57...filesystem-mcp-server-v0.1.58) (2026-08-05)
+
+
+### Bug Fixes
+
+* Update versitygw config to use s3 backend ([#356](https://github.com/mckinsey/agents-at-scale-marketplace/issues/356)) ([cc724ce](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cc724ce5d772e627956fbe8c11661b40fab60073))
+
 ## [0.1.57](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.56...filesystem-mcp-server-v0.1.57) (2026-05-12)
 
 

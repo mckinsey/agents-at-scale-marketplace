@@ -22,4 +22,4 @@ spec:
     - type: mcp
       name: {{ .Values.mcp.resourcesGetTool }}
   prompt: |
-{{ .Files.Get "files/prompt.txt" | indent 4 }}
+{{ .Files.Get "files/prompt.md" | indent 4 }}
