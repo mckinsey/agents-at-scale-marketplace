@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.43](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.42...v0.1.43) (2026-08-07)
+
+
+### Features
+
+* Add support for mcp tools to openai-responses-executor and update to Companies House mcp ([#342](https://github.com/mckinsey/agents-at-scale-marketplace/issues/342)) ([9bee5e7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9bee5e7d2cecc4f6284a6bd0c9a543ce6260589b))
+
+
+### Bug Fixes
+
+* Correct notes for after file-gateway installation ([#385](https://github.com/mckinsey/agents-at-scale-marketplace/issues/385)) ([a3e6017](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a3e601765c81e1aa5529c432b5d983bc030084ef))
+* run unit tests for all components with a tests/ dir ([#367](https://github.com/mckinsey/agents-at-scale-marketplace/issues/367)) ([4453c2d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4453c2d72dda861471114565f929c5ac970aa67f))
+
 ## [0.1.42](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.41...v0.1.42) (2026-08-05)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.10...file-gateway-v0.1.11) (2026-08-07)
+
+
+### Bug Fixes
+
+* Correct notes for after file-gateway installation ([#385](https://github.com/mckinsey/agents-at-scale-marketplace/issues/385)) ([a3e6017](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a3e601765c81e1aa5529c432b5d983bc030084ef))
+
 ## [0.1.10](https://github.com/mckinsey/agents-at-scale-marketplace/compare/file-gateway-v0.1.9...file-gateway-v0.1.10) (2026-08-05)
 
 
