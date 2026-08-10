@@ -9,18 +9,18 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.104.0", # web framework
-    "uvicorn[standard]>=0.24.0", # ASGI server
-    "pydantic>=2.0.0", # data validation
-    "langchain-core>=0.3.0", # langchain core types
-    "langchain-openai>=0.1.0", # openai integration
-    "langchain-community>=0.0.20", # community integrations (FAISS)
-    "langchain-text-splitters>=0.3.0", # text splitting
-    "faiss-cpu>=1.7.4", # vector search
-    "tiktoken>=0.5.0",
+    "fastapi>=0.141.1", # web framework
+    "uvicorn[standard]>=0.52.1", # ASGI server
+    "pydantic>=2.13.4", # data validation
+    "langchain-core>=1.5.3", # langchain core types
+    "langchain-openai>=1.4.1", # openai integration
+    "langchain-community>=0.4.2", # community integrations (FAISS)
+    "langchain-text-splitters>=1.1.2", # text splitting
+    "faiss-cpu>=1.15.0", # vector search
+    "tiktoken>=0.13.0",
     "ark-sdk==0.1.64",
-    "urllib3>=2.6.0",
-    "a2a-sdk[http-server]>=0.3.0",
+    "urllib3>=2.7.0",
+    "a2a-sdk[http-server]>=1.1.2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -40,7 +40,7 @@ build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 dev = [
-    "pyright>=1.1.402",
+    "pyright>=1.1.411",
 ]
 
 [tool.hatch.metadata]
@@ -88,5 +88,5 @@ testpaths = [
 
 [dependency-groups]
 dev = [
-    "pytest-asyncio>=1.3.0",
+    "pytest-asyncio>=1.4.0",
 ]
