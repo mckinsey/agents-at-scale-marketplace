@@ -9,7 +9,8 @@ from ark_sdk.executor import BaseExecutor, ExecutionEngineRequest, Message
 
 from . import sessions
 from .config import config
-from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_file_ids, resolve_output_schema, resolve_max_tool_calls
+from .mcp_tools import bindable_dict, call_mcp_tool, clean_input_text, discover_mcp_function_tools, render_args
+from .models import FunctionTool, ModelConfig, ResponsesCreateParams, resolve_built_in_tools, resolve_reasoning, resolve_file_ids, resolve_output_schema, resolve_max_tool_calls, resolve_mcp_prefetch
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +67,54 @@ class OpenAIResponsesExecutor(BaseExecutor):
 
         model_config = ModelConfig.from_request(request)
         instructions = self._resolve_prompt(request.agent)
+        # MCP tools resolved by the ARK SDK (Agent.spec.tools[type:mcp] ->
+        # request.mcpServers) are surfaced to the model as OpenAI `function`
+        # tools; `mcp_registry` maps each synthesized function name back to its
+        # (server, tool) for dispatch and for the prefetch chain.
+        mcp_function_tools, mcp_registry = await discover_mcp_function_tools(
+            getattr(request, "mcpServers", None) or []
+        )
+
+        def _is_mcp_tool(t: Any) -> bool:
+            return str(getattr(t, "type", "") or "").lower() == "mcp"
+
         tools = (
-            [FunctionTool.from_definition(t).model_dump() for t in getattr(request, "tools", [])]
+            [FunctionTool.from_definition(t).model_dump() for t in getattr(request, "tools", []) if not _is_mcp_tool(t)]
+            + mcp_function_tools
             + resolve_built_in_tools(request)
         )
+
+        # Deterministic prefetch chain (opt-in): run a chain of MCP tool calls up
+        # front, inject the results, and answer in a single no-tool turn — trading
+        # the model's tool-loop flexibility for fewer model round-trips. Each step
+        # may bind its result for later steps' arg templating ({<bind>.<field>}).
+        prefetch_steps = resolve_mcp_prefetch(request)
+        if prefetch_steps:
+            subs: dict[str, str] = {"input": clean_input_text(request.userInput.content)}
+            injected: list[str] = []
+            ran_any = False
+            for step in prefetch_steps:
+                entry = mcp_registry.get(step.get("tool"))
+                if entry is None:
+                    logger.warning("prefetch: tool %s not available; skipping step", step.get("tool"))
+                    continue
+                server, real_tool = entry
+                args = render_args(step.get("args") or {}, subs)
+                logger.info("prefetch step: %s args=%s", real_tool, args)
+                result = await call_mcp_tool(server, real_tool, args)
+                ran_any = True
+                bind = step.get("bind")
+                if bind:
+                    for k, v in bindable_dict(result).items():
+                        if isinstance(v, (str, int, float)):
+                            subs[f"{bind}.{k}"] = str(v)
+                if step.get("inject", True):
+                    label = step.get("label") or bind or real_tool
+                    injected.append(f"[{label}]:\n{json.dumps(result)[:8000]}")
+            if ran_any:
+                request.userInput.content = f"{request.userInput.content}\n\n" + "\n\n".join(injected)
+                tools = []          # single-turn: no tools exposed to the model
+                mcp_registry = {}   # nothing left to dispatch
         # reasoning only supported on gpt-5+; temperature not supported on gpt-5+
         reasoning = resolve_reasoning(request) if model_config.model_name.startswith("gpt-5") else None
         output_schema = resolve_output_schema(request)
@@ -119,7 +164,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
             )
 
         try:
-            result = await self._run_tool_loop(client, params, model_config, instructions, tools, request, conversation_id)
+            result = await self._run_tool_loop(client, params, model_config, instructions, tools, request, conversation_id, mcp_registry)
             if conversation_id and file_ids:
                 await sessions.mark_file_ids_sent(conversation_id, set(file_ids))
             return result
@@ -139,6 +184,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
         tools: list[Any],
         request: ExecutionEngineRequest,
         conversation_id: Optional[str],
+        mcp_registry: Optional[dict[str, Any]] = None,
     ) -> list[Message]:
         for iteration in range(config.max_tool_iterations):
             api_kwargs = params.to_api_kwargs()
@@ -170,7 +216,7 @@ class OpenAIResponsesExecutor(BaseExecutor):
                 {
                     "type": "function_call_output",
                     "call_id": fc.call_id,
-                    "output": json.dumps(await self._execute_function_call(fc, request)),
+                    "output": json.dumps(await self._execute_function_call(fc, request, mcp_registry)),
                 }
                 for fc in function_calls
             ]
@@ -197,12 +243,24 @@ class OpenAIResponsesExecutor(BaseExecutor):
     # Function tool execution
     # ------------------------------------------------------------------
 
-    async def _execute_function_call(self, function_call: Any, request: ExecutionEngineRequest) -> Any:
+    async def _execute_function_call(
+        self,
+        function_call: Any,
+        request: ExecutionEngineRequest,
+        mcp_registry: Optional[dict[str, Any]] = None,
+    ) -> Any:
         tool_name = function_call.name
         try:
             arguments = json.loads(function_call.arguments) if function_call.arguments else {}
         except json.JSONDecodeError:
             arguments = {"raw": function_call.arguments}
+
+        # MCP-backed tools: dispatch tools/call to the resolved MCP server.
+        entry = (mcp_registry or {}).get(tool_name)
+        if entry is not None:
+            server, mcp_tool_name = entry
+            logger.info(f"Executing MCP tool '{mcp_tool_name}' (via '{tool_name}') args: {arguments}")
+            return await call_mcp_tool(server, mcp_tool_name, arguments)
 
         if not any(getattr(t, "name", t) == tool_name for t in getattr(request, "tools", [])):
             logger.warning(f"Function tool '{tool_name}' not found in agent tool definitions")
@@ -210,7 +268,6 @@ class OpenAIResponsesExecutor(BaseExecutor):
 
         logger.info(f"Executing function tool '{tool_name}' with arguments: {arguments}")
 
-        # Tool HTTP execution requires the tool endpoint URL from Ark's tool infrastructure.
-        # This will be wired up as the Ark SDK evolves.
+        # Non-MCP ark ToolDefinition HTTP execution is still unimplemented.
         logger.warning(f"HTTP execution of tool '{tool_name}' is not yet implemented.")
         return {"error": f"Tool '{tool_name}' HTTP execution not yet implemented", "arguments": arguments}

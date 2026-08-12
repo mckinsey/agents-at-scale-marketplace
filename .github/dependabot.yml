@@ -1,29 +1,80 @@
 version: 2
 updates:
-  # Python dependencies for executors
-  - package-ecosystem: "pip"
-    directory: "/executors/langchain"
+  # uv, not pip: these directories have a uv.lock that pip would leave stale.
+  - package-ecosystem: "uv"
+    directories:
+      - "/agents/noah"
+      - "/executors/langchain"
+      - "/executors/claude-agent-sdk"
+      - "/executors/openai-responses"
+      - "/services/ark-sandbox"
+      - "/services/file-gateway/services/file-api"
     schedule:
       interval: "daily"
-    allow:
-      - dependency-name: "ark-sdk"
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      # First matching group wins, so ark-sdk stays a standalone one-line PR.
+      ark-sdk:
+        patterns:
+          - "ark-sdk"
+      python-dependencies:
+        patterns:
+          - "*"
 
-  - package-ecosystem: "pip"
-    directory: "/executors/openai-responses"
+  # Base image tags only. Packages inside the image are covered by Xray.
+  - package-ecosystem: "docker"
+    directories:
+      - "/agents/noah"
+      - "/executors/langchain"
+      - "/executors/claude-agent-sdk"
+      - "/executors/openai-responses"
+      - "/mcps/companies-house-mcp"
+      - "/mcps/filesystem-mcp-server"
+      - "/mcps/pdf-extraction-mcp"
+      - "/mcps/perplexity-ask-mcp"
+      - "/mcps/speech-mcp-server"
+      - "/mcps/web-research-mcp"
+      - "/services/ark-sandbox"
+      - "/services/file-gateway/services/file-api"
+      - "/demos/cobol-modernization-bundle/examples/data"
+      - "/demos/kyc-onboarding-bundle/examples/data"
     schedule:
-      interval: "daily"
-    allow:
-      - dependency-name: "ark-sdk"
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns:
+          - "*"
 
-  - package-ecosystem: "pip"
-    directory: "/executors/claude-agent-sdk"
+  - package-ecosystem: "npm"
+    directories:
+      - "/docs"
+      - "/mcps/filesystem-mcp-server"
     schedule:
-      interval: "daily"
-    allow:
-      - dependency-name: "ark-sdk"
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

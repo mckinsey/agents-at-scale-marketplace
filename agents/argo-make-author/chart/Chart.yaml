@@ -5,8 +5,8 @@ description: >-
   Argo steps with existing Ark agents, models, and teams. Grounds every query
   target on the live cluster via the kubernetes-mcp-server tools.
 type: application
-version: 0.1.1
-appVersion: 0.1.1
+version: 0.1.2
+appVersion: 0.1.2
 keywords:
   - ark
   - agent

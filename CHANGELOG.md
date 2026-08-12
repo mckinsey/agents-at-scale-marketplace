@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.1.42](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.41...v0.1.42) (2026-08-05)
+
+
+### Bug Fixes
+
+* **kubernetes-mcp-server:** categorize as mcp in marketplace ([#379](https://github.com/mckinsey/agents-at-scale-marketplace/issues/379)) ([43a8bb5](https://github.com/mckinsey/agents-at-scale-marketplace/commit/43a8bb5296274d6767ff46fe71e9a9f479478865))
+* USe correct image for file-gateway MCP ([#381](https://github.com/mckinsey/agents-at-scale-marketplace/issues/381)) ([4de80a0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4de80a0e3b1aa7e2b18b9d32a8dc48b7e817a0cd))
+
+## [0.1.41](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.40...v0.1.41) (2026-08-05)
+
+
+### Features
+
+* **argo-make-author:** guide conversation-id/session-id and workflow parameters ([#357](https://github.com/mckinsey/agents-at-scale-marketplace/issues/357)) ([e24e8e7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e24e8e78f23c4a2e1087f1597cb1d105557bca79))
+* **argo-make-author:** mention tool query targets in prompt ([#359](https://github.com/mckinsey/agents-at-scale-marketplace/issues/359)) ([aec42e8](https://github.com/mckinsey/agents-at-scale-marketplace/commit/aec42e8dc68200e030ba5bcba4e5d64c61db9b23))
+
+
+### Bug Fixes
+
+* Update versitygw config to use s3 backend ([#356](https://github.com/mckinsey/agents-at-scale-marketplace/issues/356)) ([cc724ce](https://github.com/mckinsey/agents-at-scale-marketplace/commit/cc724ce5d772e627956fbe8c11661b40fab60073))
+
 ## [0.1.40](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.39...v0.1.40) (2026-07-28)
 
 
