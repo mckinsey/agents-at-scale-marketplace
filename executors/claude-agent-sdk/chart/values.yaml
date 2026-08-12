@@ -39,6 +39,24 @@ app:
 #       name: jira-credentials
 extraEnvFrom: []
 
+# Additional volumes and volume mounts on the executor container.
+# Prefer mounting rotating credentials as a FILE rather than injecting them via a
+# secretKeyRef env var: env vars are resolved once at container start and go stale
+# when the secret rotates, whereas a mounted secret file is kept current by kubelet.
+# The CVE-remediation pr-creator relies on this for a fresh GitHub App token
+# (reads /git-token/token, which rotates ~hourly).
+# Example:
+# extraVolumes:
+#   - name: github-git-token
+#     secret:
+#       secretName: github-git-token
+# extraVolumeMounts:
+#   - name: github-git-token
+#     mountPath: /git-token
+#     readOnly: true
+extraVolumes: []
+extraVolumeMounts: []
+
 # Service configuration
 service:
   name: executor-claude-agent-sdk
