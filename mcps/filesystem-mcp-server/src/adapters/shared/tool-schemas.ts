@@ -7,7 +7,6 @@
 // of truth prevents that.
 
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 // Schema definitions
 export const SetBaseDirectoryArgsSchema = z.object({
@@ -108,13 +107,13 @@ export const TOOL_DEFINITIONS: Array<{
     description:
       "Add a directory to the allowed directories list. This allows file operations " +
       "to access files within this directory in addition to the session directory.",
-    inputSchema: zodToJsonSchema(SetBaseDirectoryArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(SetBaseDirectoryArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "read_file",
     description:
       "Read the complete contents of a file as text. DEPRECATED: Use read_text_file instead.",
-    inputSchema: zodToJsonSchema(ReadTextFileArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(ReadTextFileArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "read_text_file",
@@ -126,14 +125,14 @@ export const TOOL_DEFINITIONS: Array<{
       "the first N lines of a file, or the 'tail' parameter to read only " +
       "the last N lines of a file. Operates on the file as text regardless of extension. " +
       "Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(ReadTextFileArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(ReadTextFileArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "read_media_file",
     description:
       "Read an image or audio file. Returns the base64 encoded data and MIME type. " +
       "Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(ReadMediaFileArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(ReadMediaFileArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "read_multiple_files",
@@ -143,7 +142,7 @@ export const TOOL_DEFINITIONS: Array<{
       "or compare multiple files. Each file's content is returned with its " +
       "path as a reference. Failed reads for individual files won't stop " +
       "the entire operation. Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(ReadMultipleFilesArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(ReadMultipleFilesArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "write_file",
@@ -151,7 +150,7 @@ export const TOOL_DEFINITIONS: Array<{
       "Create a new file or completely overwrite an existing file with new content. " +
       "Use with caution as it will overwrite existing files without warning. " +
       "Handles text content with proper encoding. Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(WriteFileArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(WriteFileArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "edit_file",
@@ -159,7 +158,7 @@ export const TOOL_DEFINITIONS: Array<{
       "Make line-based edits to a text file. Each edit replaces exact line sequences " +
       "with new content. Returns a git-style diff showing the changes made. " +
       "Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(EditFileArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(EditFileArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "create_directory",
@@ -168,7 +167,7 @@ export const TOOL_DEFINITIONS: Array<{
       "nested directories in one operation. If the directory already exists, " +
       "this operation will succeed silently. Perfect for setting up directory " +
       "structures for projects or ensuring required paths exist. Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(CreateDirectoryArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(CreateDirectoryArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "list_directory",
@@ -177,7 +176,7 @@ export const TOOL_DEFINITIONS: Array<{
       "Results clearly distinguish between files and directories with [FILE] and [DIR] " +
       "prefixes. This tool is essential for understanding directory structure and " +
       "finding specific files within a directory. Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(ListDirectoryArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(ListDirectoryArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "list_directory_with_sizes",
@@ -186,7 +185,7 @@ export const TOOL_DEFINITIONS: Array<{
       "Results clearly distinguish between files and directories with [FILE] and [DIR] " +
       "prefixes. This tool is useful for understanding directory structure and " +
       "finding specific files within a directory. Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(ListDirectoryWithSizesArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(ListDirectoryWithSizesArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "directory_tree",
@@ -195,7 +194,7 @@ export const TOOL_DEFINITIONS: Array<{
       "Each entry includes 'name', 'type' (file/directory), and 'children' for directories. " +
       "Files have no children array, while directories always have a children array (which may be empty). " +
       "The output is formatted with 2-space indentation for readability. Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(DirectoryTreeArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(DirectoryTreeArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "move_file",
@@ -204,7 +203,7 @@ export const TOOL_DEFINITIONS: Array<{
       "and rename them in a single operation. If the destination exists, the " +
       "operation will fail. Works across different directories and can be used " +
       "for simple renaming within the same directory. Both source and destination must be within allowed directories.",
-    inputSchema: zodToJsonSchema(MoveFileArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(MoveFileArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "search_files",
@@ -214,7 +213,7 @@ export const TOOL_DEFINITIONS: Array<{
       "Use pattern like '*.ext' to match files in current directory, and '**/*.ext' to match files in all subdirectories. " +
       "Returns full paths to all matching items. Great for finding files when you don't know their exact location. " +
       "Only searches within allowed directories.",
-    inputSchema: zodToJsonSchema(SearchFilesArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(SearchFilesArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "get_file_info",
@@ -223,7 +222,7 @@ export const TOOL_DEFINITIONS: Array<{
       "information including size, creation time, last modified time, permissions, " +
       "and type. This tool is perfect for understanding file characteristics " +
       "without reading the actual content. Only works within allowed directories.",
-    inputSchema: zodToJsonSchema(GetFileInfoArgsSchema) as ToolInput,
+    inputSchema: z.toJSONSchema(GetFileInfoArgsSchema, { io: "input" }) as ToolInput,
   },
   {
     name: "list_allowed_directories",
