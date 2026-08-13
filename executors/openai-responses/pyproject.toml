@@ -9,19 +9,19 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.104.0", # web framework
-    "uvicorn[standard]>=0.24.0", # ASGI server
-    "pydantic>=2.0.0", # data validation
-    "openai>=1.60.0", # OpenAI Python SDK with Responses API support
-    "mcp>=1.8.0", # MCP client (streamable-http/sse) for MCP tool servers + prefetch chains
-    "pydantic-settings>=2.0.0", # environment variable config
-    "python-multipart>=0.0.6", # multipart form parsing for /v1/files uploads
+    "fastapi>=0.141.1", # web framework
+    "uvicorn[standard]>=0.52.1", # ASGI server
+    "pydantic>=2.13.4", # data validation
+    "openai>=2.53.0", # OpenAI Python SDK with Responses API support
+    "mcp>=2.0.0", # MCP client (streamable-http/sse) for MCP tool servers + prefetch chains
+    "pydantic-settings>=2.15.0", # environment variable config
+    "python-multipart>=0.0.32", # multipart form parsing for /v1/files uploads
     "ark-sdk==0.1.67",
     "openinference-instrumentation-openai",
     "opentelemetry-exporter-otlp-proto-http",
-    "urllib3>=2.6.0",
-    "kubernetes>=32.0.0,<36.0.0",
-    "a2a-sdk[http-server]>=0.3.0",
+    "urllib3>=2.7.0",
+    "kubernetes>=36.0.3,<37.0.0",
+    "a2a-sdk[http-server]>=1.1.2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -41,7 +41,7 @@ build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 dev = [
-    "pyright>=1.1.402",
+    "pyright>=1.1.411",
 ]
 
 [tool.hatch.metadata]
@@ -89,5 +89,5 @@ testpaths = [
 
 [dependency-groups]
 dev = [
-    "pytest-asyncio>=1.3.0",
+    "pytest-asyncio>=1.4.0",
 ]
