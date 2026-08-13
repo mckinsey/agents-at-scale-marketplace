@@ -1,7 +1,9 @@
 """Tests for HTTP proxy logic."""
 
+import dataclasses
 import json
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -10,7 +12,7 @@ from ark_sdk.extensions.query import QUERY_EXTENSION_METADATA_KEY, QueryRef
 from fastapi.testclient import TestClient
 
 from claude_agent_scheduler.config import SchedulerConfig
-from claude_agent_scheduler.proxy import create_proxy_app
+from claude_agent_scheduler.proxy import _reports_query_status, create_proxy_app
 from claude_agent_scheduler.sandbox_manager import SandboxCapacityError, SandboxInfo, SandboxManager
 
 
@@ -90,20 +92,31 @@ class TestProxySandboxError:
         assert body["error"]["code"] == -32000
 
 
+def _sdk_parses_target() -> bool:
+    """Whether the installed ark-sdk parses the query extension `target` field."""
+    return any(field.name == "target" for field in dataclasses.fields(QueryRef))
+
+
 def _a2a_body_with_query_ref(
     query_name: str = "q-1",
     query_namespace: str = "test-ns",
     context_id: str | None = None,
+    target: dict | None = None,
 ) -> dict:
-    """Build an A2A JSON-RPC body that includes query extension metadata."""
+    """Build an A2A JSON-RPC body that includes query extension metadata.
+
+    Pass `target` to build a sub-target call — one member of a team, dispatched by
+    the calling engine rather than by a user.
+    """
+    ref: dict = {
+        "name": query_name,
+        "namespace": query_namespace,
+    }
+    if target is not None:
+        ref["target"] = target
     message: dict = {
         "role": "user",
-        "metadata": {
-            QUERY_EXTENSION_METADATA_KEY: {
-                "name": query_name,
-                "namespace": query_namespace,
-            },
-        },
+        "metadata": {QUERY_EXTENSION_METADATA_KEY: ref},
     }
     if context_id is not None:
         message["contextId"] = context_id
@@ -171,6 +184,81 @@ class TestProxyQueryStatus:
 
         assert response.status_code == 200
         mock_updater.update_query_phase.assert_not_awaited()
+
+    def test_sub_target_call_writes_no_parent_status(
+        self, sandbox_manager: MagicMock,
+    ) -> None:
+        """A team member call must not write the parent Query's phase."""
+        sandbox_info = SandboxInfo(
+            claim_name="claim-1",
+            sandbox_name="sandbox-1",
+            service_fqdn="sandbox-1.test-ns.svc.cluster.local",
+        )
+        sandbox_manager.create_sandbox = AsyncMock(return_value=sandbox_info)
+
+        mock_http = AsyncMock(spec=httpx.AsyncClient)
+        mock_http.request = AsyncMock(
+            return_value=httpx.Response(200, content=b'{"ok":true}', headers={"content-type": "application/json"}),
+        )
+
+        mock_updater = AsyncMock()
+        sub_target_ref = QueryRef(name="q-1", namespace="test-ns")
+        sub_target_ref.target = SimpleNamespace(type="agent", name="member-b")
+
+        with (
+            patch("claude_agent_scheduler.proxy.QueryStatusUpdater", return_value=mock_updater),
+            patch("claude_agent_scheduler.proxy._extract_query_ref_from_body", return_value=sub_target_ref),
+        ):
+            fastapi_app = create_proxy_app(sandbox_manager=sandbox_manager, http_client=mock_http)
+            client = TestClient(fastapi_app, raise_server_exceptions=False)
+
+            body = _a2a_body_with_query_ref(target={"type": "agent", "name": "member-b"})
+            response = client.post("/", json=body)
+
+        assert response.status_code == 200
+        sandbox_manager.create_sandbox.assert_awaited_once()
+        mock_updater.update_query_phase.assert_not_awaited()
+
+    @pytest.mark.skipif(
+        not _sdk_parses_target(),
+        reason="installed ark-sdk does not parse query extension 'target'; bump the pin to enable",
+    )
+    def test_sub_target_metadata_is_honoured(
+        self, sandbox_manager: MagicMock,
+    ) -> None:
+        """The gate reads `target` off the wire, not just off a hand-built QueryRef."""
+        sandbox_info = SandboxInfo(
+            claim_name="claim-1",
+            sandbox_name="sandbox-1",
+            service_fqdn="sandbox-1.test-ns.svc.cluster.local",
+        )
+        sandbox_manager.create_sandbox = AsyncMock(return_value=sandbox_info)
+
+        mock_http = AsyncMock(spec=httpx.AsyncClient)
+        mock_http.request = AsyncMock(
+            return_value=httpx.Response(200, content=b'{"ok":true}', headers={"content-type": "application/json"}),
+        )
+
+        mock_updater = AsyncMock()
+
+        with patch("claude_agent_scheduler.proxy.QueryStatusUpdater", return_value=mock_updater):
+            fastapi_app = create_proxy_app(sandbox_manager=sandbox_manager, http_client=mock_http)
+            client = TestClient(fastapi_app, raise_server_exceptions=False)
+
+            body = _a2a_body_with_query_ref(target={"type": "agent", "name": "member-b"})
+            response = client.post("/", json=body)
+
+        assert response.status_code == 200
+        mock_updater.update_query_phase.assert_not_awaited()
+
+    def test_reports_query_status_gate(self) -> None:
+        """The gate is the presence of a target, not the presence of a query ref."""
+        assert _reports_query_status(QueryRef(name="q-1", namespace="test-ns")) is True
+        assert _reports_query_status(None) is False
+
+        sub_target = QueryRef(name="q-1", namespace="test-ns")
+        sub_target.target = SimpleNamespace(type="agent", name="member-b")
+        assert _reports_query_status(sub_target) is False
 
     def test_status_update_failure_does_not_block(
         self, sandbox_manager: MagicMock, http_client: httpx.AsyncClient,

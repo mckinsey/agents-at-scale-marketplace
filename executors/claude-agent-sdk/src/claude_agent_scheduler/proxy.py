@@ -100,6 +100,23 @@ def extract_context_id(body: bytes) -> tuple[str, bytes, bool]:
         return str(uuid.uuid4()), body, True
 
 
+def _reports_query_status(query_ref) -> bool:
+    """Whether this call may write the referenced Query's phase.
+
+    A query extension `target` marks the call as one member of a team: the calling
+    engine owns the parent Query's status for the whole run, so a member must not
+    write phases to it. Team member calls carry no contextId, so every one of them
+    arrives as `is_new` and would otherwise churn the parent Query's phase.
+
+    `target` reaches QueryRef from the ark-sdk version that introduced sub-target
+    dispatch; against an older SDK the attribute is absent and every call is
+    top-level, which is what that SDK can express.
+    """
+    if query_ref is None:
+        return False
+    return getattr(query_ref, "target", None) is None
+
+
 async def _best_effort_phase(status_updater, phase: str, reason: str, message: str) -> None:
     """Report a query phase without letting the report fail the query.
 
@@ -158,17 +175,20 @@ def create_proxy_app(
             ) as route_span:
                 query_ref = _extract_query_ref_from_body(raw_body) if is_new else None
                 status_updater = QueryStatusUpdater(query_ref)
+                report_status = _reports_query_status(query_ref)
 
                 # Route to sandbox based on session type
                 try:
                     if is_new:
-                        await _best_effort_phase(
-                            status_updater, "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
-                        )
+                        if report_status:
+                            await _best_effort_phase(
+                                status_updater, "provisioning", "ExecutorProvisioning", "Provisioning sandbox",
+                            )
                         info = await sandbox_manager.create_sandbox(conversation_id)
-                        await _best_effort_phase(
-                            status_updater, "running", "QueryRunning", "Query is running",
-                        )
+                        if report_status:
+                            await _best_effort_phase(
+                                status_updater, "running", "QueryRunning", "Query is running",
+                            )
                     else:
                         info = await sandbox_manager.get_sandbox(conversation_id)
                         if info is None:
