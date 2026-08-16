@@ -50,6 +50,10 @@ def _build_stub() -> None:
         result: Optional[str] = None
         structured_output: Any = None
 
+    # Must accept every kwarg the executor passes at executor.py:130 — including
+    # the optional mcp_kwargs, prompt_kwargs and resume_kwargs. A missing field
+    # here surfaces as an unexpected-keyword TypeError across every test that
+    # reaches execute_agent, which does not point at the real cause.
     @dataclass
     class ClaudeAgentOptions:
         model: str = ""
@@ -59,6 +63,7 @@ def _build_stub() -> None:
         mcp_servers: Optional[dict] = None
         allowed_tools: Optional[list] = None
         resume: Optional[str] = None
+        system_prompt: Optional[Any] = None
 
     class ClaudeSDKClient:
         def __init__(self, options=None):

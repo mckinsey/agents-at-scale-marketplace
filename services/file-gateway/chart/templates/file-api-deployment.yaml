@@ -43,7 +43,7 @@ spec:
         - name: AWS_ENDPOINT_URL
           value: {{ printf "http://%s-versitygw:%d" (include "file-gateway.fullname" .) (.Values.versitygw.service.port | int) }}
         - name: BUCKET_NAME
-          value: {{ .Values.filesystemMcp.config.bucketName | quote }}
+          value: {{ .Values.fileApi.config.bucketName | default .Values.filesystemMcp.config.bucketName | quote }}
         - name: HOST
           value: {{ .Values.fileApi.config.host | quote }}
         - name: PORT

@@ -13,9 +13,10 @@ dependencies = [
     "uvicorn[standard]>=0.24.0", # ASGI server
     "pydantic>=2.0.0", # data validation
     "openai>=1.60.0", # OpenAI Python SDK with Responses API support
+    "mcp>=1.8.0", # MCP client (streamable-http/sse) for MCP tool servers + prefetch chains
     "pydantic-settings>=2.0.0", # environment variable config
     "python-multipart>=0.0.6", # multipart form parsing for /v1/files uploads
-    "ark-sdk==0.1.64",
+    "ark-sdk==0.1.67",
     "openinference-instrumentation-openai",
     "opentelemetry-exporter-otlp-proto-http",
     "urllib3>=2.6.0",

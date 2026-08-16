@@ -19,6 +19,10 @@ jobs:
     name: Validate Documentation
     uses: ./.github/workflows/_reusable-docs-cicd.yaml
 
+  tests:
+    name: Tests
+    uses: ./.github/workflows/_reusable-unit-tests.yaml
+
   jfrog-xray-scan:
     name: JFrog Xray Dependency Scan
     runs-on: ubuntu-latest
@@ -227,7 +231,10 @@ jobs:
 
   release-please:
     name: Create Release
-    needs: [validate-docs, validate-charts, build-docker-images]
+    # tests gates the release: everything downstream of this job publishes
+    # artifacts (push-docker-images, deploy-charts), so a failing suite must
+    # stop here rather than ship.
+    needs: [validate-docs, tests, validate-charts, build-docker-images]
     runs-on: ubuntu-24.04
     outputs:
       released: ${{ steps.release-please.outputs.release_created }}

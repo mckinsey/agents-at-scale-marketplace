@@ -17,19 +17,9 @@ jobs:
     name: Validate Documentation
     uses: ./.github/workflows/_reusable-docs-cicd.yaml
 
-  unit-tests:
-    name: Unit Tests - ${{ matrix.service.name }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service:
-          - { name: executor-openai-responses, path: executors/openai-responses }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - name: Run pytest
-        working-directory: ${{ matrix.service.path }}
-        run: uv run --with pytest pytest tests/ -q
+  tests:
+    name: Tests
+    uses: ./.github/workflows/_reusable-unit-tests.yaml
 
   jfrog-xray-scan:
     name: JFrog Xray Dependency Scan

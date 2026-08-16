@@ -5,6 +5,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { MCPAdapter } from './adapter.js';
 import { FilesystemAdapter } from './adapters/filesystem/adapter.js';
+import { S3Adapter } from './adapters/s3/adapter.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 
@@ -19,11 +20,25 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
 const SESSION_FILE = process.env.SESSION_FILE || '/data/sessions/sessions.json';
 const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || '1000');
 const BASE_DATA_DIR = process.env.BASE_DATA_DIR || '/data';
+const STORAGE_BACKEND = (process.env.STORAGE_BACKEND || 'filesystem').toLowerCase();
 
 const app = express();
 app.use(express.json());
 
-const adapter: MCPAdapter = new FilesystemAdapter();
+function selectAdapter(): MCPAdapter {
+  switch (STORAGE_BACKEND) {
+    case 'filesystem':
+      return new FilesystemAdapter();
+    case 's3':
+      return new S3Adapter();
+    default:
+      throw new Error(
+        `Unknown STORAGE_BACKEND "${STORAGE_BACKEND}" (expected "filesystem" or "s3")`
+      );
+  }
+}
+
+const adapter: MCPAdapter = selectAdapter();
 const sessions = new Map<string, Session>();
 const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 const servers: { [sessionId: string]: Server } = {};
@@ -245,6 +260,7 @@ app.get('/health', (req, res) => {
 
 app.listen(PORT);
 console.log(`MCP server listening on port ${PORT}`);
+console.log(`Storage backend: ${STORAGE_BACKEND}`);
 console.log(`Base data directory: ${BASE_DATA_DIR}`);
 console.log(`Session file: ${SESSION_FILE}`);
 console.log(`Max sessions: ${MAX_SESSIONS}`);
