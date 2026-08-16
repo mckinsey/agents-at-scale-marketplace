@@ -39,10 +39,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
         if: ${{ inputs.push-to-registry }}
@@ -75,7 +75,7 @@ jobs:
 
       - name: Extract metadata for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image.outputs.name }}
           tags: |
@@ -86,7 +86,7 @@ jobs:
       - name: Build and push by digest
         if: ${{ inputs.push-to-registry }}
         id: build-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ inputs.service-path }}
           file: ${{ inputs.service-path }}/Dockerfile
@@ -98,7 +98,7 @@ jobs:
 
       - name: Build (validation only)
         if: ${{ !inputs.push-to-registry }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ inputs.service-path }}
           file: ${{ inputs.service-path }}/Dockerfile
@@ -169,7 +169,7 @@ jobs:
 
       - name: Extract metadata for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image.outputs.name }}
           tags: |
