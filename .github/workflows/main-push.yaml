@@ -32,7 +32,7 @@ jobs:
       actions: read
       issues: write
     env:
-      XRAY_WATCH_NAME: 'ark-marketplace-security-watch'
+      XRAY_WATCH_NAME: 'ark-marketplace-20863-security-watch'
       SCAN_JSON: "xray-scan-agents-at-scale-marketplace-${{ github.run_number }}.json"
     steps:
       - uses: actions/checkout@v4

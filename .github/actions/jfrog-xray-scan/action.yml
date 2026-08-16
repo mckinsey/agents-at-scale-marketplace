@@ -13,7 +13,7 @@ inputs:
   watch_name:
     description: 'Name of the Xray watch to use for scanning'
     required: false
-    default: 'ark-marketplace-security-watch'
+    default: 'ark-marketplace-20863-security-watch'
   jfrog_user:
     description: 'JFrog username'
     required: true
