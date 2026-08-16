@@ -1,12 +1,12 @@
 name: 'JFrog Xray Container Scan'
-description: 'Scans a locally-built container image using JFrog Xray'
+description: 'Pulls and scans a container image using JFrog Xray'
 # Report-only, mirroring agents-at-scale-ark: findings reach the summary and an
 # artifact, never the exit code. To gate later, read violations_count — Critical only,
 # since base images carry unfixable Highs. Check scan_completed first: a failed scan
 # reports no counts at all, which must not be read as a clean image.
 inputs:
   image:
-    description: 'Full image reference, already present in the local docker daemon'
+    description: 'Full image reference in a registry the caller is logged in to'
     required: true
   image_name:
     description: 'Short image name used for artifact naming (e.g., noah)'
@@ -33,6 +33,14 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    # buildx pushes straight to the registry without loading into the local daemon,
+    # so the image has to be pulled back before jf docker scan can read it.
+    - name: Pull container image
+      shell: bash
+      run: |
+        echo "Pulling container image: ${{ inputs.image }}"
+        docker pull ${{ inputs.image }}
+
     - name: Setup JFrog CLI
       uses: jfrog/setup-jfrog-cli@v4
       env:
