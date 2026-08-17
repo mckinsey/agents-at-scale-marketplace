@@ -253,7 +253,7 @@ jobs:
       
       - name: Run Release Please
         if: ${{ env.ACT == 'false' && github.ref == 'refs/heads/main' }}
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         id: release-please
         with:
           config-file: .github/release-please-config.json
@@ -287,7 +287,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   log-rp-outputs:
     name: Log Release Please Outputs
