@@ -1,0 +1,39 @@
+XRAY-97724 - CVE-2018-20225 (pip, all versions)
+- pip installs the highest version number available, even when the user intended a private package from a private index. Only affects --extra-index-url, and requires the package to be absent from the public index so an attacker can publish it there with an arbitrary version. Upstream reports this is intended functionality and the user is responsible for using --extra-index-url securely.
+- NOT EXPLOITABLE in the marketplace: the vulnerable pattern is --extra-index-url, which appears nowhere in the repo. Unlike Ark (which uses uv), marketplace Dockerfiles do call pip directly — agents/noah, mcps/perplexity-ask-mcp, mcps/pdf-extraction-mcp, mcps/web-research-mcp, mcps/speech-mcp-server all run "pip install -r requirements.txt" — so Ark's "we use uv" rationale does not transfer and is deliberately not copied here.
+- Evidence: the single --index-url in the repo (mcps/speech-mcp-server, torch CPU wheels) REPLACES the index rather than adding to it, so the cross-index "highest version wins" resolution the CVE describes never happens.
+- No fix available: intended pip behaviour per the official response.
+
+XRAY-225406 - CVE-2022-29169 (useragent 2.3.0)
+XRAY-649170 - CVE-2020-26311 (useragent 2.3.0)
+- ReDoS in useragent's parsing of attacker-supplied User-Agent strings.
+- NOT SHIPPED: useragent is a devDependency, reached only via broken-link-checker@0.7.8 -> robot-directives@0.3.0. broken-link-checker is used by docs/scripts/check-links.js, which runs in CI only (_reusable-docs-cicd.yaml) against a locally served docs build. It is in no container image and no runtime path.
+- No fix available: useragent 2.3.0 is the latest release and is unmaintained. Resolving these means dropping broken-link-checker or replacing the link checker; tracked separately.
+
+XRAY-413136 - CVE-2021-4305 (robots-txt-guard 0.1.1)
+- Same reachability as the useragent entries above: devDependency pulled by broken-link-checker@0.7.8, CI-only, never shipped.
+- No fix available: 0.1.1 is the latest release.
+
+XRAY-1050796 (@xmldom/xmldom 0.9.10)
+XRAY-1050799 (@xmldom/xmldom 0.9.10)
+XRAY-1050801 (@xmldom/xmldom 0.9.10)
+- Reached only through the docs site toolchain: nextra@4.6.0 -> better-react-mathjax@2.3.0 -> mathjax-full@3.2.2 -> speech-rule-engine@4.1.4 -> @xmldom/xmldom@0.9.10. Four levels deep, none of it under our control.
+- No fix available: 0.9.10 is the latest release on that line. Resolves only when nextra or mathjax-full moves off this chain. Re-check when nextra is upgraded.
+
+XRAY-1051070 - CVE-2026-73086 / GHSA-xwg4-73v4-xw9w (nanoid integer overflow)
+- nanoid(size) coerced size to a signed 32-bit int; 2147483648 wrapped to -2147483648 and corrupted the CSPRNG poolOffset, making tokens the deterministic string "uuuuuuuuuuuuuuuuuuuuu" until restart. Fixed on the 3.x line in 3.3.12 and on the 5.x line in 5.1.11.
+- PRE-TOLERATED, not yet observed here: this did not appear in the marketplace baseline scan (PR #366, run 31975425091). Carried over from the Ark baseline because the same exposure exists — verified locally that docs ships nanoid@3.3.17 via next@15.5.22 -> postcss@8.5.25, above the 3.3.12 fix on the same line Ark analysed.
+- FALSE POSITIVE mechanism (per Ark's source-level analysis, not re-verified here): Xray's "fixed" metadata lists only 5.1.11 and omits 3.3.12, so patched 3.3.x releases are flagged anyway.
+- Cannot upgrade to 5.x: nanoid is transitive under postcss, which pins the 3.x line; nanoid 5.x is ESM-only and would break postcss's CommonJS require().
+- Remove this entry if Xray corrects its fixed-version metadata, or if nanoid moves onto a genuinely affected line.
+
+# Not carried over from Ark: XRAY-1002760 (esbuild < 0.28.1). Ark reaches esbuild
+# via tsx and vite in ark-broker/ark-cli/ark-dashboard. The marketplace has no
+# esbuild in its tree at all ("npm ls esbuild" in docs/ is empty), so tolerating
+# it here would record a justification that is false for this repo.
+#
+# Baselined 2026-08-16 from the first gate run on PR #366 (run 31975425091),
+# which had no prior main scan to diff against. Every entry is a conscious risk
+# acceptance: before adding one, confirm Xray reports no fixed version — if a fix
+# exists, take the fix instead. The gate reads the first field of each
+# non-comment line, so the prose bullets below each ID are ignored.
