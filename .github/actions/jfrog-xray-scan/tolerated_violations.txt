@@ -12,28 +12,7 @@ XRAY-649170 - CVE-2020-26311 (useragent 2.3.0)
 
 XRAY-413136 - CVE-2021-4305 (robots-txt-guard 0.1.1)
 - Same reachability as the useragent entries above: devDependency pulled by broken-link-checker@0.7.8, CI-only, never shipped.
-- No fix available: 0.1.1 is the latest release.
+- No fix available: Xray reports no fixed version for this advisory. Newer releases of the package exist (up to 1.0.2), but they are unreachable — broken-link-checker pins "robots-txt-guard": "~0.1.0", which caps at <0.2.0. Resolving this means changing broken-link-checker, not bumping robots-txt-guard.
 
-XRAY-1050796 (@xmldom/xmldom 0.9.10)
-XRAY-1050799 (@xmldom/xmldom 0.9.10)
-XRAY-1050801 (@xmldom/xmldom 0.9.10)
-- Reached only through the docs site toolchain: nextra@4.6.0 -> better-react-mathjax@2.3.0 -> mathjax-full@3.2.2 -> speech-rule-engine@4.1.4 -> @xmldom/xmldom@0.9.10. Four levels deep, none of it under our control.
-- No fix available: 0.9.10 is the latest release on that line. Resolves only when nextra or mathjax-full moves off this chain. Re-check when nextra is upgraded.
-
-XRAY-1051070 - CVE-2026-73086 / GHSA-xwg4-73v4-xw9w (nanoid integer overflow)
-- nanoid(size) coerced size to a signed 32-bit int; 2147483648 wrapped to -2147483648 and corrupted the CSPRNG poolOffset, making tokens the deterministic string "uuuuuuuuuuuuuuuuuuuuu" until restart. Fixed on the 3.x line in 3.3.12 and on the 5.x line in 5.1.11.
-- PRE-TOLERATED, not yet observed here: this did not appear in the marketplace baseline scan (PR #366, run 31975425091). Carried over from the Ark baseline because the same exposure exists — verified locally that docs ships nanoid@3.3.17 via next@15.5.22 -> postcss@8.5.25, above the 3.3.12 fix on the same line Ark analysed.
-- FALSE POSITIVE mechanism (per Ark's source-level analysis, not re-verified here): Xray's "fixed" metadata lists only 5.1.11 and omits 3.3.12, so patched 3.3.x releases are flagged anyway.
-- Cannot upgrade to 5.x: nanoid is transitive under postcss, which pins the 3.x line; nanoid 5.x is ESM-only and would break postcss's CommonJS require().
-- Remove this entry if Xray corrects its fixed-version metadata, or if nanoid moves onto a genuinely affected line.
-
-# Not carried over from Ark: XRAY-1002760 (esbuild < 0.28.1). Ark reaches esbuild
-# via tsx and vite in ark-broker/ark-cli/ark-dashboard. The marketplace has no
-# esbuild in its tree at all ("npm ls esbuild" in docs/ is empty), so tolerating
-# it here would record a justification that is false for this repo.
-#
-# Baselined 2026-08-16 from the first gate run on PR #366 (run 31975425091),
-# which had no prior main scan to diff against. Every entry is a conscious risk
-# acceptance: before adding one, confirm Xray reports no fixed version — if a fix
-# exists, take the fix instead. The gate reads the first field of each
-# non-comment line, so the prose bullets below each ID are ignored.
+# Only tolerate what has no fix. Xray's fixed_versions goes stale, so confirm against
+# the package's own release notes, not just the scan output.
