@@ -167,7 +167,7 @@ jobs:
 
       - name: Upload Helm Chart - ${{ inputs.chart-name }}
         if: ${{ inputs.upload-artifact || inputs.deploy-to-registry }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.chart-name }}-${{ github.sha }}
           path: ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz
@@ -194,7 +194,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Download Chart Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.chart-name }}-${{ github.sha }}
           path: ${{ inputs.chart-path }}
@@ -232,7 +232,7 @@ jobs:
           version: "latest"
 
       - name: Download Helm Chart Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.chart-name }}-${{ github.sha }}
           path: ${{ inputs.chart-path }}
