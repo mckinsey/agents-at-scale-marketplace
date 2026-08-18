@@ -1,0 +1,18 @@
+XRAY-97724 - CVE-2018-20225 (pip, all versions)
+- pip installs the highest version number available, even when the user intended a private package from a private index. Only affects --extra-index-url, and requires the package to be absent from the public index so an attacker can publish it there with an arbitrary version. Upstream reports this is intended functionality and the user is responsible for using --extra-index-url securely.
+- NOT EXPLOITABLE in the marketplace: the vulnerable pattern is --extra-index-url, which appears nowhere in the repo. Unlike Ark (which uses uv), marketplace Dockerfiles do call pip directly — agents/noah, mcps/perplexity-ask-mcp, mcps/pdf-extraction-mcp, mcps/web-research-mcp, mcps/speech-mcp-server all run "pip install -r requirements.txt" — so Ark's "we use uv" rationale does not transfer and is deliberately not copied here.
+- Evidence: the single --index-url in the repo (mcps/speech-mcp-server, torch CPU wheels) REPLACES the index rather than adding to it, so the cross-index "highest version wins" resolution the CVE describes never happens.
+- No fix available: intended pip behaviour per the official response.
+
+XRAY-225406 - CVE-2022-29169 (useragent 2.3.0)
+XRAY-649170 - CVE-2020-26311 (useragent 2.3.0)
+- ReDoS in useragent's parsing of attacker-supplied User-Agent strings.
+- NOT SHIPPED: useragent is a devDependency, reached only via broken-link-checker@0.7.8 -> robot-directives@0.3.0. broken-link-checker is used by docs/scripts/check-links.js, which runs in CI only (_reusable-docs-cicd.yaml) against a locally served docs build. It is in no container image and no runtime path.
+- No fix available: useragent 2.3.0 is the latest release and is unmaintained. Resolving these means dropping broken-link-checker or replacing the link checker; tracked separately.
+
+XRAY-413136 - CVE-2021-4305 (robots-txt-guard 0.1.1)
+- Same reachability as the useragent entries above: devDependency pulled by broken-link-checker@0.7.8, CI-only, never shipped.
+- No fix available: Xray reports no fixed version for this advisory. Newer releases of the package exist (up to 1.0.2), but they are unreachable — broken-link-checker pins "robots-txt-guard": "~0.1.0", which caps at <0.2.0. Resolving this means changing broken-link-checker, not bumping robots-txt-guard.
+
+# Only tolerate what has no fix. Xray's fixed_versions goes stale, so confirm against
+# the package's own release notes, not just the scan output.
