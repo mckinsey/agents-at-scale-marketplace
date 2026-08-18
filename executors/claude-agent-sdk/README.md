@@ -101,13 +101,16 @@ The calling engine owns the parent Query's status, stream, and memory for the wh
 A member call writes none of them, and human-in-the-loop approval is not available to a
 member — the member's engine cannot resume an approval the caller owns.
 
-Requires an Ark version that sends the query extension `target` field. Against an older
-Ark, a member call fails with `Query extension resolution only supports agent targets, got
-'team'`.
+Requires both an Ark version that sends the query extension `target` field and an executor
+image built against an ark-sdk that reads it. An older Ark never dispatches a member to its
+engine, so the member runs on the completions loop instead. A newer Ark against an older
+ark-sdk fails the member call with `Query extension resolution only supports agent targets,
+got 'team'`.
 
 In scheduler mode each member turn provisions its own sandbox, because member calls carry
-no `contextId`. Size `scheduler.config.maxActiveSandboxes` accordingly: a 3-member
-sequential team needs 3, and a selector team needs up to two per turn.
+no `contextId`. `scheduler.config.maxActiveSandboxes` defaults to `0` (unlimited); if you
+have capped it, a 3-member sequential team needs 3 and a selector team needs up to two per
+turn.
 
 ## Deployment Modes
 
