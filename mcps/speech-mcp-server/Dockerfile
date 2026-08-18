@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Install system dependencies for whisper (ffmpeg is required)
 RUN apt-get update && \

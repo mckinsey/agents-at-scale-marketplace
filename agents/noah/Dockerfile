@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Declare build arguments for multi-arch support
 ARG TARGETARCH
