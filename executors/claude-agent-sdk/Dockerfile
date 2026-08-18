@@ -1,5 +1,5 @@
 # Stage 1: Build the claude-agent-sdk wheel for Linux
-FROM python:3.12-slim AS sdk-builder
+FROM python:3.14-slim AS sdk-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -23,17 +23,21 @@ RUN npm install -g @anthropic-ai/claude-code && \
     python scripts/build_wheel.py --skip-download --clean
 
 # Stage 2: Application image
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-# Create non-root user and install Node.js (required at runtime by Claude Agent SDK CLI)
+# Create non-root user and install Node.js (required at runtime by Claude Agent SDK CLI).
+# git is required at runtime by agents that commit repo changes (e.g. the CVE-remediation
+# pr-creator, which commits full lockfiles that exceed the GitHub API/MCP content-size limit
+# and can only be landed via git). Shipping git in the image replaces the previous
+# `git-sideload` initContainer hack used on the management cluster.
 RUN adduser --system --uid 1001 --home /home/executor executor && \
     apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends curl git && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     apt-get clean && \

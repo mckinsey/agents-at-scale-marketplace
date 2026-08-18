@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup kind (Kubernetes in Docker)
         uses: helm/kind-action@v1
@@ -52,7 +52,7 @@ jobs:
           kubectl_version: v1.29.0
 
       - name: Setup Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: "latest"
 
@@ -114,10 +114,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: "latest"
 
@@ -167,7 +167,7 @@ jobs:
 
       - name: Upload Helm Chart - ${{ inputs.chart-name }}
         if: ${{ inputs.upload-artifact || inputs.deploy-to-registry }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.chart-name }}-${{ github.sha }}
           path: ${{ inputs.chart-path }}/${{ inputs.chart-name }}-*.tgz
@@ -191,10 +191,10 @@ jobs:
         working-directory: ${{ inputs.chart-path }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download Chart Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.chart-name }}-${{ github.sha }}
           path: ${{ inputs.chart-path }}
@@ -224,15 +224,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: "latest"
 
       - name: Download Helm Chart Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.chart-name }}-${{ github.sha }}
           path: ${{ inputs.chart-path }}
