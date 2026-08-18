@@ -1,5 +1,5 @@
 # Stage 1: Build the claude-agent-sdk wheel for Linux
-FROM python:3.12-slim AS sdk-builder
+FROM python:3.14-slim AS sdk-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -23,7 +23,7 @@ RUN npm install -g @anthropic-ai/claude-code && \
     python scripts/build_wheel.py --skip-download --clean
 
 # Stage 2: Application image
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
