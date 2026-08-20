@@ -1,14 +1,8 @@
 """Tests for ConfigWatcher: initial ConfigMap load and hot-reload watch.
 
-_watch_loop runs `while not self._stop.is_set()`, so every test that enters it
-must arrange for the stop event to be set from inside -- otherwise the test
-hangs rather than fails. The helpers below set it from the stream generator or
-from a patched asyncio.sleep, which is why each loop test terminates.
-
-kubernetes_asyncio is patched at the module level. Note that config.ConfigException
-has to be replaced with a real exception class: `except <MagicMock>` is a
-TypeError, so leaving it as an auto-created attribute breaks the fallback path
-under test rather than exercising it.
+_watch_loop only exits once _stop is set, so every loop test sets it from
+inside the stream or from a patched asyncio.sleep. config.ConfigException must
+be a real exception class, since `except <MagicMock>` raises TypeError.
 """
 
 import asyncio

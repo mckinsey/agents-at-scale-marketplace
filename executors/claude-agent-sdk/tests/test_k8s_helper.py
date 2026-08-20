@@ -1,14 +1,8 @@
 """Tests for _AsyncK8sHelper, the agent-sandbox CRD boundary.
 
-The rest of the suite patches this class out wholesale, so nothing exercised
-the manifests it builds or the not-found handling the reaper depends on.
-
-Two mocking details matter. client.ApiException is replaced with a real
-exception class, because `except <MagicMock>` raises TypeError and would mask
-the very paths under test. And the timeout tests patch time.monotonic with an
-unbounded counter rather than a fixed list: patching the attribute reaches the
-real time module, so asyncio's own calls would exhaust a list and surface as
-"coroutine raised StopIteration" instead of the timeout being asserted.
+Two mocking traps: client.ApiException must be a real exception class, since
+`except <MagicMock>` raises TypeError; and time.monotonic is patched with an
+unbounded counter, not a list, because asyncio's own calls would exhaust one.
 """
 
 import asyncio

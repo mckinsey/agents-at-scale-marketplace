@@ -1,10 +1,8 @@
 """Tests for scheduler OTEL setup.
 
-setup_otel() mutates process-global OTEL state (tracer provider, global
-propagator). Every test here patches those two sinks rather than letting the
-real ones run: OTEL ignores a second set_tracer_provider call for the lifetime
-of the process, so a test that really set it would silently disable the
-assertions of every test that ran after it.
+setup_otel() mutates process-global state, and OTEL ignores a second
+set_tracer_provider call, so every test patches the sinks instead of letting
+the real ones run -- otherwise the first test would disable all the others.
 """
 
 from unittest.mock import MagicMock, patch
