@@ -1,6 +1,6 @@
 {
   "name": "marketplace-docs",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "Agents at Scale (ARK) Marketplace Documentation",
   "main": "index.js",
   "scripts": {
@@ -41,6 +41,9 @@
     "brace-expansion@^2.0.1": "^2.1.4",
     "@xmldom/xmldom": "^0.9.11",
     "mermaid": {
+      "uuid": "^11.1.1"
+    },
+    "form-data2": {
       "uuid": "^11.1.1"
     },
     "serve-handler": {

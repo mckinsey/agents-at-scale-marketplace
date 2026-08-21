@@ -16,7 +16,7 @@ dependencies = [
     "mcp>=1.8.0", # MCP client (streamable-http/sse) for MCP tool servers + prefetch chains
     "pydantic-settings>=2.0.0", # environment variable config
     "python-multipart>=0.0.6", # multipart form parsing for /v1/files uploads
-    "ark-sdk==0.1.67",
+    "ark-sdk==0.1.68",
     "openinference-instrumentation-openai",
     "opentelemetry-exporter-otlp-proto-http",
     "urllib3>=2.6.0",

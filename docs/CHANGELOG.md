@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.20](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.19...marketplace-docs-v0.1.20) (2026-08-21)
+
+
+### Features
+
+* add JFrog Xray dependency and containers scans to CI ([#366](https://github.com/mckinsey/agents-at-scale-marketplace/issues/366)) ([6baaeb6](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6baaeb6023a2e2e24802750ecafe3f3bc216a4c4))
+* Add support for mcp tools to openai-responses-executor and update to Companies House mcp ([#342](https://github.com/mckinsey/agents-at-scale-marketplace/issues/342)) ([9bee5e7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9bee5e7d2cecc4f6284a6bd0c9a543ce6260589b))
+
 ## [0.1.19](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.18...marketplace-docs-v0.1.19) (2026-08-05)
 
 

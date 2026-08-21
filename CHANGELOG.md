@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.43](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.42...v0.1.43) (2026-08-21)
+
+
+### Features
+
+* add JFrog Xray dependency and containers scans to CI ([#366](https://github.com/mckinsey/agents-at-scale-marketplace/issues/366)) ([6baaeb6](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6baaeb6023a2e2e24802750ecafe3f3bc216a4c4))
+* Add support for mcp tools to openai-responses-executor and update to Companies House mcp ([#342](https://github.com/mckinsey/agents-at-scale-marketplace/issues/342)) ([9bee5e7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9bee5e7d2cecc4f6284a6bd0c9a543ce6260589b))
+* Allow extra volumes for claude sdk ([#378](https://github.com/mckinsey/agents-at-scale-marketplace/issues/378)) ([a855239](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a8552392cd23dccd5a8b3f8762e04baba27c76fd))
+
+
+### Bug Fixes
+
+* **claude-agent-sdk:** suppress parent query status writes for team members ([#401](https://github.com/mckinsey/agents-at-scale-marketplace/issues/401)) ([90d218d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/90d218def39e60c353aa932519e3dd958393cfbe))
+* Correct notes for after file-gateway installation ([#385](https://github.com/mckinsey/agents-at-scale-marketplace/issues/385)) ([a3e6017](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a3e601765c81e1aa5529c432b5d983bc030084ef))
+* **deps:** resolve ajv and diff advisories in filesystem-mcp-server ([#395](https://github.com/mckinsey/agents-at-scale-marketplace/issues/395)) ([e5feaa2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e5feaa27b4f2b851e3db8e351e17581d1a248c29))
+* run unit tests for all components with a tests/ dir ([#367](https://github.com/mckinsey/agents-at-scale-marketplace/issues/367)) ([4453c2d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4453c2d72dda861471114565f929c5ac970aa67f))
+
 ## [0.1.42](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.41...v0.1.42) (2026-08-05)
 
 
