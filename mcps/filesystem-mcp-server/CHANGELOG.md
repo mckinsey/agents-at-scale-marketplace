@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.60](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.59...filesystem-mcp-server-v0.1.60) (2026-08-21)
+
+
+### Bug Fixes
+
+* **deps:** resolve ajv and diff advisories in filesystem-mcp-server ([#395](https://github.com/mckinsey/agents-at-scale-marketplace/issues/395)) ([e5feaa2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e5feaa27b4f2b851e3db8e351e17581d1a248c29))
+
 ## [0.1.59](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.58...filesystem-mcp-server-v0.1.59) (2026-08-05)
 
 

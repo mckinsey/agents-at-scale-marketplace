@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-openai-responses-v0.1.7...executor-openai-responses-v0.1.8) (2026-08-21)
+
+
+### Features
+
+* Add support for mcp tools to openai-responses-executor and update to Companies House mcp ([#342](https://github.com/mckinsey/agents-at-scale-marketplace/issues/342)) ([9bee5e7](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9bee5e7d2cecc4f6284a6bd0c9a543ce6260589b))
+
+
+### Bug Fixes
+
+* **claude-agent-sdk:** suppress parent query status writes for team members ([#401](https://github.com/mckinsey/agents-at-scale-marketplace/issues/401)) ([90d218d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/90d218def39e60c353aa932519e3dd958393cfbe))
+
 ## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-openai-responses-v0.1.6...executor-openai-responses-v0.1.7) (2026-06-30)
 
 
