@@ -5,7 +5,7 @@ set_tracer_provider call, so every test patches the sinks instead of letting
 the real ones run -- otherwise the first test would disable all the others.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -57,17 +57,15 @@ class TestSetupOtelEnabled:
 
     def test_propagator_carries_tracecontext_and_baggage(self, monkeypatch, otel_sinks) -> None:
         """Baggage is not optional: ark.session.id rides it from controller to sandbox."""
-        from opentelemetry.baggage.propagation import W3CBaggagePropagator
-        from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
 
         setup_otel()
 
         composite = otel_sinks["set_textmap"].call_args.args[0]
-        kinds = {type(p) for p in composite._propagators}
-        assert TraceContextTextMapPropagator in kinds
-        assert W3CBaggagePropagator in kinds
+        # Assert the wire contract, not which classes were assembled: fields is
+        # the public union of every propagator's header names, so swapping an
+        # implementation that still emits the header is not a regression.
+        assert composite.fields >= {"traceparent", "baggage"}
 
     @pytest.mark.parametrize(
         "env_value,expected",
