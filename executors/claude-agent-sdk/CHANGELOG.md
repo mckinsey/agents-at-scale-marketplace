@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.12](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.11...executor-claude-agent-sdk-v0.1.12) (2026-08-21)
+
+
+### Features
+
+* Allow extra volumes for claude sdk ([#378](https://github.com/mckinsey/agents-at-scale-marketplace/issues/378)) ([a855239](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a8552392cd23dccd5a8b3f8762e04baba27c76fd))
+
+
+### Bug Fixes
+
+* **claude-agent-sdk:** suppress parent query status writes for team members ([#401](https://github.com/mckinsey/agents-at-scale-marketplace/issues/401)) ([90d218d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/90d218def39e60c353aa932519e3dd958393cfbe))
+* run unit tests for all components with a tests/ dir ([#367](https://github.com/mckinsey/agents-at-scale-marketplace/issues/367)) ([4453c2d](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4453c2d72dda861471114565f929c5ac970aa67f))
+
 ## [0.1.11](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.10...executor-claude-agent-sdk-v0.1.11) (2026-05-12)
 
 
