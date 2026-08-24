@@ -32,9 +32,9 @@ jobs:
       XRAY_WATCH_NAME: 'ark-marketplace-20863-security-watch'
       SCAN_JSON: "xray-scan-agents-at-scale-marketplace-${{ github.run_number }}.json"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Export uv lockfiles to requirements.txt
         shell: bash
