@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from ark_sdk.executor import BaseExecutor, MCPServerConfig, Message
 from ark_sdk.executor_app import is_otel_enabled
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, list_sessions
-from claude_agent_sdk.types import AssistantMessage, TextBlock
+from claude_agent_sdk.types import AssistantMessage, TextBlock, ToolUseBlock
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +147,15 @@ class ClaudeAgentExecutor(BaseExecutor):
                         for block in message.content:
                             if isinstance(block, TextBlock) and block.text:
                                 await self.stream_chunk(block.text)
+                            elif isinstance(block, ToolUseBlock):
+                                # Remove once the ark-sdk pin provides stream_tool_call.
+                                stream_tool_call = getattr(self, "stream_tool_call", None)
+                                if stream_tool_call is not None:
+                                    await stream_tool_call(
+                                        name=block.name,
+                                        arguments=block.input or {},
+                                        tool_call_id=block.id,
+                                    )
                     if hasattr(message, "result") and message.result:
                         result_text = message.result
 
