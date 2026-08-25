@@ -17,11 +17,11 @@ RUN adduser --system --uid 1001 --home /home/executor executor && \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Copy project files
-COPY pyproject.toml setup.cfg README.md ./
+COPY pyproject.toml setup.cfg README.md uv.lock ./
 COPY src/ ./src/
 
 # Install dependencies
-RUN uv sync --no-install-project
+RUN uv sync --frozen --no-install-project
 
 # Set up directories for non-root user. /.devspace is pre-created so the
 # DevSpace restart helper (used by `devspace dev` file sync) can write its

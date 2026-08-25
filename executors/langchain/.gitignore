@@ -160,9 +160,6 @@ cython_debug/
 #  See https://intellij-support.jetbrains.com/hc/en/articles/206544839
 .idea/
 
-# UV lock files (optional - can be committed for reproducible builds)
-uv.lock
-
 # Local ark-sdk-python directory (should use the one in services/ark-sdk-python)
 ark-sdk-python/
 .wheels/
