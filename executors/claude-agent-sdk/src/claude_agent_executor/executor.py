@@ -148,11 +148,14 @@ class ClaudeAgentExecutor(BaseExecutor):
                             if isinstance(block, TextBlock) and block.text:
                                 await self.stream_chunk(block.text)
                             elif isinstance(block, ToolUseBlock):
-                                await self.stream_tool_call(
-                                    name=block.name,
-                                    arguments=block.input or {},
-                                    tool_call_id=block.id,
-                                )
+                                # Remove once the ark-sdk pin provides stream_tool_call.
+                                stream_tool_call = getattr(self, "stream_tool_call", None)
+                                if stream_tool_call is not None:
+                                    await stream_tool_call(
+                                        name=block.name,
+                                        arguments=block.input or {},
+                                        tool_call_id=block.id,
+                                    )
                     if hasattr(message, "result") and message.result:
                         result_text = message.result
 

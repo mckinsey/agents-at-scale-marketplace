@@ -165,6 +165,48 @@ class TestStreaming:
         assert chunks == ["all done"]
 
     @pytest.mark.asyncio
+    async def test_tool_use_survives_ark_sdk_without_stream_tool_call(self, tmp_path, monkeypatch):
+        monkeypatch.delattr(BaseExecutor, "stream_tool_call", raising=False)
+
+        executor = ClaudeAgentExecutor()
+        chunks = []
+
+        async def capture_chunk(text):
+            chunks.append(text)
+
+        executor.stream_chunk = capture_chunk
+
+        class FakeClient:
+            def __init__(self, options=None):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def query(self, prompt):
+                pass
+
+            async def receive_response(self):
+                yield AssistantMessage(
+                    content=[
+                        ToolUseBlock(id="toolu_1", name="Bash", input={"command": "ls"}),
+                        TextBlock(text="all done"),
+                    ],
+                    model="claude-sonnet-4-20250514",
+                )
+                yield _make_result_message("all done")
+
+        with patch("claude_agent_executor.executor.SESSIONS_DIR", tmp_path), \
+             patch("claude_agent_executor.executor.ClaudeSDKClient", FakeClient):
+            result = await executor.execute_agent(_request())
+
+        assert chunks == ["all done"]
+        assert result == [Message(role="assistant", content="all done", name="test-agent")]
+
+    @pytest.mark.asyncio
     async def test_no_assistant_messages_no_stream_chunks(self, tmp_path):
         executor = ClaudeAgentExecutor()
         chunks = []
