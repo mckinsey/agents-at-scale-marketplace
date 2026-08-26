@@ -14,5 +14,12 @@ XRAY-413136 - CVE-2021-4305 (robots-txt-guard 0.1.1)
 - Same reachability as the useragent entries above: devDependency pulled by broken-link-checker@0.7.8, CI-only, never shipped.
 - No fix available: Xray reports no fixed version for this advisory. Newer releases of the package exist (up to 1.0.2), but they are unreachable — broken-link-checker pins "robots-txt-guard": "~0.1.0", which caps at <0.2.0. Resolving this means changing broken-link-checker, not bumping robots-txt-guard.
 
+XRAY-1061020 - no CVE assigned, GHSA-2xp9-vwfh-vxw4 (next, all versions)
+- Unauthenticated RCE when the Next.js Image Optimization API optimizes an attacker-controlled AVIF image. The root cause is libheif (GHSA-g89c-p67h-r497), reached via sharp.
+- ALREADY ON THE PATCHED RELEASE: next 15.5.24 is the fix Vercel shipped for the 15.5 line (16.3.3 for 16.3) in the August 2026 security release. Xray reports next 15.5.24 as still affected and returns an empty fixed_versions, which is the stale-metadata case this file warns about below — the patch mitigates by disabling AVIF optimization outright, it does not fix libheif, so the advisory stays open against every next release until upstream lands a fix. Bumping to 16.3.3 would be flagged identically and is not a remedy.
+- NOT REACHABLE in docs: docs/next.config.mjs sets output: 'export' with images.unoptimized: true, so there is no Next.js server and no /_next/image route to reach the optimizer. _reusable-docs-cicd.yaml publishes the static export through actions/upload-pages-artifact to GitHub Pages, so sharp and its libheif binaries exist only in the CI build tree and are never in the deployed artifact.
+- Evidence: AVIF is not opt-in anywhere (Next defaults images.formats to webp, and no formats key exists in the repo), the only images are committed to the repo rather than attacker-supplied, and next 15.5.24 disables AVIF optimization regardless.
+- Re-check when libheif ships a fix and sharp picks it up: at that point Xray should report a fixed next version and this entry must be removed rather than carried forward.
+
 # Only tolerate what has no fix. Xray's fixed_versions goes stale, so confirm against
 # the package's own release notes, not just the scan output.
