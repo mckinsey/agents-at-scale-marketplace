@@ -87,7 +87,7 @@ testpaths = [
 ]
 
 [tool.coverage.report]
-fail_under = 70
+fail_under = 75
 
 [dependency-groups]
 dev = [
