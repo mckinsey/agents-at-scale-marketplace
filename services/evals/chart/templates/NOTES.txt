@@ -1,0 +1,33 @@
+Evals add-on installed.
+
+WorkflowTemplate : {{ .Values.workflowTemplate.name }}
+Engine image     : {{ .Values.image.repository }}:{{ .Values.image.tag }}
+Runner SA        : {{ include "evals.serviceAccountName" . }}
+{{- if .Values.referenceSuite.enabled }}
+Reference suite  : ConfigMap eval-suite-kyc-profile-init
+{{- end }}
+
+Trigger an eval from a workflow's onExit hook (story 02). In the workflow spec:
+
+  onExit: eval-onexit
+  templates:
+    - name: eval-onexit
+      steps:
+        - - name: evaluate
+            when: "{{ "{{workflow.status}}" }} == Succeeded"
+            templateRef:
+              name: {{ .Values.workflowTemplate.name }}
+              template: evaluate
+            arguments:
+              parameters:
+                - name: suite-name
+                  value: kyc-profile-init
+                - name: output-key
+                  value: <the file key the workflow produced>
+                - name: report-key
+                  value: <where to write the Markdown report>
+                - name: workflow-name
+                  value: "{{ "{{workflow.name}}" }}"
+
+The report is written to the file-gateway at the report-key and echoed to the
+handler log. It is report-only: a below-threshold result does not fail the run.

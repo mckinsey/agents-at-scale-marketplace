@@ -1,0 +1,35 @@
+[
+  {
+    "id": "sections-present",
+    "check": "structural",
+    "slice": "$.\"Inquiry information\"",
+    "description": "L1 — the top-level 'Inquiry information' array exists in the output"
+  },
+  {
+    "id": "validation-status-pending",
+    "check": "structural",
+    "slice": "$.\"Inquiry information\"[0].content[0].\"validation status\"",
+    "expected": "_Pending_",
+    "description": "L1 — no external validation has happened yet, so the first field is _Pending_"
+  },
+  {
+    "id": "company-name-extracted",
+    "check": "exact",
+    "slice": "$.\"Inquiry information\"[0].content[0].\"Company Name\"",
+    "expected": "Associated British Foods (ABF)",
+    "description": "L2 — the company name was extracted exactly as it appears in the email"
+  },
+  {
+    "id": "account-purpose-faithful",
+    "check": "judge",
+    "judge": "quality",
+    "slice": "$.\"Inquiry information\"[2].content[2].\"Account purpose\"",
+    "description": "L3 — the extracted account purpose is faithful to the email and reads clearly",
+    "source_documents": [
+      {
+        "title": "Inquiry email (excerpt)",
+        "content": "We would like to open a Corporate Treasury Management Account to optimize our global cash flow, manage currency risk, and streamline international payments across our subsidiaries."
+      }
+    ]
+  }
+]

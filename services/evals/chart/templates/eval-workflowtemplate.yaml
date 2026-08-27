@@ -1,0 +1,68 @@
+{{- if .Values.workflowTemplate.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: {{ .Values.workflowTemplate.name }}
+  labels:
+    {{- include "evals.labels" . | nindent 4 }}
+  annotations:
+    workflows.argoproj.io/title: "Evals - grade a workflow's output"
+    workflows.argoproj.io/description: >-
+      Standalone eval template invoked from a workflow's onExit hook. Grades the
+      produced output against a suite (golden dataset + LLM-as-judge) and writes
+      a Markdown report with a pass rate against the suite threshold.
+spec:
+  # Reusable by any workflow via `templateRef` (story 02). The caller's onExit
+  # handler passes the suite name, the produced output key, and where to write
+  # the report; nothing here is hard-coded to a specific workflow.
+  entrypoint: evaluate
+  arguments:
+    parameters:
+      - name: suite-name
+      - name: output-key
+      - name: report-key
+      - name: workflow-name
+        value: ""
+
+  templates:
+    - name: evaluate
+      inputs:
+        parameters:
+          - name: suite-name
+          - name: output-key
+          - name: report-key
+          - name: workflow-name
+      # The suite ConfigMap (eval-suite-<suite-name>) is mounted as a volume, so
+      # each key becomes a file the engine's loader reads (story 01).
+      volumes:
+        - name: suite
+          configMap:
+            name: "eval-suite-{{ "{{inputs.parameters.suite-name}}" }}"
+      container:
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        # Argo's emissary executor otherwise tries to read the image's ENTRYPOINT
+        # from the registry, which fails for a locally built image. Stating the
+        # command explicitly avoids that registry look-up.
+        command: ["python", "-m", "ark_evals"]
+        args:
+          - "run"
+          - "--suite-dir"
+          - "/suite"
+          - "--output-key"
+          - "{{ "{{inputs.parameters.output-key}}" }}"
+          - "--report-key"
+          - "{{ "{{inputs.parameters.report-key}}" }}"
+          - "--file-gateway-url"
+          - "{{ .Values.fileGateway.url }}"
+          - "--namespace"
+          - "{{ .Release.Namespace }}"
+          - "--workflow"
+          - "{{ "{{inputs.parameters.workflow-name}}" }}"
+        volumeMounts:
+          - name: suite
+            mountPath: /suite
+  # The eval pods run under this package's own ServiceAccount (RBAC to create
+  # judge Queries), keeping the add-on independently deployable.
+  serviceAccountName: {{ include "evals.serviceAccountName" . }}
+{{- end }}

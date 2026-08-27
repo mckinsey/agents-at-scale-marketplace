@@ -1,38 +1,99 @@
 # Evals
 
-An evaluation add-on for Ark agentic workflows. Runs a golden-dataset,
-LLM-as-judge evaluation over the output a workflow produces, and reports a
-pass rate against a configurable threshold.
+An evaluation add-on for Ark agentic workflows. It grades the output a workflow
+produces against a golden dataset with an LLM-as-judge, and writes a Markdown
+report with a pass rate against a configurable threshold. It is triggered from
+the workflow's `onExit` hook, so the workflow stays focused on its own job.
 
-> **Status:** planning / exploration. This folder currently holds only the
-> product documentation (user stories under `documentation/`). No chart,
-> image, or code has been written yet.
+## How it works
 
-## What it will do
+```
+workflow finishes ──onExit──▶ eval WorkflowTemplate ──▶ ark-evals engine
+                                                            │
+   reads produced output (file-gateway) ◀───────────────────┤
+   grades each case (structural / exact / judge)             │
+   judge = an Ark Query against your judge Model ◀───────────┤
+   writes a Markdown report + pass rate ─────────────────────▶ file-gateway
+```
 
-- Trigger an evaluation as a final step of an Ark/Argo workflow, once the
-  workflow completes successfully.
-- Read the output the workflow produced (Milestone 1: a file on the
-  file-gateway volume), compare it against curated golden cases, and score it
-  with an LLM-as-judge (quality + hallucination).
-- Produce a log/report with a **pass rate** and, when the pass rate falls
-  below a configured **threshold**, surface it for a human-in-the-loop
-  decision (auto-retrigger is a later extension).
+- **Report-only (Milestone 1):** a below-threshold result is reported for a
+  human to act on; it does not block or retrigger the workflow.
+- **Judge via Ark:** the judge is an existing Ark `Model`, called by creating an
+  Ark `Query`, so judge calls are traced in Langfuse like any other model call.
 
-## Approach
+## Writing a suite
 
-The evaluation engine reuses the model and mechanics of the internal
-`agentic-evals-service` (golden dataset + judge + thresholds + report),
-adapted to the Ark world: instead of calling a target application over HTTP,
-it evaluates the output an Ark workflow has already produced.
+A suite is a folder (see `chart/files/kyc-profile-init` for the reference):
 
-Configuration (which Ark `Model` is the judge, the pass threshold, and the
-golden dataset) lives in a `ConfigMap` for Milestone 1 — files edited in code
-and applied with `kubectl`, no custom CRD and no UI yet. A CRD and a UI are
-possible later evolutions, not part of the first milestone.
+```
+<suite>/suite.json     # judge Model name, pass threshold, per-dimension thresholds
+<suite>/dataset.json   # the golden cases
+<suite>/judges/quality.prompt.txt    # the rubric the judge scores against
+<suite>/judges/quality.schema.json   # the JSON shape the judge must return
+```
+
+Each case targets a **slice** of the output and declares a **check type**. Pick
+the cheapest check that can see the failure:
+
+| Intent | Use | Example |
+|--------|-----|---------|
+| A field / section exists, or equals a fixed literal | `structural` (L1) | `"validation status"` is `_Pending_` |
+| An extracted value equals a known-correct value | `exact` (L2) | `Company Name` == `Associated British Foods (ABF)` |
+| Free text is faithful / complete / well-toned | `judge` (L3) | `Account purpose` faithfully summarizes the email |
+
+Only `judge` cases call the model; `structural` and `exact` are deterministic
+and free. A `slice` is a small JSONPath subset: `$`, `$.key`, `$.a.b`,
+`$.list[0]`, quoted keys with spaces (`$."Inquiry information"[0]`).
+
+Validate a suite before running it (no model calls):
+
+```bash
+python -m ark_evals validate --suite-dir <mounted-suite-dir>
+```
+
+## Install
+
+```bash
+# Build the engine image (OrbStack shares the docker daemon with the cluster).
+docker build -t ark-evals-engine:0.1.0 engine/
+
+# Install the add-on: eval WorkflowTemplate, runner ServiceAccount + RBAC,
+# and the reference-suite ConfigMap.
+helm install evals ./chart -n default
+```
+
+Apply your own suite folder as a ConfigMap:
+
+```bash
+./chart/files/apply-suite.sh <suite-dir> default
+```
+
+## Trigger it from a workflow
+
+Add an `onExit` hook to the workflow you want evaluated (a one-line reference
+plus a small handler). See the install `NOTES.txt` for the exact snippet; in
+short:
+
+```yaml
+onExit: eval-onexit
+templates:
+  - name: eval-onexit
+    steps:
+      - - name: evaluate
+          when: "{{workflow.status}} == Succeeded"
+          templateRef: { name: eval-run, template: evaluate }
+          arguments:
+            parameters:
+              - { name: suite-name,    value: kyc-profile-init }
+              - { name: output-key,    value: <produced file key> }
+              - { name: report-key,    value: <report destination key> }
+              - { name: workflow-name, value: "{{workflow.name}}" }
+```
 
 ## Documentation
 
-Product intent is captured as small user stories under
-[`documentation/`](documentation/). Start with
-[`documentation/README.md`](documentation/README.md) for the index.
+Product intent and the acceptance contract for Milestone 1 live as user stories
+under [`documentation/`](documentation/).
+
+> **Status:** Milestone 1 — trigger an eval on workflow completion, grade a
+> produced file, report a pass rate. No UI, no custom CRD, report-only.
