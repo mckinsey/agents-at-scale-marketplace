@@ -25,7 +25,7 @@ def resolve_session_dir(conversation_id: str) -> Path:
     the A2A contextId and the a2a-context-id annotation, so the join is guarded here
     rather than at any single caller.
     """
-    if not SAFE_CONVERSATION_ID.match(conversation_id or ""):
+    if not SAFE_CONVERSATION_ID.fullmatch(conversation_id or ""):
         raise ValueError(
             f"invalid conversationId: must match {SAFE_CONVERSATION_ID.pattern}"
         )

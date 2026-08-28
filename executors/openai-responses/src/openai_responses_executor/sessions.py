@@ -36,7 +36,7 @@ def validate_conversation_id(conversation_id: str) -> None:
     Exposed so HTTP handlers can reject early and return 400 rather than failing
     once a streaming response is already in flight.
     """
-    if not SAFE_CONVERSATION_ID.match(conversation_id or ""):
+    if not SAFE_CONVERSATION_ID.fullmatch(conversation_id or ""):
         raise ValueError(
             f"invalid conversationId: must match {SAFE_CONVERSATION_ID.pattern}"
         )

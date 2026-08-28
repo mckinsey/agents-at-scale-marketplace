@@ -24,6 +24,11 @@ REJECTED = [
     "-leading-dash",
     "_leading-underscore",
     "a" * 129,
+    "safe-id\n",
+    "a" * 128 + "\n",
+    "\n",
+    "safe-id\n../../etc",
+    "safe-id\r\n",
 ]
 
 ACCEPTED = [
