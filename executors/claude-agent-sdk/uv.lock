@@ -1013,7 +1013,7 @@ wheels = [
 
 [[package]]
 name = "openinference-instrumentation-claude-agent-sdk"
-version = "0.1.10"
+version = "0.1.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openinference-instrumentation" },
@@ -1024,9 +1024,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/f1/5934c92d85e0076615ca4ddf6f3e824ed1c74895e5e8ff9165fa6a2326e1/openinference_instrumentation_claude_agent_sdk-0.1.10.tar.gz", hash = "sha256:da7fc94b35727ea8bed25e3b05042471f83ff0d758d3899cd3e94f6e808cfe6a", size = 16233, upload-time = "2026-08-12T19:46:13.053Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/0d/1e51ea06c4a012e7506c9e00045d3b3535a07206873967ac52a0769c13e5/openinference_instrumentation_claude_agent_sdk-0.1.11.tar.gz", hash = "sha256:46470fc5a6fe618bff0f5e592684c6772bf8d841aae2fbf1c589cedcb321377f", size = 16266, upload-time = "2026-08-24T23:47:30.061Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/02/546b6ce6065f3fae15375eeba6f8d2eb0a56ba3ea5d0656724ea5fc3d20c/openinference_instrumentation_claude_agent_sdk-0.1.10-py3-none-any.whl", hash = "sha256:31b169b589d9863b48b978ea0e343d536a223acf28a76e256288a99f19e3f2a4", size = 17806, upload-time = "2026-08-12T19:46:11.965Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/a2/ce6aac513a9f9a858d8147e707117ddc32aa0b741f06cb19821148466300/openinference_instrumentation_claude_agent_sdk-0.1.11-py3-none-any.whl", hash = "sha256:5983e48ae07255e4b116567ccdd8843ea1cf164f5ee833edae95e484997f5165", size = 17847, upload-time = "2026-08-24T23:47:27.506Z" },
 ]
 
 [[package]]

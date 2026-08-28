@@ -1101,7 +1101,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "2.0.0"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1119,22 +1119,22 @@ dependencies = [
     { name = "typing-inspection" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/33/32d4dff2c95bb5d897c3ef4c83649a08996b17b58f0a326d2495d4c81179/mcp-2.0.0.tar.gz", hash = "sha256:0f440e735c13ece8bb19bc62cf0b86f4313448432fbb77d35e14034f4e050728", size = 1662284, upload-time = "2026-07-28T13:45:32.346Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/3b/3acf4897b934ceeb8d22df7309a435a76c34f94be936b36eee8bb57b29a3/mcp-2.1.0.tar.gz", hash = "sha256:b4407b2890238248795d03e8c17d02d311c600ca9272d023ab12dbfa6ad21c70", size = 3983282, upload-time = "2026-08-24T19:04:32.671Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/72/7d7897418912c1d12e87556630dfb7bf0eac71160e9bef8b447960804ee3/mcp-2.0.0-py3-none-any.whl", hash = "sha256:1cb4c75d2d2c7b8c1d756355e5d82a39f2822cc7f13e22a2051d7ca3592349d6", size = 349980, upload-time = "2026-07-28T13:45:28.853Z" },
+    { url = "https://files.pythonhosted.org/packages/88/67/b2160b6cf138872860d2552cca2894dbe4d29da7f1c6fae0c21d22782838/mcp-2.1.0-py3-none-any.whl", hash = "sha256:b8acaed6ca4b9376801377463e44246395749363b1c34467ec6243a50be5ed28", size = 357320, upload-time = "2026-08-24T19:04:29.909Z" },
 ]
 
 [[package]]
 name = "mcp-types"
-version = "2.0.0"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/56/9b8e1c152f61f6c6b07c4b5896c88c7d0ae90bac6ee6306f852fcc5c1eb0/mcp_types-2.0.0.tar.gz", hash = "sha256:d7d939b9285c9961ae8866ba75ef85da34d12bafe276efbf4eb6a131786d8379", size = 66632, upload-time = "2026-07-28T13:45:33.804Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/97/5b1c2e40d6121172c97638a0f1d6240526f5aeebdc9ebea11ddcf2139249/mcp_types-2.1.0.tar.gz", hash = "sha256:16f91064ce33d7ee7a75a7e198a437172215180c16d4bbcfa0e61488ede92c54", size = 66679, upload-time = "2026-08-24T19:04:34.13Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/4c/c78d78c3d52b0ac594ad7cc8ef5972adfe070e3597a8a4c6ce0cd39196ea/mcp_types-2.0.0-py3-none-any.whl", hash = "sha256:6b2de797ca2797f568b79529e1b25948e34de511bcc0bd82fef1039a6d1b8eb0", size = 69649, upload-time = "2026-07-28T13:45:30.713Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/99/f9041368b5af773de32af6192ff0627a71368c240123e57262439ae5b594/mcp_types-2.1.0-py3-none-any.whl", hash = "sha256:6a65bfb7d057ceaf2418781ee61b3041e1f4b5418199297f8939a4b4ed334c3a", size = 69654, upload-time = "2026-08-24T19:04:31.327Z" },
 ]
 
 [[package]]
@@ -1306,7 +1306,7 @@ wheels = [
 
 [[package]]
 name = "openinference-instrumentation-openai"
-version = "0.1.54"
+version = "0.1.56"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openinference-instrumentation" },
@@ -1317,18 +1317,18 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/98/f0/d20c42cb1adb63db512531269584e969ea8296f4c19d8e0c07ce5be8fcef/openinference_instrumentation_openai-0.1.54.tar.gz", hash = "sha256:665ce91fc57e631ce124ac9ae242474dfee77bacdc477e8610a3505737399720", size = 23145, upload-time = "2026-08-07T14:29:19.369Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/eb/f1680fe357bf72287ec9cf6ad2ef0bb29d60b53aa809c2f39cfab0b745fd/openinference_instrumentation_openai-0.1.56.tar.gz", hash = "sha256:734fb899cc29f4c72bbd6784b88ed834db8eabe7c4dcf292b73aa1be6025a3c2", size = 23741, upload-time = "2026-08-25T05:32:47.878Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/da/5e2767427c8ac8336bdd655620a80141e0801c4986c6493d34f26536ade4/openinference_instrumentation_openai-0.1.54-py3-none-any.whl", hash = "sha256:19864c980303c6a3240a8add57b1c0b0fed9bcb46a0f14d4e36760b9a026bee2", size = 30585, upload-time = "2026-08-07T14:29:18.112Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/5b/cea21fe67a865a17e84c35d35c93dd0f496f57796c1da6c9002ff7f5e8b0/openinference_instrumentation_openai-0.1.56-py3-none-any.whl", hash = "sha256:5265cd83559a85f104f287f5ad21725467c0f5367c825c07540705832a074a60", size = 31339, upload-time = "2026-08-25T05:32:46.582Z" },
 ]
 
 [[package]]
 name = "openinference-semantic-conventions"
-version = "0.1.32"
+version = "0.1.33"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/05/5e/13ffdb2ba436312cda9ed842ce3416fa5961e36a205df9a18a67eef7f9b3/openinference_semantic_conventions-0.1.32.tar.gz", hash = "sha256:2a3e6723ddce37abc5c43d38c6c7ac05b0f2efcfbe75cc0f135ab14ceb0730f7", size = 13980, upload-time = "2026-08-07T14:29:21.035Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/ba/a749f287fc09de1886f038603be18089f35f202488218bc4f87408a9cf0d/openinference_semantic_conventions-0.1.33.tar.gz", hash = "sha256:c029a06d34cb75d8698289d266eb78749c5ed627032e1ccdc164860c3b2341e4", size = 14145, upload-time = "2026-08-24T23:47:28.777Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/19/2d096333313d45e5f87d08f903cedc3f7298c5690d2e6c4ef236dc22870e/openinference_semantic_conventions-0.1.32-py3-none-any.whl", hash = "sha256:d06c4716faf7537fbabbb6d34e758ec6b3650a18c037661782fc8c3e9fa90f81", size = 11252, upload-time = "2026-08-07T14:29:19.78Z" },
+    { url = "https://files.pythonhosted.org/packages/26/9f/7bb1c5b0a2e16074db637ea2010ffdd5ee4edbaec7b942916a0f22e7cd4d/openinference_semantic_conventions-0.1.33-py3-none-any.whl", hash = "sha256:ae7207177afa97c0607a49313f57607bd3958750a3ec3078d98a540dfe3b88ad", size = 11397, upload-time = "2026-08-24T23:47:27.522Z" },
 ]
 
 [[package]]
