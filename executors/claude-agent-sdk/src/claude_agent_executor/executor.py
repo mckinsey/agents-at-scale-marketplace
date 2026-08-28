@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -13,6 +14,29 @@ from claude_agent_sdk.types import AssistantMessage, TextBlock, ToolUseBlock
 logger = logging.getLogger(__name__)
 
 SESSIONS_DIR = Path(os.getenv("SESSIONS_DIR", "/data/sessions"))
+
+SAFE_CONVERSATION_ID = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
+
+
+def resolve_session_dir(conversation_id: str) -> Path:
+    """Map a conversationId to its session directory, rejecting path traversal.
+
+    conversationId reaches the executor unvalidated from Query.spec.conversationId,
+    the A2A contextId and the a2a-context-id annotation, so the join is guarded here
+    rather than at any single caller.
+    """
+    if not SAFE_CONVERSATION_ID.match(conversation_id or ""):
+        raise ValueError(
+            f"invalid conversationId: must match {SAFE_CONVERSATION_ID.pattern}"
+        )
+
+    root = SESSIONS_DIR.resolve()
+    resolved = (root / conversation_id).resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError("conversationId resolves outside the sessions directory")
+
+    return resolved
+
 
 # Executor-specific instrumentation — only the Claude Agent SDK instrumentor
 if is_otel_enabled():
@@ -88,11 +112,16 @@ class ClaudeAgentExecutor(BaseExecutor):
         if not user_input:
             return [Message(role="assistant", content="Error: user input is required", name=request.agent.name)]
 
+        try:
+            session_dir = resolve_session_dir(conversation_id)
+        except ValueError as e:
+            logger.warning(f"Rejected conversationId for agent {request.agent.name}: {e}")
+            return [Message(role="assistant", content=f"Error: {e}", name=request.agent.name)]
+
         model_name, api_key, base_url = self._resolve_model_config(request)
 
         logger.info(f"Executing Claude Agent SDK query for agent {request.agent.name} (model: {model_name}, conversation: {conversation_id})")
 
-        session_dir = SESSIONS_DIR / conversation_id
         session_dir.mkdir(parents=True, exist_ok=True)
 
         # Find existing session to resume
