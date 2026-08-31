@@ -1,0 +1,16 @@
+{{- if .Values.mcpServer.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubernetes-mcp-server.addressConfigMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    # Required, and required at creation: ark-api's admission policy rejects
+    # writes to ConfigMaps without it, and rejects adding it after the fact.
+    ark.mckinsey.com/resource-type: configuration
+  annotations:
+    ark.mckinsey.com/description: {{ .Values.mcpServer.configuration.description | quote }}
+data:
+  # Ark Configurations always key on `value`.
+  value: {{ include "kubernetes-mcp-server.address" . | quote }} # NOSONAR - cluster-internal service communication
+{{- end }}

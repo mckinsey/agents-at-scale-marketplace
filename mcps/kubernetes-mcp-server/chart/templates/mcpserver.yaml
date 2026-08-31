@@ -5,8 +5,13 @@ metadata:
   name: {{ .Values.mcpServer.name }}
   namespace: {{ .Release.Namespace }}
 spec:
+  # Held in an Ark Configuration ConfigMap rather than inline so it can be
+  # edited from the dashboard.
   address:
-    value: {{ tpl (.Values.mcpServer.address | default (printf "http://%s.%s.svc.cluster.local:8080/mcp" .Release.Name .Release.Namespace)) . | quote }} # NOSONAR - cluster-internal service communication
+    valueFrom:
+      configMapKeyRef:
+        name: {{ include "kubernetes-mcp-server.addressConfigMapName" . }}
+        key: value
   description: {{ .Values.mcpServer.description | quote }}
   transport: {{ .Values.mcpServer.transport }}
   pollInterval: {{ .Values.mcpServer.pollInterval }}
