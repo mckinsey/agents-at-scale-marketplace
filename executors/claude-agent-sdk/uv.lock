@@ -826,9 +826,10 @@ wheels = [
 
 [[package]]
 name = "kubernetes"
-version = "35.0.0"
+version = "36.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "aiohttp" },
     { name = "certifi" },
     { name = "durationpy" },
     { name = "python-dateutil" },
@@ -839,9 +840,9 @@ dependencies = [
     { name = "urllib3" },
     { name = "websocket-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/8f/85bf51ad4150f64e8c665daf0d9dfe9787ae92005efb9a4d1cba592bd79d/kubernetes-35.0.0.tar.gz", hash = "sha256:3d00d344944239821458b9efd484d6df9f011da367ecb155dadf9513f05f09ee", size = 1094642, upload-time = "2026-01-16T01:05:27.76Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/57/b07b96353f902aa1bdbe00e878e3a12a137977d03a962479785576aa8ec9/kubernetes-36.0.3.tar.gz", hash = "sha256:36993ed25ce59b789c9341473a228fcf268504a2fec7c2b2b1531d73072e5ce7", size = 2337528, upload-time = "2026-07-13T20:38:12.128Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/70/05b685ea2dffcb2adbf3cdcea5d8865b7bc66f67249084cf845012a0ff13/kubernetes-35.0.0-py2.py3-none-any.whl", hash = "sha256:39e2b33b46e5834ef6c3985ebfe2047ab39135d41de51ce7641a7ca5b372a13d", size = 2017602, upload-time = "2026-01-16T01:05:25.991Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/30/a96d47df739689ac0001ade0afefc16e3b477fc2fb426b568515fdc8afce/kubernetes-36.0.3-py2.py3-none-any.whl", hash = "sha256:8fde9241c4b298e6374a069dcf728359b4e72c2fb29489a975ba4e1c047cf10f", size = 4618066, upload-time = "2026-07-13T20:38:10.172Z" },
 ]
 
 [[package]]
@@ -1013,7 +1014,7 @@ wheels = [
 
 [[package]]
 name = "openinference-instrumentation-claude-agent-sdk"
-version = "0.1.10"
+version = "0.1.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openinference-instrumentation" },
@@ -1024,9 +1025,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/f1/5934c92d85e0076615ca4ddf6f3e824ed1c74895e5e8ff9165fa6a2326e1/openinference_instrumentation_claude_agent_sdk-0.1.10.tar.gz", hash = "sha256:da7fc94b35727ea8bed25e3b05042471f83ff0d758d3899cd3e94f6e808cfe6a", size = 16233, upload-time = "2026-08-12T19:46:13.053Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ed/e1/ebb9ee04cc5fe0091fa09d9efd2f5c0ed54272a807b75c0c3b694e36fd3d/openinference_instrumentation_claude_agent_sdk-0.1.14.tar.gz", hash = "sha256:1c4ea1e75974e9e2895347a4b4399adfa061d89929b44438939801601b3edfd7", size = 16370, upload-time = "2026-08-28T04:51:00.527Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/02/546b6ce6065f3fae15375eeba6f8d2eb0a56ba3ea5d0656724ea5fc3d20c/openinference_instrumentation_claude_agent_sdk-0.1.10-py3-none-any.whl", hash = "sha256:31b169b589d9863b48b978ea0e343d536a223acf28a76e256288a99f19e3f2a4", size = 17806, upload-time = "2026-08-12T19:46:11.965Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/ce/7a8222ed9f6d8d8393b0f7fa7a7765bff9d088132cb5922cd983cedcf1c0/openinference_instrumentation_claude_agent_sdk-0.1.14-py3-none-any.whl", hash = "sha256:720a674b828b3e2973bec20a36fe6935aa61bbc0457146b191202ab50fe49456", size = 17971, upload-time = "2026-08-28T04:50:59.378Z" },
 ]
 
 [[package]]
