@@ -29,6 +29,11 @@ a pass rate against a threshold. No custom CRD, no UI — configuration via
 - [`dataset-guide.md`](dataset-guide.md) — step-by-step reference for writing a
   suite's `dataset.json` (every field, the `check` enum, the slice syntax, an
   end-to-end example). Written for both human authors and AI agents.
+- [`evolving-the-framework.md`](evolving-the-framework.md) — what the current
+  literature and SOTA frameworks say about agent evals (judge panels, trajectory
+  evaluation, pass@k/pass^k, error bars, dataset growth), each mapped to a
+  concrete next step for this engine, with citations. The forward-looking design
+  note beyond Milestone 1.
 
 ## Planned stories (Milestone 1)
 
