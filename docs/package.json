@@ -55,7 +55,8 @@
     "glob": {
       ".": "^10.5.0",
       "minimatch": "^9.0.7"
-    }
+    },
+    "zod": "4.1.12"
   },
   "optionalDependencies": {
     "@napi-rs/simple-git-linux-arm64-gnu": "^0.1.19",
