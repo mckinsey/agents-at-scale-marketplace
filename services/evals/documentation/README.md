@@ -24,6 +24,12 @@ the file it produced against a golden dataset with an LLM-as-judge, and report
 a pass rate against a threshold. No custom CRD, no UI — configuration via
 `ConfigMap`, files edited in code.
 
+## Guides
+
+- [`dataset-guide.md`](dataset-guide.md) — step-by-step reference for writing a
+  suite's `dataset.json` (every field, the `check` enum, the slice syntax, an
+  end-to-end example). Written for both human authors and AI agents.
+
 ## Planned stories (Milestone 1)
 
 1. Configure an eval suite — golden dataset, threshold, judge model.
