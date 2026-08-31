@@ -82,8 +82,13 @@ mcpServer:
   name: kubernetes-mcp-server
   description: k8s mcp server
   transport: http
-  # Defaults to the in-cluster service the subchart deploys. Override to point
-  # at a different address.
+  # Pins the address, overriding any dashboard edit. Leave empty to keep the
+  # value already in the cluster, falling back to the in-cluster service.
   address: ""
   pollInterval: 1m
   timeout: 30s
+
+  # The address lives in the `<release>-address` ConfigMap, editable from the
+  # dashboard's Configurations page.
+  configuration:
+    description: Address the Ark controller uses to reach the Kubernetes MCP server.
