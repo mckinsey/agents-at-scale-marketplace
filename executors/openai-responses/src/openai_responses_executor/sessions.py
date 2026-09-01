@@ -20,15 +20,42 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from pathlib import Path
 
 from .config import config
 
 logger = logging.getLogger(__name__)
 
+SAFE_CONVERSATION_ID = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
+
+
+def validate_conversation_id(conversation_id: str) -> None:
+    """Raise ValueError if conversation_id is not safe as a path segment.
+
+    Exposed so HTTP handlers can reject early and return 400 rather than failing
+    once a streaming response is already in flight.
+    """
+    if not SAFE_CONVERSATION_ID.fullmatch(conversation_id or ""):
+        raise ValueError(
+            f"invalid conversationId: must match {SAFE_CONVERSATION_ID.pattern}"
+        )
+
 
 def _conv_dir(conversation_id: str) -> Path:
-    return config.sessions_dir / conversation_id
+    """Resolve a conversation's directory, rejecting path traversal.
+
+    conversation_id arrives unvalidated from both the A2A contextId and the
+    /chat request body, so every read, write and unlink is guarded here.
+    """
+    validate_conversation_id(conversation_id)
+
+    root = config.sessions_dir.resolve()
+    resolved = (root / conversation_id).resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError("conversationId resolves outside the sessions directory")
+
+    return resolved
 
 
 def _read_response_id(conversation_id: str) -> str | None:
