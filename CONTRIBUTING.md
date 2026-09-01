@@ -6,12 +6,12 @@ We welcome any and all contributions to the Agents at Scale Marketplace, at what
 
 There are quite a few ways to contribute, such as:
 
-* **Add new marketplace items**: Contribute new services, tools, agents, or other resources to the marketplace. See the [Adding Marketplace Items](#adding-marketplace-items) section below.
-* **Report bugs and security vulnerabilities**: We use [GitHub issues](https://github.com/mckinsey/agents-at-scale-marketplace/issues) to keep track of known bugs and security vulnerabilities. We keep a close eye on them and update them when we have an internal fix in progress. Before you report a new issue, do your best to ensure your problem hasn't already been reported. If it has, just leave a comment on the existing issue, rather than create a new one.
-* **Propose new marketplace items or features**: If you have ideas for new items to add to the marketplace or features to improve existing ones, please open a [GitHub issue](https://github.com/mckinsey/agents-at-scale-marketplace/issues) and describe what you would like to see, why you need it, and how it should work.
-* **Review pull requests**: See the [repo](https://github.com/mckinsey/agents-at-scale-marketplace) to find open pull requests and contribute a review!
-* **Contribute a fix or improvement**: If you're interested in contributing fixes or improvements to existing marketplace items or documentation, first read our guidelines for contributing developers below. Once you are ready to contribute, feel free to pick one of the issues and create a PR.
-* **Contribute to the documentation**: You can help us improve the [documentation](https://mckinsey.github.io/agents-at-scale-marketplace/) online. Send us feedback as a GitHub issue or start a documentation discussion on GitHub. You are also welcome to raise a PR with a bug fix or addition to the documentation.
+- **Add new marketplace items**: Contribute new services, tools, agents, or other resources to the marketplace. See the [Adding Marketplace Items](#adding-marketplace-items) section below.
+- **Report bugs and security vulnerabilities**: We use [GitHub issues](https://github.com/mckinsey/agents-at-scale-marketplace/issues) to keep track of known bugs and security vulnerabilities. We keep a close eye on them and update them when we have an internal fix in progress. Before you report a new issue, do your best to ensure your problem hasn't already been reported. If it has, just leave a comment on the existing issue, rather than create a new one.
+- **Propose new marketplace items or features**: If you have ideas for new items to add to the marketplace or features to improve existing ones, please open a [GitHub issue](https://github.com/mckinsey/agents-at-scale-marketplace/issues) and describe what you would like to see, why you need it, and how it should work.
+- **Review pull requests**: See the [repo](https://github.com/mckinsey/agents-at-scale-marketplace) to find open pull requests and contribute a review!
+- **Contribute a fix or improvement**: If you're interested in contributing fixes or improvements to existing marketplace items or documentation, first read our guidelines for contributing developers below. Once you are ready to contribute, feel free to pick one of the issues and create a PR.
+- **Contribute to the documentation**: You can help us improve the [documentation](https://mckinsey.github.io/agents-at-scale-marketplace/) online. Send us feedback as a GitHub issue or start a documentation discussion on GitHub. You are also welcome to raise a PR with a bug fix or addition to the documentation.
 
 ## Code of Conduct
 
@@ -20,12 +20,14 @@ The Agents at Scale team pledges to foster and maintain a friendly community. We
 ## Ways of Working
 
 **Principle 1: Team Planning and Prioritization**
+
 - Plan tickets for current and upcoming sprints as a team
 - Final prioritization decisions rest with the product manager
 - When possible, break out self-contained chunks of development that a wider group of developers can work on
 
 **Principle 2: Design Before Code**
 For non-trivial changes:
+
 - Propose design in ticket and gather team feedback
 - Use RFC pull requests or spikes to share ideas
 - For architectural implications, discuss with TSC (meets weekly)
@@ -35,19 +37,20 @@ For non-trivial changes:
 Ensure contributions include appropriate tests and validation to demonstrate functionality and prevent regressions.
 
 **Principle 4: Implementation**
+
 - Keep development focused on ticket requirements. If additional features or ideas arise, create new tickets and track as separate work to be prioritized by the team. Link to the original ticket.
 - Use PR title prefixes (`feat:`, `bug:`, `rfc:`) to ensure changelog updates, release notes generation, and semantic versioning are managed properly.
 - All pull requests must use conventional commit format in their titles. This is enforced by the `validate_pr_title` workflow and is required for Automatic version determination, Changelog generation, Semantic versioning compliance
 - Supported commit types:
-    - `feat`: New features (triggers minor version bump)
-    - `fix`: Bug fixes (triggers patch version bump)
-    - `docs`: Documentation changes
-    - `chore`: Maintenance tasks
-    - `refactor`: Code refactoring
-    - `test`: Test additions or changes
-    - `ci`: CI/CD changes
-    - `build`: Build system changes
-    - `perf`: Performance improvements
+  - `feat`: New features (triggers minor version bump)
+  - `fix`: Bug fixes (triggers patch version bump)
+  - `docs`: Documentation changes
+  - `chore`: Maintenance tasks
+  - `refactor`: Code refactoring
+  - `test`: Test additions or changes
+  - `ci`: CI/CD changes
+  - `build`: Build system changes
+  - `perf`: Performance improvements
 - Breaking changes can be indicated with `!` after the type (e.g., `feat!:`) or by including `BREAKING CHANGE:` in the commit body.
 
 **Principle 5: Releasing**
@@ -60,6 +63,7 @@ The marketplace is designed to host a variety of items including services, tools
 **Repository Structure**
 
 Organize your contribution in the appropriate directory:
+
 - `services/` - Platform services (e.g., observability, monitoring, data processing)
 - `tools/` - Reusable utilities and tools
 - `agents/` - Pre-built agents and agent templates
@@ -70,7 +74,6 @@ Organize your contribution in the appropriate directory:
 Each marketplace item should include:
 
 1. **Directory Structure**: Create a directory under the appropriate category (e.g., `services/your-service-name/`)
-
 2. **README.md**: Comprehensive documentation including:
    - Description and purpose
    - Features and capabilities
@@ -79,23 +82,21 @@ Each marketplace item should include:
    - Configuration options
    - Usage examples
    - Troubleshooting
-
 3. **Helm Chart** (for services):
    - Place in `chart/` subdirectory
    - Include `Chart.yaml` with proper metadata (see [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup))
    - Provide `values.yaml` with sensible defaults
    - Include necessary templates
    - For services with web UIs, configure UI URL annotations (see [Marketplace Setup Guide](https://mckinsey.github.io/agents-at-scale-marketplace/marketplace-setup#ui-url-configuration))
-
 4. **DevSpace Configuration** (recommended):
    - `devspace.yaml` for local development
    - Enables hot-reload and easy testing
-
 5. **Documentation Page**: Add a corresponding page in `docs/content/` to appear in the online documentation
 
 **Testing Your Contribution**
 
 Before submitting:
+
 - Test locally using DevSpace or Helm
 - Verify all documentation is accurate
 - Ensure examples work as described
@@ -106,12 +107,14 @@ For detailed information on configuring chart annotations and UI URLs, see the [
 **Language and Technology Choices**
 
 The marketplace welcomes contributions in various languages and technologies. Choose what best suits your use case:
+
 - **Python**: Popular for AI/ML services, data processing, and general-purpose tools
 - **Go**: Excellent for high-performance services, Kubernetes operators, and system-level tools
 - **JavaScript/TypeScript**: Common for web services, UIs, and Node.js tools
 - **Others**: Feel free to use other languages where appropriate
 
 The key is that your contribution should:
+
 - Be well-documented
 - Follow Kubernetes best practices (if applicable)
 - Include proper Helm charts for deployment
@@ -136,10 +139,41 @@ Then view the documentation at `http://localhost:3000`.
 **Adding Documentation for Marketplace Items:**
 
 When adding a new marketplace item, create a corresponding MDX file in `docs/content/`:
+
 - For services: `docs/content/services/your-service.mdx`
 - For other categories: Create appropriate subdirectories as needed
 
 Update `docs/content/_meta.js` or relevant category `_meta.js` to include your new page in the navigation.
+
+## Developer Certificate of Origin
+
+We require that all contributions comply with the [Developer Certificate of Origin (DCO)](https://developercertificate.org/). This certifies that the contributor wrote or otherwise has the right to submit their contribution.
+
+All commits must be signed off by including a `Signed-off-by` line in the commit message:
+
+```
+This is my commit message
+
+Signed-off-by: Random J Developer <random@developer.example.org>
+```
+
+The sign-off can be added automatically to your commit message using the `-s` option:
+
+```bash
+git commit -s -m "This is my commit message"
+```
+
+The name and email in the `Signed-off-by` line must match the commit author, or the DCO check fails. Set them with `git config user.name` and `git config user.email`.
+
+To avoid needing to remember the `-s` flag on every commit, you might like to set up a [git alias](https://git-scm.com/book/en/v2/Git-Basics-Git-Aliases) for `git commit -s`. Alternatively, run `make sign-off` to set up a `commit-msg` [Git hook](https://git-scm.com/docs/githooks#_commit_msg). The hook signs off all commits created in the marketplace repository, including merge commits.
+
+If only the latest unpushed commit is missing a sign-off, amend it:
+
+```bash
+git commit --amend --signoff --no-edit
+```
+
+For pushed or multiple unsigned commits, follow the "Rebase the branch" instructions on the DCO GitHub Check. Rebasing rewrites commit history, so coordinate with collaborators before updating a shared branch and only sign off commits that you have the right to submit.
 
 ## Guidelines for contributing developers
 
