@@ -105,33 +105,45 @@ class ClaudeAgentExecutor(BaseExecutor):
         return sdk_servers, allowed_tools
 
     async def execute_agent(self, request) -> List[Message]:
-        """Execute agent using ClaudeSDKClient and return response messages."""
-        conversation_id = request.conversationId
+        """Execute agent using ClaudeSDKClient and return response messages.
+
+        An absent conversationId means an unthreaded query, which is the default:
+        Query.spec.conversationId is optional and the SDK passes "" when it is
+        unset. Such a query runs in the sessions root with no session to resume,
+        rather than being rejected as an invalid path segment. Resume is skipped
+        because sessions are keyed by working directory, so resuming here would
+        hand one unthreaded query the transcript of an unrelated one.
+        """
+        conversation_id = request.conversationId or None
         user_input = request.userInput.content
 
         if not user_input:
             return [Message(role="assistant", content="Error: user input is required", name=request.agent.name)]
 
-        try:
-            session_dir = resolve_session_dir(conversation_id)
-        except ValueError as e:
-            logger.warning(f"Rejected conversationId for agent {request.agent.name}: {e}")
-            return [Message(role="assistant", content=f"Error: {e}", name=request.agent.name)]
+        if conversation_id:
+            try:
+                session_dir = resolve_session_dir(conversation_id)
+            except ValueError as e:
+                logger.warning(f"Rejected conversationId for agent {request.agent.name}: {e}")
+                return [Message(role="assistant", content=f"Error: {e}", name=request.agent.name)]
+        else:
+            session_dir = SESSIONS_DIR.resolve()
 
         model_name, api_key, base_url = self._resolve_model_config(request)
 
-        logger.info(f"Executing Claude Agent SDK query for agent {request.agent.name} (model: {model_name}, conversation: {conversation_id})")
+        logger.info(f"Executing Claude Agent SDK query for agent {request.agent.name} (model: {model_name}, conversation: {conversation_id or 'unthreaded'})")
 
         session_dir.mkdir(parents=True, exist_ok=True)
 
         # Find existing session to resume
         previous_session_id = None
-        try:
-            sessions = list_sessions(directory=str(session_dir), limit=1)
-            if sessions:
-                previous_session_id = sessions[0].session_id
-        except Exception:
-            logger.debug("Could not list sessions for %s", session_dir, exc_info=True)
+        if conversation_id:
+            try:
+                sessions = list_sessions(directory=str(session_dir), limit=1)
+                if sessions:
+                    previous_session_id = sessions[0].session_id
+            except Exception:
+                logger.debug("Could not list sessions for %s", session_dir, exc_info=True)
 
         mcp_kwargs: Dict = {}
         mcp_servers = getattr(request, "mcpServers", None) or []
@@ -165,7 +177,7 @@ class ClaudeAgentExecutor(BaseExecutor):
             **prompt_kwargs,
             **resume_kwargs,
         )
-        logger.info(f"{'Resuming session ' + previous_session_id if previous_session_id else 'Starting new session'} for conversation {conversation_id}")
+        logger.info(f"{'Resuming session ' + previous_session_id if previous_session_id else 'Starting new session'} for conversation {conversation_id or 'unthreaded'}")
 
         try:
             result_text = ""

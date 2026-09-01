@@ -93,6 +93,79 @@ class TestResolveSessionDir:
         assert not outside.exists()
 
 
+class TestUnthreadedQueriesStillRun:
+    """An unset conversationId is the default, not an invalid path segment.
+
+    Query.spec.conversationId is optional and the SDK sends "" when it is unset,
+    so validating it unconditionally turned every ordinary one-shot query into
+    "Error: invalid conversationId".
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("conversation_id", ["", None])
+    async def test_unthreaded_runs_in_sessions_root(self, conversation_id, tmp_path):
+        executor = ClaudeAgentExecutor.__new__(ClaudeAgentExecutor)
+        captured = {}
+
+        class FakeClient:
+            def __init__(self, options=None):
+                captured["options"] = options
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def query(self, prompt):
+                pass
+
+            async def receive_response(self):
+                return
+                yield
+
+        with patch("claude_agent_executor.executor.SESSIONS_DIR", tmp_path), \
+             patch("claude_agent_executor.executor.ClaudeSDKClient", FakeClient):
+            messages = await executor.execute_agent(_request(conversation_id))
+
+        assert not any(m.content.startswith("Error:") for m in messages)
+        assert captured["options"].cwd == str(tmp_path.resolve())
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("conversation_id", ["", None])
+    async def test_unthreaded_never_resumes_another_session(self, conversation_id, tmp_path):
+        executor = ClaudeAgentExecutor.__new__(ClaudeAgentExecutor)
+        captured = {}
+
+        class FakeClient:
+            def __init__(self, options=None):
+                captured["options"] = options
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def query(self, prompt):
+                pass
+
+            async def receive_response(self):
+                return
+                yield
+
+        stray = MagicMock()
+        stray.session_id = "someone-elses-session"
+
+        with patch("claude_agent_executor.executor.SESSIONS_DIR", tmp_path), \
+             patch("claude_agent_executor.executor.ClaudeSDKClient", FakeClient), \
+             patch("claude_agent_executor.executor.list_sessions", return_value=[stray]) as listed:
+            await executor.execute_agent(_request(conversation_id))
+
+        listed.assert_not_called()
+        assert getattr(captured["options"], "resume", None) is None
+
+
 class TestExecuteAgentRejection:
     """The escalation being closed: a rejected id must never reach ClaudeAgentOptions."""
 
