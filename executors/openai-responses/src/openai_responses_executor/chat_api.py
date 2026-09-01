@@ -165,6 +165,11 @@ async def chat(request: Request) -> StreamingResponse | JSONResponse:
         return JSONResponse({"error": "conversationId is required"}, status_code=400)
 
     try:
+        sessions.validate_conversation_id(conversation_id)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+    try:
         ctx = await _resolve_context(request)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
@@ -192,6 +197,10 @@ async def reset_chat(request: Request) -> JSONResponse:
     conversation_id = (body.get("conversationId") or "").strip()
     if not conversation_id:
         return JSONResponse({"error": "conversationId is required"}, status_code=400)
+    try:
+        sessions.validate_conversation_id(conversation_id)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
     await sessions.clear_conversation(conversation_id)
     return JSONResponse({"ok": True, "conversationId": conversation_id})
 
