@@ -37,9 +37,9 @@ never a silent skip.
 | Field | Type | Required | Default | Applies to | Meaning |
 |-------|------|----------|---------|-----------|---------|
 | `id` | string | **yes** | — | all | Unique identifier for the case; appears in the report. |
-| `check` | enum | **yes** | — | all | How to verify the slice. One of `structural`, `exact`, `judge` (see §3). |
+| `check` | enum | **yes** | — | all | How to verify the slice. One of `structural`, `exact`, `regex`, `schema`, `judge` (see §3). |
 | `slice` | string | no | `"$"` | all | JSONPath-subset pointer into the output (see §4). `"$"` = whole document. |
-| `expected` | any | conditional | `null` | `structural`, `exact` | The value the slice must equal (see §3). Ignored by `judge`. |
+| `expected` | any | conditional | `null` | `structural`, `exact`, `regex`, `schema` | The value the slice must equal; for `regex`, the pattern string; for `schema`, a JSON Schema object (see §3). Ignored by `judge`. |
 | `judge` | string | no | `"quality"` | `judge` | Which judge to use — a key under the suite's `judges/`. |
 | `source_documents` | array of objects | no | `[]` | `judge` | Evidence the judge scores against (grounding). Each object is free-form, e.g. `{"title": "...", "content": "..."}`. |
 | `description` | string | no | `""` | all | Human note; not used by scoring. |
@@ -51,7 +51,7 @@ freely (e.g. `"rationale_for_case": "..."`).
 
 ## 3. `check` — the one enum, and what each value needs
 
-`check` is the only enumerated field. **Allowed values (exactly these three):**
+`check` is the only enumerated field. **Allowed values (exactly these five):**
 
 ### `structural` — L1, deterministic, no model call
 Verifies shape/contract. Two modes, decided by whether `expected` is present:
@@ -79,6 +79,63 @@ equality).
   "expected": "Associated British Foods (ABF)" }
 ```
 
+### `regex` — L2, deterministic, no model call
+Passes if the slice, as a string, **matches the regular expression** in
+`expected` (Python `re.search`, so an unanchored pattern acts as "contains").
+`expected` is **required** and must be a pattern string. Non-string slices are
+coerced to their JSON string form before matching, so numbers/lists can still
+be pattern-matched. An **invalid** pattern is a case **error** (a broken test),
+not a fail.
+
+Use it for substring checks, case-insensitive checks, and format/shape checks:
+
+```json
+{ "id": "purpose-mentions-treasury", "check": "regex",
+  "slice": "$.\"Inquiry information\"[2].content[2].\"Account purpose\"",
+  "expected": "Treasury" }
+{ "id": "purpose-mentions-treasury-ci", "check": "regex",
+  "slice": "$.\"Inquiry information\"[2].content[2].\"Account purpose\"",
+  "expected": "(?i)treasury" }
+{ "id": "company-number-is-8-digits", "check": "regex",
+  "slice": "$.\"Inquiry information\"[0].content[2].\"Company Number\"",
+  "expected": "^\\d{8}$" }
+```
+
+Common patterns: `"Treasury"` (contains), `"(?i)treasury"` (case-insensitive),
+`"^\\d{8}$"` (exactly 8 digits), `"\\d{4}-\\d{2}-\\d{2}"` (an ISO-ish date),
+`"@"` (looks like an email). Remember JSON needs the backslash doubled
+(`\\d`, not `\d`).
+
+### `schema` — L2, deterministic, no model call
+Passes if the slice **validates against the JSON Schema** (Draft 2020-12) in
+`expected`. This is the *powerful* deterministic check: one type covers `type`,
+`enum`, `pattern`, `required`, `minLength`/`maxLength`, `minimum`/`maximum`,
+`minItems`, nested object/array shapes, and more — using the JSON Schema
+standard rather than a bespoke grammar. A malformed schema is a case **error**;
+a value that fails validation is a **fail** with the specific violation.
+
+```json
+{ "id": "purpose-is-nonempty-string", "check": "schema",
+  "slice": "$.\"Inquiry information\"[2].content[2].\"Account purpose\"",
+  "expected": { "type": "string", "minLength": 10 } }
+{ "id": "company-number-8-digits", "check": "schema",
+  "slice": "$.\"Inquiry information\"[0].content[2].\"Company Number\"",
+  "expected": { "type": "string", "pattern": "^\\d{8}$" } }
+{ "id": "status-is-known-value", "check": "schema",
+  "slice": "$.\"Inquiry information\"[0].content[0].\"validation status\"",
+  "expected": { "enum": ["_Pending_", "_Validated_"] } }
+{ "id": "at-least-one-product", "check": "schema",
+  "slice": "$.\"Inquiry information\"[2].content[1].\"Product requested\"",
+  "expected": { "type": "array", "minItems": 1 } }
+```
+
+**`structural` / `exact` / `regex` vs `schema`.** The first three are
+*ergonomic shortcuts* for the common cases — `exact` with `expected: "ACME"`
+reads better than `schema` with `{"const": "ACME"}`, and `regex` with
+`"Treasury"` beats `{"type": "string", "pattern": "Treasury"}`. Reach for
+`schema` when you need type/enum/range/array/nested validation the shortcuts
+can't express. Both tiers are deterministic and free.
+
 ### `judge` — L3, calls the LLM judge
 Sends the slice to the judge model (an Ark `Model`, via an Ark Query) and scores
 it against the judge's rubric. `expected` is **not** used for scoring (you may
@@ -103,6 +160,8 @@ whose quality is a matter of degree.
 | a field/section exists | `structural` (no `expected`) |
 | a field equals a fixed literal (a flag, an enum value) | `structural` (with `expected`) |
 | an extracted value equals a known-correct value | `exact` |
+| a value **contains** a substring, or matches a simple **pattern** | `regex` |
+| a value has a **type/enum/range/array shape**, or nested structure | `schema` |
 | free text is faithful / complete / well-toned | `judge` |
 
 ---
@@ -239,8 +298,10 @@ pass, `purpose-faithful` pass → **100%**. If the extractor instead wrote
 
 ## 7. Checklist for an author (human or agent)
 
-1. Every case has a unique `id` and a valid `check` (`structural` / `exact` / `judge`).
-2. `exact` cases have `expected`. `structural` cases have `expected` only if
+1. Every case has a unique `id` and a valid `check` (`structural` / `exact` /
+   `regex` / `schema` / `judge`).
+2. `exact`, `regex`, and `schema` cases have `expected` (a value / a pattern
+   string / a JSON Schema object). `structural` cases have `expected` only if
    asserting a literal.
 3. Every `judge` case's `judge` names a judge that exists under `judges/`.
 4. Every `slice` uses only the supported subset (§4) and resolves against a

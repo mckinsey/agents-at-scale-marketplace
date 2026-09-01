@@ -13,6 +13,9 @@ import json
 import re
 from typing import Any, Callable
 
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
+
 from .schemas import (
     CaseResult,
     CheckType,
@@ -73,6 +76,10 @@ def _grade_case(
         return _grade_structural(case, actual, result)
     if case.check is CheckType.EXACT:
         return _grade_exact(case, actual, result)
+    if case.check is CheckType.REGEX:
+        return _grade_regex(case, actual, result)
+    if case.check is CheckType.SCHEMA:
+        return _grade_schema(case, actual, result)
     return _grade_judge(case, suite, actual, result, judge_caller)
 
 
@@ -101,6 +108,63 @@ def _grade_exact(case: EvalCase, actual: Any, result: CaseResult) -> CaseResult:
         result.detail = f"{case.slice} == {_short(case.expected)}"
     else:
         result.detail = f"expected {_short(case.expected)}, got {_short(actual)}"
+    return result
+
+
+def _grade_regex(case: EvalCase, actual: Any, result: CaseResult) -> CaseResult:
+    """L2: the value (as a string) matches the `expected` regular expression.
+
+    Uses ``re.search`` so a plain substring like ``"Treasury"`` works as
+    "contains", while full patterns handle case-insensitivity ``(?i)``, dates,
+    formats, etc. A slice that is not a string is coerced with ``str()`` so a
+    number or list can still be pattern-matched. An invalid pattern is a case
+    error (a broken test), not a fail.
+    """
+    if case.expected is None or not isinstance(case.expected, str):
+        result.error = "regex check requires 'expected' to be a pattern string"
+        return result
+    text = actual if isinstance(actual, str) else json.dumps(actual, ensure_ascii=False)
+    try:
+        found = re.search(case.expected, text)
+    except re.error as exc:
+        result.error = f"invalid regex {case.expected!r}: {exc}"
+        return result
+    if found:
+        result.passed = True
+        result.detail = f"{case.slice} matches /{case.expected}/"
+    else:
+        result.detail = f"no match for /{case.expected}/ in {_short(text)}"
+    return result
+
+
+def _grade_schema(case: EvalCase, actual: Any, result: CaseResult) -> CaseResult:
+    """L2: the slice validates against the JSON Schema in `expected`.
+
+    Delegates deterministic validation to the `jsonschema` library (Draft
+    2020-12), so one check type covers type/enum/pattern/required/min-max/format
+    without bespoke code. A malformed schema is a case error (broken test); a
+    value that fails validation is a fail with the specific reason.
+    """
+    if not isinstance(case.expected, dict):
+        result.error = "schema check requires 'expected' to be a JSON Schema object"
+        return result
+    try:
+        Draft202012Validator.check_schema(case.expected)
+    except SchemaError as exc:
+        result.error = f"invalid JSON Schema: {exc.message}"
+        return result
+
+    errors = sorted(
+        Draft202012Validator(case.expected).iter_errors(actual),
+        key=lambda e: list(e.path),
+    )
+    if not errors:
+        result.passed = True
+        result.detail = f"{case.slice} validates against schema"
+    else:
+        first = errors[0]
+        loc = "".join(f"[{p!r}]" for p in first.path) or "(root)"
+        result.detail = f"schema violation at {loc}: {first.message}"
     return result
 
 

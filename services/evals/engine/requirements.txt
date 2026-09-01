@@ -1,4 +1,7 @@
 # Runtime dependencies for the ark_evals engine.
-# Deliberately lean: everything else (HTTP, multipart, JSON) is stdlib, and the
-# judge is called via `kubectl` (present in the image), so no Kubernetes client.
+# Deliberately lean: HTTP, multipart, and JSON are stdlib, and the judge is
+# called via `kubectl` (present in the image), so no Kubernetes client.
 pydantic>=2.0.0,<3.0.0
+# JSON Schema validation powers the `schema` check type (Draft 2020-12), so we
+# don't hand-roll type/enum/pattern/range assertions.
+jsonschema>=4.23.0,<5.0.0

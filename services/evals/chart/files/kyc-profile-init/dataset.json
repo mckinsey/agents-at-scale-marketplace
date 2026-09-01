@@ -20,6 +20,13 @@
     "description": "L2 — the company name was extracted exactly as it appears in the email"
   },
   {
+    "id": "purpose-mentions-treasury",
+    "check": "regex",
+    "slice": "$.\"Inquiry information\"[2].content[2].\"Account purpose\"",
+    "expected": "(?i)treasury",
+    "description": "L2 — the account purpose mentions a treasury account (case-insensitive substring via regex)"
+  },
+  {
     "id": "account-purpose-faithful",
     "check": "judge",
     "judge": "quality",

@@ -36,6 +36,8 @@ each failure at the cheapest level that can see it), each case targets a
 |------------|-------|----------|-----------------|
 | `structural` | L1 | shape/contract: a field exists, schema valid, a value equals a literal like `_Pending_` | no — deterministic |
 | `exact` | L2 | an extracted value equals the golden expected value | no — deterministic |
+| `regex` | L2 | a value contains a substring or matches a simple pattern | no — deterministic |
+| `schema` | L2 | a value matches a JSON Schema (type/enum/pattern/range/array/nested) | no — deterministic |
 | `judge` | L3 | free-text quality: faithfulness to the evidence, completeness, tone | yes — LLM-as-judge |
 
 So `structural` and `exact` cases cost nothing and never flake; only `judge`

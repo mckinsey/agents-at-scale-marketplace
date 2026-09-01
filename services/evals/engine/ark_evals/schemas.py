@@ -21,6 +21,8 @@ class CheckType(str, Enum):
 
     STRUCTURAL = "structural"  # L1 — deterministic shape/contract
     EXACT = "exact"  # L2 — deterministic value equality
+    REGEX = "regex"  # L2 — deterministic pattern match (substring, format, ...)
+    SCHEMA = "schema"  # L2 — deterministic JSON Schema validation (Draft 2020-12)
     JUDGE = "judge"  # L3 — LLM-as-judge on free text
 
 
