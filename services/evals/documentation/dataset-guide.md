@@ -39,7 +39,8 @@ never a silent skip.
 |-------|------|----------|---------|-----------|---------|
 | `id` | string | **yes** | — | all | Unique identifier for the case; appears in the report. |
 | `check` | enum | **yes** | — | all | How to verify the slice. One of `structural`, `exact`, `regex`, `schema`, `judge` (see §3). |
-| `slice` | string | no | `"$"` | all | JSONPath-subset pointer into the output (see §4). `"$"` = whole document. |
+| `source` | enum | no | `"output"` | all | Which document the slice resolves against: `output` (what the workflow produced) or `input` (what it was given, e.g. the source email). `input` needs the run to be given the input location — see §5. |
+| `slice` | string | no | `"$"` | all | JSONPath-subset pointer into the chosen document (see §4). `"$"` = whole document. |
 | `expected` | any | conditional | `null` | `structural`, `exact`, `regex`, `schema` | The value the slice must equal; for `regex`, the pattern string; for `schema`, a JSON Schema object (see §3). Ignored by `judge`. |
 | `judge` | string | no | `"quality"` | `judge` | Which judge to use — a key under the suite's `judges/`. |
 | `source_documents` | array of objects | no | `[]` | `judge` | Evidence the judge scores against (grounding). Each object is free-form, e.g. `{"title": "...", "content": "..."}`. |
@@ -182,8 +183,10 @@ predictable subset (not full JSONPath):
 | `$."key with spaces"` | quoted key (needed when a key contains spaces or dots) — in JSON you write `$.\"key with spaces\"` |
 
 **Not supported** (will fail to parse or resolve): wildcards (`*`), recursive
-descent (`..`), filters (`[?(...)]`), slices (`[0:2]`), functions. If you need
-these, see §7 — they are candidates for a future version.
+descent (`..`), filters (`[?(...)]`), slices (`[0:2]`), functions. These are
+candidates for a future version; for now, target a fixed index, or use a
+`schema` check (whose `items`/`contains` cover "every element" / "at least one"
+without wildcards).
 
 A slice that does not resolve produces a **case error** (not a fail) whose
 message names the path, where it broke, and the keys actually available — e.g.:
@@ -194,7 +197,45 @@ slice '$.NoSuchKey': key 'NoSuchKey' not found at $ (available: ['Inquiry inform
 
 ---
 
-## 5. Pass / fail / error — how a case is scored
+## 5. `source` — evaluating the input, not just the output
+
+By default a case's `slice` resolves against the workflow's **output**. Set
+`source: "input"` to resolve it against the workflow's **input** instead — the
+document the workflow was given (e.g. the source email). This is what makes an
+*extraction* eval possible: you can assert facts about the input, and — most
+importantly — judge whether the output is faithful to it.
+
+`source: "input"` requires the run to be told where the input is (the trigger's
+`input-key`, see the service README / chart `NOTES.txt`). If it wasn't, an
+`input` case is a clear **error** (not a fail): "targets source 'input' but the
+run was given no input-key".
+
+The input is often plain text (an email), not JSON. When it is, `slice: "$"`
+gives you the whole text and `regex`/`judge` work on it directly; when the input
+is JSON, the normal slice syntax applies.
+
+```json
+{ "id": "email-mentions-treasury", "source": "input", "check": "regex",
+  "slice": "$", "expected": "(?i)treasury" }
+```
+
+**Judge grounding.** Independently of `source`, every `judge` case is given the
+real workflow input as a `{workflow_input}` placeholder in its prompt (empty if
+no input-key was provided). So a judge prompt can score groundedness against the
+actual input rather than a hand-copied excerpt:
+
+```
+Score whether the output is faithful to the source the workflow was given.
+Output: {output}
+Source the workflow was given: {workflow_input}
+```
+
+`source_documents` on a case still work as an explicit, per-case evidence list;
+`{workflow_input}` is the automatic, always-the-real-thing counterpart.
+
+---
+
+## 6. Pass / fail / error — how a case is scored
 
 - **pass** — the check succeeded.
 - **fail** — the check ran and the output was wrong (`exact` mismatch, a judge
@@ -215,7 +256,7 @@ judge dimension, 3), and `judge_thresholds.<judge>.<dimension>` (overrides).
 
 ---
 
-## 6. End-to-end example
+## 7. End-to-end example
 
 A minimal but complete suite that grades a KYC-style extraction output.
 
@@ -297,7 +338,7 @@ pass, `purpose-faithful` pass → **100%**. If the extractor instead wrote
 
 ---
 
-## 7. Checklist for an author (human or agent)
+## 8. Checklist for an author (human or agent)
 
 1. Every case has a unique `id` and a valid `check` (`structural` / `exact` /
    `regex` / `schema` / `judge`).

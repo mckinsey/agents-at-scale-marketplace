@@ -23,6 +23,7 @@ from .schemas import (
     JudgeSpec,
     JudgeVerdict,
     RunReport,
+    Source,
     Suite,
 )
 from .slicing import SliceError, resolve_slice
@@ -43,8 +44,15 @@ def grade_suite(
     output_path: str,
     workflow: str,
     judge_caller: JudgeCaller,
+    workflow_input: Any = None,
 ) -> RunReport:
-    """Grade every case in ``suite`` against ``output`` and aggregate a report."""
+    """Grade every case in ``suite`` against ``output`` and aggregate a report.
+
+    ``workflow_input`` is the document the workflow was given (e.g. the source
+    email). It is optional: when absent, ``source: input`` cases error and the
+    judge's ``{workflow_input}`` grounding is empty. When present, cases can
+    target it and the judge scores faithfulness against the real input.
+    """
     report = RunReport(
         suite=suite.name,
         judge_model=suite.judge_model,
@@ -53,7 +61,9 @@ def grade_suite(
         threshold=suite.threshold,
     )
     for case in suite.cases:
-        report.results.append(_grade_case(case, suite, output, judge_caller))
+        report.results.append(
+            _grade_case(case, suite, output, workflow_input, judge_caller)
+        )
 
     report.total = len(report.results)
     report.passed = sum(1 for r in report.results if r.error is None and r.passed)
@@ -63,11 +73,28 @@ def grade_suite(
 
 
 def _grade_case(
-    case: EvalCase, suite: Suite, output: Any, judge_caller: JudgeCaller
+    case: EvalCase,
+    suite: Suite,
+    output: Any,
+    workflow_input: Any,
+    judge_caller: JudgeCaller,
 ) -> CaseResult:
     result = CaseResult(case_id=case.id, check=case.check, slice=case.slice)
+
+    # Pick the document the slice resolves against (story: input↔output checks).
+    if case.source is Source.INPUT:
+        if workflow_input is None:
+            result.error = (
+                "case targets source 'input' but the run was given no input-key; "
+                "pass the workflow input location to evaluate against it"
+            )
+            return result
+        document = workflow_input
+    else:
+        document = output
+
     try:
-        actual = resolve_slice(output, case.slice)
+        actual = resolve_slice(document, case.slice)
     except SliceError as exc:
         result.error = str(exc)
         return result
@@ -80,7 +107,7 @@ def _grade_case(
         return _grade_regex(case, actual, result)
     if case.check is CheckType.SCHEMA:
         return _grade_schema(case, actual, result)
-    return _grade_judge(case, suite, actual, result, judge_caller)
+    return _grade_judge(case, suite, actual, result, judge_caller, workflow_input)
 
 
 def _grade_structural(case: EvalCase, actual: Any, result: CaseResult) -> CaseResult:
@@ -174,6 +201,7 @@ def _grade_judge(
     actual: Any,
     result: CaseResult,
     judge_caller: JudgeCaller,
+    workflow_input: Any = None,
 ) -> CaseResult:
     """L3: score the slice with the LLM judge, recompute pass/fail."""
     spec = suite.judges.get(case.judge)
@@ -181,7 +209,7 @@ def _grade_judge(
         result.error = f"judge {case.judge!r} not defined in suite"
         return result
 
-    prompt = _fill_prompt(spec.prompt, case, actual)
+    prompt = _fill_prompt(spec.prompt, case, actual, workflow_input)
     try:
         raw = judge_caller(prompt, suite.judge_model)
     except Exception as exc:  # noqa: BLE001 — surface any judge transport failure
@@ -212,13 +240,31 @@ def _grade_judge(
     return result
 
 
-def _fill_prompt(prompt: str, case: EvalCase, actual: Any) -> str:
-    """Fill ``{output}``/``{source_documents}``/``{expected}`` placeholders."""
+def _fill_prompt(
+    prompt: str, case: EvalCase, actual: Any, workflow_input: Any = None
+) -> str:
+    """Fill the judge-prompt placeholders.
+
+    Supported: ``{output}`` (the graded slice), ``{source_documents}`` (evidence
+    declared on the case), ``{expected}`` (the case's expected value), and
+    ``{workflow_input}`` — the real document the workflow was given, so the
+    judge can score faithfulness against the actual input rather than a
+    hand-copied excerpt. ``{workflow_input}`` is empty when no input-key was
+    provided to the run.
+    """
+    input_str = (
+        workflow_input
+        if isinstance(workflow_input, str)
+        else json.dumps(workflow_input, ensure_ascii=False)
+        if workflow_input is not None
+        else ""
+    )
     try:
         return prompt.format(
             output=json.dumps(actual, ensure_ascii=False),
             source_documents=json.dumps(case.source_documents, ensure_ascii=False),
             expected=json.dumps(case.expected, ensure_ascii=False),
+            workflow_input=input_str,
         )
     except (KeyError, ValueError, IndexError):
         # A prompt that uses no placeholders (or an unknown one) is sent as-is,

@@ -27,6 +27,24 @@
     "description": "L2 — the account purpose mentions a treasury account (case-insensitive substring via regex)"
   },
   {
+    "id": "company-number-format",
+    "check": "schema",
+    "slice": "$.\"Inquiry information\"[0].content[2].\"Company Number\"",
+    "expected": {
+      "type": "string",
+      "pattern": "^\\d{8}$"
+    },
+    "description": "L2 (schema) — company number, if present, is an 8-digit string"
+  },
+  {
+    "id": "input-mentions-abf",
+    "source": "input",
+    "check": "regex",
+    "slice": "$",
+    "expected": "(?i)associated british foods",
+    "description": "L2 on the INPUT — the source email actually names the company we expect to extract"
+  },
+  {
     "id": "account-purpose-faithful",
     "check": "judge",
     "judge": "quality",

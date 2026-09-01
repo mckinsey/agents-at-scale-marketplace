@@ -23,6 +23,8 @@ spec:
       - name: report-key
       - name: workflow-name
         value: ""
+      - name: input-key
+        value: ""
 
   templates:
     - name: evaluate
@@ -32,6 +34,10 @@ spec:
           - name: output-key
           - name: report-key
           - name: workflow-name
+          # Optional: the workflow input (e.g. the source email). When set, cases
+          # can target source:input and the judge scores against the real input.
+          - name: input-key
+            value: ""
       # The suite ConfigMap (eval-suite-<suite-name>) is mounted as a volume, so
       # each key becomes a file the engine's loader reads (story 01).
       volumes:
@@ -51,6 +57,8 @@ spec:
           - "/suite"
           - "--output-key"
           - "{{ "{{inputs.parameters.output-key}}" }}"
+          - "--input-key"
+          - "{{ "{{inputs.parameters.input-key}}" }}"
           - "--report-key"
           - "{{ "{{inputs.parameters.report-key}}" }}"
           - "--file-gateway-url"

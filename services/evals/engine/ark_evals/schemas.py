@@ -26,6 +26,19 @@ class CheckType(str, Enum):
     JUDGE = "judge"  # L3 — LLM-as-judge on free text
 
 
+class Source(str, Enum):
+    """Which document a case's slice resolves against.
+
+    ``output`` (default) is what the workflow produced; ``input`` is what the
+    workflow was given (e.g. the source email) — available only when the run is
+    told where the input is. A judge case always also receives the workflow
+    input as grounding, regardless of this field.
+    """
+
+    OUTPUT = "output"
+    INPUT = "input"
+
+
 class EvalCase(BaseModel):
     """One golden case: a slice of the output + how to check it.
 
@@ -37,7 +50,11 @@ class EvalCase(BaseModel):
 
     id: str
     description: str = ""
-    #: JSONPath-like pointer into the produced output. ``$`` (or omitted) means
+    #: Which document the slice resolves against — the workflow ``output``
+    #: (default) or its ``input``. ``input`` requires the run to be given the
+    #: input location (see the trigger's ``input-key``).
+    source: Source = Source.OUTPUT
+    #: JSONPath-like pointer into the chosen document. ``$`` (or omitted) means
     #: the whole document. See :mod:`ark_evals.slicing` for the supported subset.
     slice: str = "$"
     check: CheckType

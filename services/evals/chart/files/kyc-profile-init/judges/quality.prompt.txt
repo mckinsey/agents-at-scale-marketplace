@@ -17,5 +17,5 @@ with exactly these keys:
 Output under evaluation:
 {output}
 
-Source evidence the workflow had:
-{source_documents}
+The actual input the workflow was given (grade groundedness against THIS):
+{workflow_input}

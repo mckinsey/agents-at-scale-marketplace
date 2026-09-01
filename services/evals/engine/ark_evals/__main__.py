@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .ark_query import ask_model
 from .grader import grade_suite
-from .output_source import OutputError, load_output
+from .output_source import OutputError, load_input, load_output
 from .report import render_markdown, render_summary_line
 from .suite_loader import SuiteError, load_suite
 
@@ -32,6 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     p_run = sub.add_parser("run", help="evaluate a produced output against a suite")
     p_run.add_argument("--suite-dir", required=True, help="mounted suite ConfigMap dir")
     p_run.add_argument("--output-key", required=True, help="file-gateway key of the produced output")
+    p_run.add_argument("--input-key", default="", help="file-gateway key of the workflow input (optional; enables source:input cases and judge grounding)")
     p_run.add_argument("--report-key", required=True, help="file-gateway key to write the Markdown report to")
     p_run.add_argument("--file-gateway-url", required=True, help="file-gateway REST base URL")
     p_run.add_argument("--namespace", default="default", help="namespace for judge Queries")
@@ -76,6 +77,16 @@ def _cmd_run(args: argparse.Namespace) -> int:
         print(f"eval could not read output: {exc}", file=sys.stderr)
         return 2
 
+    # The workflow input is optional. If given, cases can target source:input
+    # and the judge scores faithfulness against the real input. A missing input
+    # file is an eval error only for cases that need it, not for the whole run.
+    workflow_input = None
+    if args.input_key:
+        try:
+            workflow_input = load_input(args.file_gateway_url, args.input_key)
+        except OutputError as exc:
+            print(f"warning: could not read input {args.input_key!r}: {exc}", file=sys.stderr)
+
     def judge_caller(prompt: str, model: str) -> str:
         return ask_model(prompt, model=model, namespace=args.namespace)
 
@@ -85,6 +96,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         output_path=args.output_key,
         workflow=args.workflow,
         judge_caller=judge_caller,
+        workflow_input=workflow_input,
     )
 
     markdown = render_markdown(report)

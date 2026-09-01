@@ -28,6 +28,11 @@ Trigger an eval from a workflow's onExit hook (story 02). In the workflow spec:
                   value: <where to write the Markdown report>
                 - name: workflow-name
                   value: "{{ "{{workflow.name}}" }}"
+                # Optional: the workflow input (e.g. the source file). Enables
+                # source:input cases and gives the judge the real input as
+                # grounding. Omit if you only evaluate the output.
+                - name: input-key
+                  value: <the file key the workflow was given>
 
 The report is written to the file-gateway at the report-key and echoed to the
 handler log. It is report-only: a below-threshold result does not fail the run.
