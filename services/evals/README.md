@@ -33,17 +33,11 @@ A suite is a folder (see `chart/files/kyc-profile-init` for the reference):
 ```
 
 Each case targets a **slice** of the output and declares a **check type**. Pick
-the cheapest check that can see the failure:
-
-| Intent | Use | Example |
-|--------|-----|---------|
-| A field / section exists, or equals a fixed literal | `structural` (L1) | `"validation status"` is `_Pending_` |
-| An extracted value equals a known-correct value | `exact` (L2) | `Company Name` == `Associated British Foods (ABF)` |
-| Free text is faithful / complete / well-toned | `judge` (L3) | `Account purpose` faithfully summarizes the email |
-
-Only `judge` cases call the model; `structural` and `exact` are deterministic
-and free. A `slice` is a small JSONPath subset: `$`, `$.key`, `$.a.b`,
-`$.list[0]`, quoted keys with spaces (`$."Inquiry information"[0]`).
+the cheapest check that can see the failure — deterministic checks
+(`structural`, `exact`, `regex`, `schema`) cost nothing and never flake; only
+`judge` calls the model. The full reference — every check type, the slice
+syntax, and an end-to-end example — is in
+[`documentation/dataset-guide.md`](documentation/dataset-guide.md).
 
 Validate a suite before running it (no model calls):
 

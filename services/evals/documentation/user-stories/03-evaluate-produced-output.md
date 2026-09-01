@@ -40,6 +40,10 @@ each failure at the cheapest level that can see it), each case targets a
 | `schema` | L2 | a value matches a JSON Schema (type/enum/pattern/range/array/nested) | no — deterministic |
 | `judge` | L3 | free-text quality: faithfulness to the evidence, completeness, tone | yes — LLM-as-judge |
 
+> This table states the *contract* (the levels of the pyramid). The operational
+> reference for authoring cases — exact field semantics, `expected` shapes, the
+> slice syntax — is [`../dataset-guide.md`](../dataset-guide.md).
+
 So `structural` and `exact` cases cost nothing and never flake; only `judge`
 cases invoke the model. A suite's pass rate is then a meaningful mix of cheap
 deterministic checks and judged quality, and a failure names the specific

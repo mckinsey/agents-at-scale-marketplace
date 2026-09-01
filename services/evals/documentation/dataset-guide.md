@@ -8,8 +8,9 @@ explicitly, with no reliance on reading the engine source.
 
 > Where this fits: a suite is a folder (`suite.json` + `dataset.json` +
 > `judges/`). This guide covers `dataset.json` only. For the suite as a whole
-> see [`01-configure-eval-suite.md`](01-configure-eval-suite.md); for how a case
-> is graded see [`03-evaluate-produced-output.md`](03-evaluate-produced-output.md).
+> see [`user-stories/01-configure-eval-suite.md`](user-stories/01-configure-eval-suite.md);
+> for how a case is graded see
+> [`user-stories/03-evaluate-produced-output.md`](user-stories/03-evaluate-produced-output.md).
 
 ---
 
