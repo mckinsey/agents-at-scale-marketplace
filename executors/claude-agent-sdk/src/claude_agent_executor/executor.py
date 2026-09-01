@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -13,6 +14,29 @@ from claude_agent_sdk.types import AssistantMessage, TextBlock, ToolUseBlock
 logger = logging.getLogger(__name__)
 
 SESSIONS_DIR = Path(os.getenv("SESSIONS_DIR", "/data/sessions"))
+
+SAFE_CONVERSATION_ID = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$")
+
+
+def resolve_session_dir(conversation_id: str) -> Path:
+    """Map a conversationId to its session directory, rejecting path traversal.
+
+    conversationId reaches the executor unvalidated from Query.spec.conversationId,
+    the A2A contextId and the a2a-context-id annotation, so the join is guarded here
+    rather than at any single caller.
+    """
+    if not SAFE_CONVERSATION_ID.fullmatch(conversation_id or ""):
+        raise ValueError(
+            f"invalid conversationId: must match {SAFE_CONVERSATION_ID.pattern}"
+        )
+
+    root = SESSIONS_DIR.resolve()
+    resolved = (root / conversation_id).resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError("conversationId resolves outside the sessions directory")
+
+    return resolved
+
 
 # Executor-specific instrumentation — only the Claude Agent SDK instrumentor
 if is_otel_enabled():
@@ -81,28 +105,45 @@ class ClaudeAgentExecutor(BaseExecutor):
         return sdk_servers, allowed_tools
 
     async def execute_agent(self, request) -> List[Message]:
-        """Execute agent using ClaudeSDKClient and return response messages."""
-        conversation_id = request.conversationId
+        """Execute agent using ClaudeSDKClient and return response messages.
+
+        An absent conversationId means an unthreaded query, which is the default:
+        Query.spec.conversationId is optional and the SDK passes "" when it is
+        unset. Such a query runs in the sessions root with no session to resume,
+        rather than being rejected as an invalid path segment. Resume is skipped
+        because sessions are keyed by working directory, so resuming here would
+        hand one unthreaded query the transcript of an unrelated one.
+        """
+        conversation_id = request.conversationId or None
         user_input = request.userInput.content
 
         if not user_input:
             return [Message(role="assistant", content="Error: user input is required", name=request.agent.name)]
 
+        if conversation_id:
+            try:
+                session_dir = resolve_session_dir(conversation_id)
+            except ValueError as e:
+                logger.warning(f"Rejected conversationId for agent {request.agent.name}: {e}")
+                return [Message(role="assistant", content=f"Error: {e}", name=request.agent.name)]
+        else:
+            session_dir = SESSIONS_DIR.resolve()
+
         model_name, api_key, base_url = self._resolve_model_config(request)
 
-        logger.info(f"Executing Claude Agent SDK query for agent {request.agent.name} (model: {model_name}, conversation: {conversation_id})")
+        logger.info(f"Executing Claude Agent SDK query for agent {request.agent.name} (model: {model_name}, conversation: {conversation_id or 'unthreaded'})")
 
-        session_dir = SESSIONS_DIR / conversation_id
         session_dir.mkdir(parents=True, exist_ok=True)
 
         # Find existing session to resume
         previous_session_id = None
-        try:
-            sessions = list_sessions(directory=str(session_dir), limit=1)
-            if sessions:
-                previous_session_id = sessions[0].session_id
-        except Exception:
-            logger.debug("Could not list sessions for %s", session_dir, exc_info=True)
+        if conversation_id:
+            try:
+                sessions = list_sessions(directory=str(session_dir), limit=1)
+                if sessions:
+                    previous_session_id = sessions[0].session_id
+            except Exception:
+                logger.debug("Could not list sessions for %s", session_dir, exc_info=True)
 
         mcp_kwargs: Dict = {}
         mcp_servers = getattr(request, "mcpServers", None) or []
@@ -136,7 +177,7 @@ class ClaudeAgentExecutor(BaseExecutor):
             **prompt_kwargs,
             **resume_kwargs,
         )
-        logger.info(f"{'Resuming session ' + previous_session_id if previous_session_id else 'Starting new session'} for conversation {conversation_id}")
+        logger.info(f"{'Resuming session ' + previous_session_id if previous_session_id else 'Starting new session'} for conversation {conversation_id or 'unthreaded'}")
 
         try:
             result_text = ""
