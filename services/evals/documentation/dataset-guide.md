@@ -164,6 +164,7 @@ whose quality is a matter of degree.
 | an extracted value equals a known-correct value | `exact` |
 | a value **contains** a substring, or matches a simple **pattern** | `regex` |
 | a value has a **type/enum/range/array shape**, or nested structure | `schema` |
+| a **conditional rule** within one JSON document (if X then Y) | `schema` (`if`/`then`, see §5) |
 | free text is faithful / complete / well-toned | `judge` |
 
 ---
@@ -218,6 +219,46 @@ is JSON, the normal slice syntax applies.
 { "id": "email-mentions-treasury", "source": "input", "check": "regex",
   "slice": "$", "expected": "(?i)treasury" }
 ```
+
+### Conditional rules within one document (`if`/`then`)
+
+When the input (or output) **is JSON**, a `schema` check can express a
+conditional rule with JSON Schema's `if`/`then`: *"IF the document looks like X,
+THEN it must also satisfy Y."* If the `if` doesn't match, `then` is skipped and
+the case passes — so the rule only bites when it applies.
+
+Example — a business rule on a structured request input: *"IF `account_type` is
+`corporate`, THEN `company.name` must be present."*
+
+```json
+{
+  "id": "corporate-requires-company",
+  "source": "input",
+  "check": "schema",
+  "slice": "$",
+  "expected": {
+    "type": "object",
+    "if":   { "properties": { "account_type": { "const": "corporate" } },
+              "required": ["account_type"] },
+    "then": { "required": ["company"],
+              "properties": { "company": { "required": ["name"] } } }
+  }
+}
+```
+
+- input `{"account_type":"corporate","company":{"name":"ACME"}}` → **pass**
+- input `{"account_type":"corporate"}` → **fail** (`'company' is a required property`)
+- input `{"account_type":"personal", ...}` → **pass** (the `if` doesn't match, so
+  the rule doesn't apply)
+
+> **Scope limit — this is single-document only.** `if`/`then` reasons about
+> *one* document: the whole `if` and the whole `then` are evaluated against the
+> same slice. You **cannot** condition on the input and assert on the output in
+> one case (e.g. "IF the input says corporate, THEN the *output* must have a
+> company field") — a case has one `source` and sees one document. Cross-source
+> correlation is deliberately out of scope; use a `judge` case (which sees both
+> the output and `{workflow_input}`) for that today. Note also that `if`/`then`
+> needs JSON: on a plain-text input, use `regex` instead.
 
 **Judge grounding.** Independently of `source`, every `judge` case is given the
 real workflow input as a `{workflow_input}` placeholder in its prompt (empty if
