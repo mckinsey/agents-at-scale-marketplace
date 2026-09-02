@@ -165,7 +165,7 @@ server, and every port except those named.
 |----------------|-------|
 | DNS | CoreDNS in `kube-system`, TCP+UDP 53 |
 | Kubernetes API | Resolves Agent, Model, Tool, MCPServer and Secret. Address read from the cluster |
-| OTEL collector | Read from the `otel-environment-variables` secret |
+| OTEL collector | Read from the `otel-environment-variables` secret. In-cluster gets a rule for its namespace and port; an external one gets its port added to the public-internet rule, since OTLP commonly uses 4317/4318 |
 | Public internet, TCP 443 | Anthropic API, WebFetch, git. Private ranges and the metadata server stay blocked |
 | Pods in this namespace | ark-broker, co-located MCP servers |
 | Namespaces labelled `ark.mckinsey.com/executor-egress=allowed` | Cross-namespace targets |
@@ -292,6 +292,10 @@ globally routable address is not covered at all, so set `apiServerCIDRs` in that
 - **Installing Phoenix or Langfuse after the executor** needs `helm upgrade` on the executor to pick
   up the new endpoint — the same reason Phoenix asks you to restart its consumers.
 - **NodeLocal DNSCache** is not matched by the CoreDNS rule; add it via `extraEgress`.
+- **An external OTLP collector widens egress by its port.** A detected external endpoint on, say,
+  4318 opens that port to the public internet, not just to the collector — NetworkPolicy matches
+  addresses, not hostnames. With `internetPorts: []` nothing is opened, and the collector has to be
+  declared in `extraEgress` instead.
 - **Cilium clusters should verify API access after upgrading.** Cilium matches CIDR rules against
   cluster-external destinations and provides a dedicated `kube-apiserver` entity for this case, so
   an `ipBlock` rule may not behave as it does on Calico. If API calls fail, express API server
