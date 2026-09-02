@@ -96,8 +96,10 @@ networkPolicy:
   # and the backing endpoint addresses, because Kubernetes does not define whether
   # egress policy is matched before or after Service address rewriting, and it
   # differs between network plugins.
-  # Renders with no cluster access - CI, GitOps - fall back to the private ranges
-  # on ports 443, 6443 and 8443, which works anywhere. Setting these replaces both
+  # Renders with no cluster access - CI, GitOps - fall back to the private IPv4
+  # ranges plus IPv6 ULA space on ports 443, 6443 and 8443, covering single-stack
+  # clusters of either family. Set these when the API server is reached over a
+  # globally routable address, or to narrow the fallback; doing so replaces both
   # detected forms with exactly what you list.
   apiServerCIDRs: []
   apiServerPorts: []

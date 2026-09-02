@@ -14,7 +14,9 @@ address is usually the node IP, and pairing it with the Service port 443 would
 also open anything host-networked listening there.
 
 Renders with no cluster access - CI, GitOps - return no peers, and the caller
-falls back to the private ranges on the API server ports.
+falls back to the private IPv4 ranges plus IPv6 ULA space on the API server
+ports, covering both single-stack families. An API server reached over a
+globally routable address still needs apiServerCIDRs set explicitly.
 */}}
 {{- define "claude-agent-sdk.apiServer" -}}
 {{- $peers := list -}}
@@ -165,6 +167,8 @@ deployment so the two cannot drift apart. Everything not listed is denied.
         cidr: 172.16.0.0/12
     - ipBlock:
         cidr: 192.168.0.0/16
+    - ipBlock:
+        cidr: "fc00::/7"
   ports:
     {{- range (list 443 6443 8443) }}
     - protocol: TCP
@@ -185,6 +189,7 @@ deployment so the two cannot drift apart. Everything not listed is denied.
         cidr: "::/0"
         except:
           - "fc00::/7"
+          - "fe80::/10"
   ports:
     {{- range $np.internetPorts }}
     - protocol: TCP

@@ -268,8 +268,9 @@ networkPolicy:
 ```
 
 With `autoDetect: false` and no addresses supplied, the API server rule falls back to the private
-ranges on ports 443, 6443 and 8443, which works on any cluster but is broader than naming the
-address.
+IPv4 ranges plus IPv6 ULA space (`fc00::/7`) on ports 443, 6443 and 8443. That covers single-stack
+clusters of either family, but is broader than naming the address — and an API server reached over a
+globally routable address is not covered at all, so set `apiServerCIDRs` in that case.
 
 ### Caveats
 
