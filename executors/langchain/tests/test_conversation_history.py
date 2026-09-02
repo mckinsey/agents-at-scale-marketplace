@@ -2,6 +2,7 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage
 
 from langchain_executor.executor import LangChainExecutor
@@ -112,3 +113,100 @@ async def test_rag_augmented_message_stored_in_history(mock_rag, mock_create_cli
     assert "RELEVANT CODE CONTEXT" in user_msg.content
     assert "def foo(): pass" in user_msg.content
     assert "explain foo" in user_msg.content
+
+
+# --- _index_code ---
+
+
+@pytest.mark.asyncio
+@patch("langchain_executor.executor.index_code_files")
+async def test_index_code_no_chunks_marks_indexed_without_embeddings(mock_index_files):
+    mock_index_files.return_value = []
+
+    executor = LangChainExecutor()
+    await executor._index_code(model_config=MagicMock())
+
+    assert executor._indexed is True
+    assert executor.vector_store is None
+
+
+@pytest.mark.asyncio
+@patch("langchain_executor.executor.create_embeddings_client")
+@patch("langchain_executor.executor.index_code_files")
+async def test_index_code_embeddings_failure_falls_back(mock_index_files, mock_create_embeddings):
+    mock_index_files.return_value = [Document(page_content="x", metadata={})]
+    mock_create_embeddings.side_effect = RuntimeError("no credentials")
+
+    executor = LangChainExecutor()
+    await executor._index_code(model_config=MagicMock())
+
+    assert executor._indexed is True
+    assert executor.vector_store is None
+
+
+# --- _retrieve_relevant_code ---
+
+
+def test_retrieve_relevant_code_no_vector_store_returns_chunks():
+    executor = LangChainExecutor()
+    executor.code_chunks = [Document(page_content=str(i), metadata={}) for i in range(10)]
+
+    result = executor._retrieve_relevant_code("query", k=3)
+
+    assert result == executor.code_chunks[:3]
+
+
+def test_retrieve_relevant_code_no_vector_store_and_no_chunks():
+    executor = LangChainExecutor()
+
+    assert executor._retrieve_relevant_code("query") == []
+
+
+def test_retrieve_relevant_code_uses_vector_search():
+    executor = LangChainExecutor()
+    docs = [Document(page_content="hit", metadata={})]
+    executor.vector_store = MagicMock()
+    executor.vector_store.similarity_search.return_value = docs
+
+    result = executor._retrieve_relevant_code("query", k=5)
+
+    executor.vector_store.similarity_search.assert_called_once_with("query", k=5)
+    assert result == docs
+
+
+def test_retrieve_relevant_code_search_failure_returns_empty():
+    executor = LangChainExecutor()
+    executor.vector_store = MagicMock()
+    executor.vector_store.similarity_search.side_effect = RuntimeError("boom")
+
+    assert executor._retrieve_relevant_code("query") == []
+
+
+# --- _get_code_context (real implementation, not mocked) ---
+
+
+@pytest.mark.asyncio
+@patch("langchain_executor.executor.create_chat_client")
+@patch("langchain_executor.executor.create_vector_store")
+@patch("langchain_executor.executor.create_embeddings_client")
+@patch("langchain_executor.executor.index_code_files")
+async def test_execute_agent_rag_end_to_end_without_mocking_get_code_context(
+    mock_index_files, mock_create_embeddings, mock_create_vector_store, mock_create_chat_client
+):
+    """Exercises _get_code_context -> _index_code -> _retrieve_relevant_code together."""
+    doc = Document(page_content="def foo(): pass", metadata={"relative_path": "foo.py"})
+    mock_index_files.return_value = [doc]
+    mock_vector_store = MagicMock()
+    mock_vector_store.similarity_search.return_value = [doc]
+    mock_create_vector_store.return_value = mock_vector_store
+    mock_create_chat_client.return_value = _streaming_client(["answer"])
+
+    executor = LangChainExecutor()
+    request = _make_request(conversation_id="rag-real", user_input="explain foo", use_rag=True)
+
+    await executor.execute_agent(request)
+
+    assert executor._indexed is True
+    user_msg = executor.history_store["rag-real"].messages[1]
+    assert "## File: foo.py" in user_msg.content
+    assert "def foo(): pass" in user_msg.content
