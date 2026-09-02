@@ -244,11 +244,28 @@ kubectl delete ns np-probe
 
 | Check result | Action |
 |--------------|--------|
-| NodeLocal DNSCache present | Add `extraEgress` for UDP+TCP 53 to `169.254.20.10/32` **before** upgrading, or DNS stops working |
+| NodeLocal DNSCache present | An `extraEgress` rule for it (see below) **before** upgrading, or DNS stops working |
 | An MCP server outside the executor's namespace | `kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed` |
 | A tracing endpoint in another namespace (Phoenix defaults to `phoenix`, Langfuse to `langfuse`) | Same label on that namespace, or add it to `allowNamespaces` — otherwise traces stop with no error |
-| A tracing endpoint outside the cluster on a port other than 443 | Add that port to `extraEgress`, since `internetPorts` covers only 443 by default |
-| Agents use git over SSH or plain HTTP | Add those ports to `extraEgress` |
+| A tracing endpoint outside the cluster on a port other than 443 | Add the port to `internetPorts`, e.g. `[443, 4318]` |
+| Agents use git over SSH or plain HTTP | Add those ports to `internetPorts`, e.g. `[443, 22]` |
+
+`internetPorts` is the lever for anything reached over the public internet. `extraEgress` takes
+complete Kubernetes egress rules and is for destinations the other settings cannot express — a
+link-local address, or a peer narrower than a whole namespace:
+
+```yaml
+networkPolicy:
+  extraEgress:
+    - to:
+        - ipBlock:
+            cidr: 169.254.20.10/32   # NodeLocal DNSCache
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+```
 
 Then upgrade and run one query. A successful answer is the verification. The policy applies to
 running pods immediately, with no restart, so `--set networkPolicy.enabled=false` reverts just as
@@ -290,9 +307,10 @@ globally routable address is not covered at all, so set `apiServerCIDRs` in that
   cannot distinguish the Anthropic API from any other host. This narrows exfiltration, it does not
   stop it. For a closed posture, serve the model in-cluster via the Model CRD `baseUrl` and set
   `internetPorts: []`.
-- **NodeLocal DNSCache** is not matched by the CoreDNS rule; add it via `extraEgress`.
+- **NodeLocal DNSCache** is not matched by the CoreDNS rule; allow it with the `extraEgress` rule
+  shown above.
 - **Tracing to a collector outside this namespace has to be allowed.** Label or list its namespace
-  if it is in-cluster; add its port to `extraEgress` if it is external and not on 443. Traces stop
+  if it is in-cluster; add its port to `internetPorts` if it is external and not on 443. Traces stop
   with no error when this is missed, so check it before upgrading.
 - **Cilium clusters should verify API access after upgrading.** Cilium matches CIDR rules against
   cluster-external destinations and provides a dedicated `kube-apiserver` entity for this case, so

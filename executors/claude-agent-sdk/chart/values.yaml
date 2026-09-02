@@ -115,8 +115,8 @@ networkPolicy:
   # Cross-namespace targets are normally opened by the target's owner:
   #   kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
   # This list is the escape hatch for namespaces whose labels you cannot set.
-  # An OTEL collector in another namespace belongs here, or in extraEgress if it
-  # is outside the cluster on a port other than those in internetPorts.
+  # An OTEL collector in another namespace belongs here. One outside the cluster
+  # needs its port in internetPorts instead.
   allowNamespaces: []
 
   dns:
@@ -124,8 +124,17 @@ networkPolicy:
     podLabels:
       k8s-app: kube-dns
 
-  # Appended verbatim. Use for NodeLocal DNSCache, non-443 outbound, or a peer
-  # narrower than a whole namespace.
+  # Complete Kubernetes egress rules, appended verbatim - not port numbers. Use
+  # for what the settings above cannot express, such as a link-local address or a
+  # peer narrower than a whole namespace. Public-internet ports belong in
+  # internetPorts. Example:
+  #   extraEgress:
+  #     - to:
+  #         - ipBlock:
+  #             cidr: 169.254.20.10/32
+  #       ports:
+  #         - protocol: UDP
+  #           port: 53
   extraEgress: []
 
   # Sandbox pods only - the standalone policy restricts egress only.
