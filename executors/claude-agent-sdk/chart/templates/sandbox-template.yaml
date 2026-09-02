@@ -11,12 +11,27 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
-  # Disable the default restrictive NetworkPolicy from agent-sandbox.
-  # Sandbox executor pods need cluster-internal access for:
-  # - K8s API (CRD resolution: Agent, Model, Tool, MCPServer, Secret)
-  # - OTEL collector (trace export)
-  # - MCP servers (tool execution)
+  {{- if .Values.networkPolicy.enabled }}
+  # The chart supplies the allow-list rather than taking agent-sandbox's built-in
+  # default, which blocks DNS, the K8s API and this chart's own scheduler ingress.
+  networkPolicyManagement: Managed
+  networkPolicy:
+    ingress:
+      - from:
+          - podSelector:
+              matchLabels:
+                app: {{ .Values.app.name }}-scheduler
+        ports:
+          - protocol: TCP
+            port: 8000
+      {{- with .Values.networkPolicy.extraIngress }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+    egress:
+      {{- include "claude-agent-sdk.egressRules" . | nindent 6 }}
+  {{- else }}
   networkPolicyManagement: Unmanaged
+  {{- end }}
   podTemplate:
     spec:
       serviceAccountName: {{ .Values.app.name }}-sandbox-sa

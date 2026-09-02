@@ -74,6 +74,72 @@ httpRoute:
   hostnames:
     - "executor-claude-agent-sdk.default.127.0.0.1.nip.io"
 
+# Egress restriction for the executor. Applies to the standalone pod, and in
+# scheduler mode to every sandbox pod via the agent-sandbox SandboxTemplate.
+# Everything not listed below is denied: other namespaces, the cloud metadata
+# server, and every port except those named here.
+# Set enabled=false to restore unrestricted egress.
+networkPolicy:
+  enabled: true
+
+  # Read the API server address from the cluster while rendering, so it does not
+  # have to be configured. This needs, in the default namespace, get on services
+  # and endpoints and list on endpointslices. Helm turns a denied read into a
+  # render error rather than an empty result, so a namespace-scoped installer
+  # without those permissions must set this to false and supply
+  # apiServerCIDRs/apiServerPorts.
+  autoDetect: true
+
+  # Kubernetes API server, needed to resolve Agent/Model/Tool/MCPServer/Secret.
+  # Read from the cluster at install time - both the kubernetes.default ClusterIP
+  # and the backing endpoint addresses, because Kubernetes does not define whether
+  # egress policy is matched before or after Service address rewriting, and it
+  # differs between network plugins.
+  # Renders with no cluster access - CI, GitOps - fall back to the private IPv4
+  # ranges plus IPv6 ULA space on ports 443, 6443 and 8443, covering single-stack
+  # clusters of either family. Set these when the API server is reached over a
+  # globally routable address, or to narrow the fallback; doing so replaces both
+  # detected forms with exactly what you list.
+  apiServerCIDRs: []
+  apiServerPorts: []
+
+  # Public-internet egress, for the Anthropic API, WebFetch and git. Private
+  # ranges and the metadata server stay blocked. Set to [] for no internet
+  # egress at all, when the model is served in-cluster via Model CRD baseUrl.
+  internetPorts:
+    - 443
+
+  # Pods in this namespace: the ark-broker and any MCP servers alongside.
+  allowSameNamespace: true
+
+  # Cross-namespace targets are normally opened by the target's owner:
+  #   kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
+  # This list is the escape hatch for namespaces whose labels you cannot set.
+  # An OTEL collector in another namespace belongs here. One outside the cluster
+  # needs its port in internetPorts instead.
+  allowNamespaces: []
+
+  dns:
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+
+  # Complete Kubernetes egress rules, appended verbatim - not port numbers. Use
+  # for what the settings above cannot express, such as a link-local address or a
+  # peer narrower than a whole namespace. Public-internet ports belong in
+  # internetPorts. Example:
+  #   extraEgress:
+  #     - to:
+  #         - ipBlock:
+  #             cidr: 169.254.20.10/32
+  #       ports:
+  #         - protocol: UDP
+  #           port: 53
+  extraEgress: []
+
+  # Sandbox pods only - the standalone policy restricts egress only.
+  extraIngress: []
+
 # RBAC configuration
 rbac:
   create: true
