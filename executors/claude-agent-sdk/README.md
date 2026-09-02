@@ -290,8 +290,6 @@ globally routable address is not covered at all, so set `apiServerCIDRs` in that
   cannot distinguish the Anthropic API from any other host. This narrows exfiltration, it does not
   stop it. For a closed posture, serve the model in-cluster via the Model CRD `baseUrl` and set
   `internetPorts: []`.
-- **Installing Phoenix or Langfuse after the executor** needs `helm upgrade` on the executor to pick
-  up the new endpoint — the same reason Phoenix asks you to restart its consumers.
 - **NodeLocal DNSCache** is not matched by the CoreDNS rule; add it via `extraEgress`.
 - **Tracing to a collector outside this namespace has to be allowed.** Label or list its namespace
   if it is in-cluster; add its port to `extraEgress` if it is external and not on 443. Traces stop
