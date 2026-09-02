@@ -82,14 +82,12 @@ httpRoute:
 networkPolicy:
   enabled: true
 
-  # Read the API server address and the OTEL endpoint from the cluster while
-  # rendering, so neither has to be configured. This needs, in the default
-  # namespace, get on services and endpoints and list on endpointslices, plus get
-  # on the otel-environment-variables secret in this namespace. Helm turns a
-  # denied read into a render error rather than an empty result, so a
-  # namespace-scoped installer without those permissions must set this to false
-  # and supply apiServerCIDRs/apiServerPorts, plus extraEgress for a
-  # cross-namespace collector.
+  # Read the API server address from the cluster while rendering, so it does not
+  # have to be configured. This needs, in the default namespace, get on services
+  # and endpoints and list on endpointslices. Helm turns a denied read into a
+  # render error rather than an empty result, so a namespace-scoped installer
+  # without those permissions must set this to false and supply
+  # apiServerCIDRs/apiServerPorts.
   autoDetect: true
 
   # Kubernetes API server, needed to resolve Agent/Model/Tool/MCPServer/Secret.
@@ -117,8 +115,8 @@ networkPolicy:
   # Cross-namespace targets are normally opened by the target's owner:
   #   kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
   # This list is the escape hatch for namespaces whose labels you cannot set.
-  # A cluster-internal OTEL collector needs neither - its endpoint is read from
-  # the otel-environment-variables secret automatically.
+  # An OTEL collector in another namespace belongs here, or in extraEgress if it
+  # is outside the cluster on a port other than those in internetPorts.
   allowNamespaces: []
 
   dns:

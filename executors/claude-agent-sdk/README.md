@@ -165,7 +165,7 @@ server, and every port except those named.
 |----------------|-------|
 | DNS | CoreDNS in `kube-system`, TCP+UDP 53 |
 | Kubernetes API | Resolves Agent, Model, Tool, MCPServer and Secret. Address read from the cluster |
-| OTEL collector | Read from the `otel-environment-variables` secret. In-cluster gets a rule for its namespace and port; an external one gets its port added to the public-internet rule, since OTLP commonly uses 4317/4318 |
+| OTEL collector | Only if it is in this namespace, or its namespace is listed/labelled below |
 | Public internet, TCP 443 | Anthropic API, WebFetch, git. Private ranges and the metadata server stay blocked |
 | Pods in this namespace | ark-broker, co-located MCP servers |
 | Namespaces labelled `ark.mckinsey.com/executor-egress=allowed` | Cross-namespace targets |
@@ -175,10 +175,11 @@ policy restricts egress only and leaves ingress untouched.
 
 ### Configuration
 
-No configuration is needed for the common case. The Kubernetes API address and the OTEL endpoint
-are both read from the cluster at install time.
+No configuration is needed when everything the executor talks to is in its own namespace — the
+Kubernetes API address is read from the cluster at install time.
 
-To reach an MCP server or other service in another namespace, label that namespace:
+To reach an MCP server, an OTEL collector, or any other service in another namespace, label that
+namespace:
 
 ```bash
 kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
@@ -190,7 +191,7 @@ kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
 | `networkPolicy.internetPorts` | Public internet ports. `[]` blocks the internet entirely | `[443]` |
 | `networkPolicy.allowSameNamespace` | Allow egress within this namespace | `true` |
 | `networkPolicy.allowNamespaces` | Namespaces to allow whose labels you cannot set | `[]` |
-| `networkPolicy.autoDetect` | Read the API server address and OTEL endpoint from the cluster while rendering | `true` |
+| `networkPolicy.autoDetect` | Read the API server address from the cluster while rendering | `true` |
 | `networkPolicy.apiServerCIDRs` | API server addresses. Read from the cluster when empty | `[]` |
 | `networkPolicy.apiServerPorts` | API server ports. Read from the cluster when empty | `[]` |
 | `networkPolicy.extraEgress` | Extra egress rules, appended verbatim | `[]` |
@@ -198,9 +199,9 @@ kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
 
 ### Upgrading an existing install
 
-Upgrading turns egress from unrestricted into default-deny. For most installs there is nothing to
-do — the API server address and the tracing endpoint are read from the cluster. Run these checks
-first to confirm; both are cheap, so run them regardless of which CNI you use.
+Upgrading turns egress from unrestricted into default-deny. The API server address is read from the
+cluster, but anything else outside the executor's own namespace has to be allowed explicitly. Run
+these checks first; they are cheap, so run them regardless of which CNI you use.
 
 ```bash
 NS=default   # the executor's namespace
@@ -214,7 +215,7 @@ kubectl get mcpservers -A --no-headers \
   -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,ADDR:.spec.address.value \
   | awk -v ns=$NS '$1!=ns {print "label needed: " $1}'
 
-# 3. Tracing endpoint - detected automatically, shown for information
+# 3. Tracing endpoint - anything not in $NS needs allowing
 kubectl get secret otel-environment-variables -n $NS \
   -o jsonpath='{.data.OTEL_EXPORTER_OTLP_ENDPOINT}' 2>/dev/null | base64 -d
 ```
@@ -245,6 +246,8 @@ kubectl delete ns np-probe
 |--------------|--------|
 | NodeLocal DNSCache present | Add `extraEgress` for UDP+TCP 53 to `169.254.20.10/32` **before** upgrading, or DNS stops working |
 | An MCP server outside the executor's namespace | `kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed` |
+| A tracing endpoint in another namespace (Phoenix defaults to `phoenix`, Langfuse to `langfuse`) | Same label on that namespace, or add it to `allowNamespaces` — otherwise traces stop with no error |
+| A tracing endpoint outside the cluster on a port other than 443 | Add that port to `extraEgress`, since `internetPorts` covers only 443 by default |
 | Agents use git over SSH or plain HTTP | Add those ports to `extraEgress` |
 
 Then upgrade and run one query. A successful answer is the verification. The policy applies to
@@ -253,14 +256,13 @@ fast if something was missed.
 
 ### Installing without cluster read permissions
 
-Rendering reads the API server address and the tracing endpoint from the cluster, which needs:
+Rendering reads the API server address from the cluster, which needs:
 
 | Resource | Namespace | Verb |
 |----------|-----------|------|
 | `services` (`kubernetes`) | `default` | `get` |
 | `endpointslices.discovery.k8s.io` | `default` | `list` |
 | `endpoints` (`kubernetes`) | `default` | `get` |
-| `secrets` (`otel-environment-variables`) | release namespace | `get` |
 
 The EndpointSlice read is a list rather than a get, because the slice is selected by its
 `kubernetes.io/service-name` label. Helm turns any denied read into a render error rather than an
@@ -272,7 +274,6 @@ networkPolicy:
   autoDetect: false
   apiServerCIDRs: ["10.96.0.1/32", "<control-plane-ip>/32"]
   apiServerPorts: [443, 6443]
-  extraEgress: []   # add a rule here if the OTEL collector is in another namespace
 ```
 
 With `autoDetect: false` and no addresses supplied, the API server rule falls back to the private
@@ -292,10 +293,9 @@ globally routable address is not covered at all, so set `apiServerCIDRs` in that
 - **Installing Phoenix or Langfuse after the executor** needs `helm upgrade` on the executor to pick
   up the new endpoint — the same reason Phoenix asks you to restart its consumers.
 - **NodeLocal DNSCache** is not matched by the CoreDNS rule; add it via `extraEgress`.
-- **An external OTLP collector widens egress by its port.** A detected external endpoint on, say,
-  4318 opens that port to the public internet, not just to the collector — NetworkPolicy matches
-  addresses, not hostnames. With `internetPorts: []` nothing is opened, and the collector has to be
-  declared in `extraEgress` instead.
+- **Tracing to a collector outside this namespace has to be allowed.** Label or list its namespace
+  if it is in-cluster; add its port to `extraEgress` if it is external and not on 443. Traces stop
+  with no error when this is missed, so check it before upgrading.
 - **Cilium clusters should verify API access after upgrading.** Cilium matches CIDR rules against
   cluster-external destinations and provides a dedicated `kube-apiserver` entity for this case, so
   an `ipBlock` rule may not behave as it does on Calico. If API calls fail, express API server

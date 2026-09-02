@@ -86,82 +86,6 @@ globally routable address still needs apiServerCIDRs set explicitly.
 {{- end -}}
 
 {{/*
-Public-internet peers: everything except private ranges, the IPv4 metadata
-server, and IPv6 link-local. Shared by the internet rule and the rule for an
-external OTEL collector so the two exclusion lists cannot drift apart.
-*/}}
-{{- define "claude-agent-sdk.internetPeers" -}}
-- ipBlock:
-    cidr: 0.0.0.0/0
-    except:
-      - 10.0.0.0/8
-      - 172.16.0.0/12
-      - 192.168.0.0/16
-      - 169.254.0.0/16
-- ipBlock:
-    cidr: "::/0"
-    except:
-      - "fc00::/7"
-      - "fe80::/10"
-{{- end -}}
-
-{{/*
-Egress rule for the OTEL collector, or nothing.
-
-The endpoint is read from the same otel-environment-variables Secret the pod
-mounts at runtime, so tracing keeps working without any configuration here.
-A collector in this namespace needs no rule. One in another namespace gets a
-namespaceSelector rule on its port. An external one gets its port opened to the
-public internet, because the internet rule covers only internetPorts and OTLP
-commonly runs on 4317 or 4318 - without this, tracing would stop silently.
-
-Nothing is emitted when internetPorts is empty, so a deliberately closed egress
-posture is never reopened here; declare the collector in extraEgress instead.
-Skipped entirely when autoDetect is false, so no Secret read is required.
-*/}}
-{{- define "claude-agent-sdk.otelEgress" -}}
-{{- $np := .Values.networkPolicy -}}
-{{- if $np.autoDetect -}}
-{{- $secret := (lookup "v1" "Secret" .Release.Namespace "otel-environment-variables") | default dict -}}
-{{- $encoded := index ($secret.data | default dict) "OTEL_EXPORTER_OTLP_ENDPOINT" | default "" -}}
-{{- if $encoded -}}
-{{- $endpoint := b64dec $encoded -}}
-{{- $parsed := urlParse $endpoint -}}
-{{- $hostport := $parsed.host | default (splitList "/" $endpoint | first) -}}
-{{- $segments := splitList ":" $hostport -}}
-{{- $host := first $segments -}}
-{{- $port := ternary (last $segments) (ternary "443" "80" (eq $parsed.scheme "https")) (gt (len $segments) 1) -}}
-{{- $labels := splitList "." $host -}}
-{{- $namespace := "" -}}
-{{- if eq (len $labels) 2 -}}
-{{- $namespace = index $labels 1 -}}
-{{- else if and (ge (len $labels) 3) (eq (index $labels 2) "svc") -}}
-{{- $namespace = index $labels 1 -}}
-{{- end }}
-{{- $allowed := list -}}
-{{- range $np.internetPorts -}}
-{{- $allowed = append $allowed (printf "%d" (int .)) -}}
-{{- end -}}
-{{- if and $namespace (ne $namespace .Release.Namespace) }}
-- to:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: {{ $namespace }}
-  ports:
-    - protocol: TCP
-      port: {{ $port | int }}
-{{- else if and (not $namespace) $np.internetPorts (not (has (printf "%d" (int $port)) $allowed)) }}
-- to:
-    {{- include "claude-agent-sdk.internetPeers" . | nindent 4 }}
-  ports:
-    - protocol: TCP
-      port: {{ $port | int }}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 The egress allow-list, shared by the sandbox template and the standalone
 deployment so the two cannot drift apart. Everything not listed is denied.
 */}}
@@ -209,10 +133,20 @@ deployment so the two cannot drift apart. Everything not listed is denied.
       port: {{ . }}
     {{- end }}
 {{- end }}
-{{- include "claude-agent-sdk.otelEgress" . }}
 {{- if $np.internetPorts }}
 - to:
-    {{- include "claude-agent-sdk.internetPeers" . | nindent 4 }}
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
+          - 169.254.0.0/16
+    - ipBlock:
+        cidr: "::/0"
+        except:
+          - "fc00::/7"
+          - "fe80::/10"
   ports:
     {{- range $np.internetPorts }}
     - protocol: TCP
