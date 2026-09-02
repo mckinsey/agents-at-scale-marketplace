@@ -154,6 +154,62 @@ kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/downl
 
 - **No streaming support**: The proxy buffers the full upstream response before relaying. A2A `message/stream` (SSE) is not supported; use `message/send` only.
 
+## Network Policy
+
+Executor egress is restricted by default in both deployment modes. Standalone pods get a
+NetworkPolicy from this chart; sandbox pods get one from the agent-sandbox controller via the
+SandboxTemplate. Everything not listed below is denied — other namespaces, the cloud metadata
+server, and every port except those named.
+
+| Allowed egress | Notes |
+|----------------|-------|
+| DNS | CoreDNS in `kube-system`, TCP+UDP 53 |
+| Kubernetes API | Resolves Agent, Model, Tool, MCPServer and Secret. Address read from the cluster |
+| OTEL collector | Read from the `otel-environment-variables` secret |
+| Public internet, TCP 443 | Anthropic API, WebFetch, git. Private ranges and the metadata server stay blocked |
+| Pods in this namespace | ark-broker, co-located MCP servers |
+| Namespaces labelled `ark.mckinsey.com/executor-egress=allowed` | Cross-namespace targets |
+
+Sandbox pods additionally accept ingress only from the scheduler on port 8000. The standalone
+policy restricts egress only and leaves ingress untouched.
+
+### Configuration
+
+No configuration is needed for the common case. The Kubernetes API address and the OTEL endpoint
+are both read from the cluster at install time.
+
+To reach an MCP server or other service in another namespace, label that namespace:
+
+```bash
+kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `networkPolicy.enabled` | Restrict egress. `false` restores unrestricted egress | `true` |
+| `networkPolicy.internetPorts` | Public internet ports. `[]` blocks the internet entirely | `[443]` |
+| `networkPolicy.allowSameNamespace` | Allow egress within this namespace | `true` |
+| `networkPolicy.allowNamespaces` | Namespaces to allow whose labels you cannot set | `[]` |
+| `networkPolicy.apiServerCIDRs` | API server endpoints. Read from the cluster when empty | `[]` |
+| `networkPolicy.apiServerPorts` | API server ports. Read from the cluster when empty | `[]` |
+| `networkPolicy.extraEgress` | Extra egress rules, appended verbatim | `[]` |
+| `networkPolicy.extraIngress` | Extra sandbox ingress rules | `[]` |
+
+### Caveats
+
+- **The policy only takes effect if your CNI enforces NetworkPolicy.** Plain minikube does not; use
+  Calico or Cilium.
+- **HTTPS egress to arbitrary hosts stays open**, because NetworkPolicy matches IP addresses and
+  cannot distinguish the Anthropic API from any other host. This narrows exfiltration, it does not
+  stop it. For a closed posture, serve the model in-cluster via the Model CRD `baseUrl` and set
+  `internetPorts: []`.
+- **Installing Phoenix or Langfuse after the executor** needs `helm upgrade` on the executor to pick
+  up the new endpoint — the same reason Phoenix asks you to restart its consumers.
+- **NodeLocal DNSCache** is not matched by the CoreDNS rule; add it via `extraEgress`.
+- **Renders with no cluster access** — CI, GitOps — cannot auto-detect the API server, and fall back
+  to allowing the private ranges on ports 443, 6443 and 8443. That works on any cluster; set
+  `apiServerCIDRs` and `apiServerPorts` to narrow it back to a single address.
+
 ## How It Works
 
 - Each `conversationId` gets an isolated directory at `/data/sessions/<conversationId>/`

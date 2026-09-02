@@ -74,6 +74,51 @@ httpRoute:
   hostnames:
     - "executor-claude-agent-sdk.default.127.0.0.1.nip.io"
 
+# Egress restriction for the executor. Applies to the standalone pod, and in
+# scheduler mode to every sandbox pod via the agent-sandbox SandboxTemplate.
+# Everything not listed below is denied: other namespaces, the cloud metadata
+# server, and every port except those named here.
+# Set enabled=false to restore unrestricted egress.
+networkPolicy:
+  enabled: true
+
+  # Kubernetes API server, needed to resolve Agent/Model/Tool/MCPServer/Secret.
+  # Read from the cluster at install time. Renders with no cluster access - CI,
+  # GitOps - fall back to the private ranges on ports 443, 6443 and 8443, which
+  # works anywhere; set these explicitly to narrow it back to one address.
+  # Egress policy is evaluated after DNAT, so these are endpoint addresses, not
+  # the kubernetes.default ClusterIP.
+  apiServerCIDRs: []
+  apiServerPorts: []
+
+  # Public-internet egress, for the Anthropic API, WebFetch and git. Private
+  # ranges and the metadata server stay blocked. Set to [] for no internet
+  # egress at all, when the model is served in-cluster via Model CRD baseUrl.
+  internetPorts:
+    - 443
+
+  # Pods in this namespace: the ark-broker and any MCP servers alongside.
+  allowSameNamespace: true
+
+  # Cross-namespace targets are normally opened by the target's owner:
+  #   kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
+  # This list is the escape hatch for namespaces whose labels you cannot set.
+  # A cluster-internal OTEL collector needs neither - its endpoint is read from
+  # the otel-environment-variables secret automatically.
+  allowNamespaces: []
+
+  dns:
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+
+  # Appended verbatim. Use for NodeLocal DNSCache, non-443 outbound, or a peer
+  # narrower than a whole namespace.
+  extraEgress: []
+
+  # Sandbox pods only - the standalone policy restricts egress only.
+  extraIngress: []
+
 # RBAC configuration
 rbac:
   create: true
