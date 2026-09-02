@@ -170,8 +170,13 @@ server, and every port except those named.
 | Pods in this namespace | ark-broker, co-located MCP servers |
 | Namespaces labelled `ark.mckinsey.com/executor-egress=allowed` | Cross-namespace targets |
 
-Sandbox pods additionally accept ingress only from the scheduler on port 8000. The standalone
-policy restricts egress only and leaves ingress untouched.
+Sandbox pods additionally accept ingress only from the scheduler on port 8000 — stricter than
+before, when nothing restricted who could reach a sandbox. The agent-sandbox controller always
+enforces both directions for sandboxes, so this cannot be turned off independently; anything else
+that needs to reach a sandbox, such as a sidecar or a debugging port-forward target, goes in
+`extraIngress`. Kubelet health probes are unaffected: they originate from the node, not from a pod,
+and are not subject to this rule (verified on Calico). The standalone policy restricts egress only
+and leaves ingress untouched.
 
 ### Configuration
 
