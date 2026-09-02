@@ -195,6 +195,43 @@ kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
 | `networkPolicy.extraEgress` | Extra egress rules, appended verbatim | `[]` |
 | `networkPolicy.extraIngress` | Extra sandbox ingress rules | `[]` |
 
+### Upgrading an existing install
+
+Upgrading turns egress from unrestricted into default-deny. For most installs there is nothing to
+do — the API server address and the tracing endpoint are read from the cluster. Run these four
+checks first to confirm. Step 1 ends it for any cluster without an enforcing CNI.
+
+```bash
+NS=default   # the executor's namespace
+
+# 1. Will the policy take effect at all?
+kubectl get pods -n kube-system | grep -qiE "calico|cilium|weave|antrea" \
+  && echo "enforced - keep checking" || echo "inert - nothing to do, stop here"
+
+# 2. NodeLocal DNSCache - the only severe case
+kubectl get ds -n kube-system node-local-dns >/dev/null 2>&1 \
+  && echo "PRESENT - add extraEgress before upgrading" || echo "fine"
+
+# 3. MCP servers outside $NS
+kubectl get mcpservers -A --no-headers \
+  -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,ADDR:.spec.address.value \
+  | awk -v ns=$NS '$1!=ns {print "label needed: " $1}'
+
+# 4. Tracing endpoint - detected automatically, shown for information
+kubectl get secret otel-environment-variables -n $NS \
+  -o jsonpath='{.data.OTEL_EXPORTER_OTLP_ENDPOINT}' 2>/dev/null | base64 -d
+```
+
+| Check result | Action |
+|--------------|--------|
+| NodeLocal DNSCache present | Add `extraEgress` for UDP+TCP 53 to `169.254.20.10/32` **before** upgrading, or DNS stops working |
+| A namespace listed by check 3 | `kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed` |
+| Agents use git over SSH or plain HTTP | Add those ports to `extraEgress` |
+
+Then upgrade and run one query. A successful answer is the verification. The policy applies to
+running pods immediately, with no restart, so `--set networkPolicy.enabled=false` reverts just as
+fast if something was missed.
+
 ### Caveats
 
 - **The policy only takes effect if your CNI enforces NetworkPolicy.** Plain minikube does not; use
