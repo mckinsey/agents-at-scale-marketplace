@@ -244,7 +244,7 @@ kubectl delete ns np-probe
 | Check result | Action |
 |--------------|--------|
 | NodeLocal DNSCache present | Add `extraEgress` for UDP+TCP 53 to `169.254.20.10/32` **before** upgrading, or DNS stops working |
-| A namespace listed by check 3 | `kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed` |
+| An MCP server outside the executor's namespace | `kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed` |
 | Agents use git over SSH or plain HTTP | Add those ports to `extraEgress` |
 
 Then upgrade and run one query. A successful answer is the verification. The policy applies to
