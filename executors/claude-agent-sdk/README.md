@@ -174,9 +174,9 @@ Sandbox pods additionally accept ingress only from the scheduler on port 8000 â€
 before, when nothing restricted who could reach a sandbox. The agent-sandbox controller always
 enforces both directions for sandboxes, so this cannot be turned off independently; anything else
 that needs to reach a sandbox, such as a sidecar or a debugging port-forward target, goes in
-`extraIngress`. Kubelet health probes are unaffected: they originate from the node, not from a pod,
-and are not subject to this rule (verified on Calico). The standalone policy restricts egress only
-and leaves ingress untouched.
+`extraIngress`. Kubelet health probes are unaffected: Kubernetes always allows traffic to and from
+the node a Pod runs on, regardless of policy, so the probe is never matched against this rule. The
+standalone policy restricts egress only and leaves ingress untouched.
 
 ### Configuration
 
