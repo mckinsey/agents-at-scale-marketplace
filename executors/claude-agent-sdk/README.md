@@ -253,11 +253,19 @@ fast if something was missed.
 
 ### Installing without cluster read permissions
 
-Rendering reads two things from the cluster: the API server address (`services` and `endpointslices`
-in `default`) and the tracing endpoint (the `otel-environment-variables` secret in the release
-namespace). Helm turns a denied read into a render error rather than an empty result, so an
-installer scoped to a single namespace cannot render the chart with detection on. Turn it off and
-supply the addresses:
+Rendering reads the API server address and the tracing endpoint from the cluster, which needs:
+
+| Resource | Namespace | Verb |
+|----------|-----------|------|
+| `services` (`kubernetes`) | `default` | `get` |
+| `endpointslices.discovery.k8s.io` | `default` | `list` |
+| `endpoints` (`kubernetes`) | `default` | `get` |
+| `secrets` (`otel-environment-variables`) | release namespace | `get` |
+
+The EndpointSlice read is a list rather than a get, because the slice is selected by its
+`kubernetes.io/service-name` label. Helm turns any denied read into a render error rather than an
+empty result, so an installer without these cannot render the chart with detection on. Turn it off
+and supply the addresses:
 
 ```yaml
 networkPolicy:
@@ -289,8 +297,9 @@ globally routable address is not covered at all, so set `apiServerCIDRs` in that
   an `ipBlock` rule may not behave as it does on Calico. If API calls fail, express API server
   egress with a CiliumNetworkPolicy using `toEntities: kube-apiserver`.
 - **Renders with no cluster access** — CI, GitOps — cannot auto-detect the API server, and fall back
-  to allowing the private ranges on ports 443, 6443 and 8443. That works on any cluster; set
-  `apiServerCIDRs` and `apiServerPorts` to narrow it back to a single address.
+  to the private IPv4 ranges plus IPv6 ULA space on ports 443, 6443 and 8443. Set `apiServerCIDRs`
+  and `apiServerPorts` to narrow that to a single address, or if the API server is reached over a
+  globally routable address, which the fallback does not cover.
 
 ## How It Works
 
