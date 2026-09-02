@@ -1,15 +1,23 @@
 {{/*
-Kubernetes API server endpoints, as {"cidrs":[...],"ports":[...]} JSON.
+Kubernetes API server peers, as {"peers":[{"cidrs":[...],"ports":[...]}]} JSON.
 
-Values win when set. Otherwise the address is read from the cluster: the
-EndpointSlice for the default/kubernetes Service, falling back to its Endpoints
-object. Egress policy is evaluated after DNAT, so this must be the endpoint
-address rather than the kubernetes.default ClusterIP.
+Values win when set. Otherwise the addresses are read from the cluster, and both
+forms are allowed: the kubernetes.default ClusterIP on the Service port, and the
+backing endpoint addresses on their own port. Kubernetes does not define whether
+address rewriting happens before or after NetworkPolicy processing and says the
+behaviour differs between network plugins, so allowing only one form would make
+API access plugin-dependent.
+https://kubernetes.io/docs/concepts/services-networking/network-policies/
 
-Renders with no cluster access - CI, GitOps - return nothing here, and the
-caller falls back to the private ranges on the API server ports.
+Each address keeps its own port rather than sharing one rule - the endpoint
+address is usually the node IP, and pairing it with the Service port 443 would
+also open anything host-networked listening there.
+
+Renders with no cluster access - CI, GitOps - return no peers, and the caller
+falls back to the private ranges on the API server ports.
 */}}
 {{- define "claude-agent-sdk.apiServer" -}}
+{{- $peers := list -}}
 {{- $cidrs := list -}}
 {{- $ports := list -}}
 {{- range .Values.networkPolicy.apiServerCIDRs -}}
@@ -17,6 +25,27 @@ caller falls back to the private ranges on the API server ports.
 {{- end -}}
 {{- range .Values.networkPolicy.apiServerPorts -}}
 {{- $ports = append $ports (. | int) -}}
+{{- end -}}
+{{- if $cidrs -}}
+{{- $peers = append $peers (dict "cidrs" $cidrs "ports" $ports) -}}
+{{- else -}}
+{{- $svcCIDRs := list -}}
+{{- $svcPorts := list -}}
+{{- $svc := (lookup "v1" "Service" "default" "kubernetes") | default dict -}}
+{{- $svcSpec := $svc.spec | default dict -}}
+{{- range ($svcSpec.clusterIPs | default (list ($svcSpec.clusterIP | default ""))) -}}
+{{- if and . (ne . "None") -}}
+{{- $svcCIDRs = append $svcCIDRs (printf "%s/%s" . (ternary "128" "32" (contains ":" .))) -}}
+{{- end -}}
+{{- end -}}
+{{- range ($svcSpec.ports | default list) -}}
+{{- if .port -}}
+{{- $svcPorts = append $svcPorts (.port | int) -}}
+{{- end -}}
+{{- end -}}
+{{- if and $svcCIDRs $svcPorts -}}
+{{- $peers = append $peers (dict "cidrs" (uniq $svcCIDRs) "ports" (uniq $svcPorts)) -}}
+{{- end -}}
 {{- end -}}
 {{- if not $cidrs -}}
 {{- $slices := (lookup "discovery.k8s.io/v1" "EndpointSlice" "default" "") | default dict -}}
@@ -48,7 +77,10 @@ caller falls back to the private ranges on the API server ports.
 {{- end -}}
 {{- end -}}
 {{- end -}}
-{{- dict "cidrs" (uniq $cidrs) "ports" (uniq $ports) | toJson -}}
+{{- if and $cidrs (not .Values.networkPolicy.apiServerCIDRs) -}}
+{{- $peers = append $peers (dict "cidrs" (uniq $cidrs) "ports" (uniq $ports)) -}}
+{{- end -}}
+{{- dict "peers" $peers | toJson -}}
 {{- end -}}
 
 {{/*
@@ -107,25 +139,33 @@ deployment so the two cannot drift apart. Everything not listed is denied.
       port: 53
     - protocol: TCP
       port: 53
+{{- if $api.peers }}
+{{- range $api.peers }}
 - to:
-    {{- if $api.cidrs }}
-    {{- range $api.cidrs }}
+    {{- range .cidrs }}
     - ipBlock:
         cidr: {{ . }}
     {{- end }}
-    {{- else }}
+  ports:
+    {{- range (.ports | default (list 443 6443 8443)) }}
+    - protocol: TCP
+      port: {{ . }}
+    {{- end }}
+{{- end }}
+{{- else }}
+- to:
     - ipBlock:
         cidr: 10.0.0.0/8
     - ipBlock:
         cidr: 172.16.0.0/12
     - ipBlock:
         cidr: 192.168.0.0/16
-    {{- end }}
   ports:
-    {{- range ($api.ports | default (list 443 6443 8443)) }}
+    {{- range (list 443 6443 8443) }}
     - protocol: TCP
       port: {{ . }}
     {{- end }}
+{{- end }}
 {{- include "claude-agent-sdk.otelEgress" . }}
 {{- if $np.internetPorts }}
 - to:

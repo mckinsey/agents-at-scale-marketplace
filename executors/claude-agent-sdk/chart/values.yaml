@@ -83,11 +83,13 @@ networkPolicy:
   enabled: true
 
   # Kubernetes API server, needed to resolve Agent/Model/Tool/MCPServer/Secret.
-  # Read from the cluster at install time. Renders with no cluster access - CI,
-  # GitOps - fall back to the private ranges on ports 443, 6443 and 8443, which
-  # works anywhere; set these explicitly to narrow it back to one address.
-  # Egress policy is evaluated after DNAT, so these are endpoint addresses, not
-  # the kubernetes.default ClusterIP.
+  # Read from the cluster at install time - both the kubernetes.default ClusterIP
+  # and the backing endpoint addresses, because Kubernetes does not define whether
+  # egress policy is matched before or after Service address rewriting, and it
+  # differs between network plugins.
+  # Renders with no cluster access - CI, GitOps - fall back to the private ranges
+  # on ports 443, 6443 and 8443, which works anywhere. Setting these replaces both
+  # detected forms with exactly what you list.
   apiServerCIDRs: []
   apiServerPorts: []
 

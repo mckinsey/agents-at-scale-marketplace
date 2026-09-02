@@ -243,6 +243,10 @@ fast if something was missed.
 - **Installing Phoenix or Langfuse after the executor** needs `helm upgrade` on the executor to pick
   up the new endpoint — the same reason Phoenix asks you to restart its consumers.
 - **NodeLocal DNSCache** is not matched by the CoreDNS rule; add it via `extraEgress`.
+- **Cilium clusters should verify API access after upgrading.** Cilium matches CIDR rules against
+  cluster-external destinations and provides a dedicated `kube-apiserver` entity for this case, so
+  an `ipBlock` rule may not behave as it does on Calico. If API calls fail, express API server
+  egress with a CiliumNetworkPolicy using `toEntities: kube-apiserver`.
 - **Renders with no cluster access** — CI, GitOps — cannot auto-detect the API server, and fall back
   to allowing the private ranges on ports 443, 6443 and 8443. That works on any cluster; set
   `apiServerCIDRs` and `apiServerPorts` to narrow it back to a single address.
