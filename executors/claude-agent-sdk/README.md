@@ -190,7 +190,8 @@ kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
 | `networkPolicy.internetPorts` | Public internet ports. `[]` blocks the internet entirely | `[443]` |
 | `networkPolicy.allowSameNamespace` | Allow egress within this namespace | `true` |
 | `networkPolicy.allowNamespaces` | Namespaces to allow whose labels you cannot set | `[]` |
-| `networkPolicy.apiServerCIDRs` | API server endpoints. Read from the cluster when empty | `[]` |
+| `networkPolicy.autoDetect` | Read the API server address and OTEL endpoint from the cluster while rendering | `true` |
+| `networkPolicy.apiServerCIDRs` | API server addresses. Read from the cluster when empty | `[]` |
 | `networkPolicy.apiServerPorts` | API server ports. Read from the cluster when empty | `[]` |
 | `networkPolicy.extraEgress` | Extra egress rules, appended verbatim | `[]` |
 | `networkPolicy.extraIngress` | Extra sandbox ingress rules | `[]` |
@@ -198,28 +199,46 @@ kubectl label namespace <ns> ark.mckinsey.com/executor-egress=allowed
 ### Upgrading an existing install
 
 Upgrading turns egress from unrestricted into default-deny. For most installs there is nothing to
-do — the API server address and the tracing endpoint are read from the cluster. Run these four
-checks first to confirm. Step 1 ends it for any cluster without an enforcing CNI.
+do — the API server address and the tracing endpoint are read from the cluster. Run these checks
+first to confirm; both are cheap, so run them regardless of which CNI you use.
 
 ```bash
 NS=default   # the executor's namespace
 
-# 1. Will the policy take effect at all?
-kubectl get pods -n kube-system | grep -qiE "calico|cilium|weave|antrea" \
-  && echo "enforced - keep checking" || echo "inert - nothing to do, stop here"
-
-# 2. NodeLocal DNSCache - the only severe case
+# 1. NodeLocal DNSCache - the only severe case
 kubectl get ds -n kube-system node-local-dns >/dev/null 2>&1 \
   && echo "PRESENT - add extraEgress before upgrading" || echo "fine"
 
-# 3. MCP servers outside $NS
+# 2. MCP servers outside $NS
 kubectl get mcpservers -A --no-headers \
   -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,ADDR:.spec.address.value \
   | awk -v ns=$NS '$1!=ns {print "label needed: " $1}'
 
-# 4. Tracing endpoint - detected automatically, shown for information
+# 3. Tracing endpoint - detected automatically, shown for information
 kubectl get secret otel-environment-variables -n $NS \
   -o jsonpath='{.data.OTEL_EXPORTER_OTLP_ENDPOINT}' 2>/dev/null | base64 -d
+```
+
+Whether the policy has any effect depends on your cluster enforcing NetworkPolicy, which is a
+property of the CNI and, on managed platforms, of how it was provisioned — consult your provider's
+documentation rather than guessing from what runs in `kube-system`. To settle it empirically, apply
+a deny-all egress policy to a scratch pod and see whether traffic stops:
+
+```bash
+kubectl create ns np-probe
+kubectl -n np-probe run probe --image=curlimages/curl:latest --command -- sleep 300
+kubectl -n np-probe wait --for=condition=Ready pod/probe --timeout=120s
+kubectl -n np-probe apply -f - <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: deny-egress}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+EOF
+# blocked => NetworkPolicy is enforced; 200 => it is not
+kubectl -n np-probe exec probe -- curl -s -m 5 -o /dev/null -w "%{http_code}\n" https://example.com
+kubectl delete ns np-probe
 ```
 
 | Check result | Action |
@@ -232,10 +251,31 @@ Then upgrade and run one query. A successful answer is the verification. The pol
 running pods immediately, with no restart, so `--set networkPolicy.enabled=false` reverts just as
 fast if something was missed.
 
+### Installing without cluster read permissions
+
+Rendering reads two things from the cluster: the API server address (`services` and `endpointslices`
+in `default`) and the tracing endpoint (the `otel-environment-variables` secret in the release
+namespace). Helm turns a denied read into a render error rather than an empty result, so an
+installer scoped to a single namespace cannot render the chart with detection on. Turn it off and
+supply the addresses:
+
+```yaml
+networkPolicy:
+  autoDetect: false
+  apiServerCIDRs: ["10.96.0.1/32", "<control-plane-ip>/32"]
+  apiServerPorts: [443, 6443]
+  extraEgress: []   # add a rule here if the OTEL collector is in another namespace
+```
+
+With `autoDetect: false` and no addresses supplied, the API server rule falls back to the private
+ranges on ports 443, 6443 and 8443, which works on any cluster but is broader than naming the
+address.
+
 ### Caveats
 
-- **The policy only takes effect if your CNI enforces NetworkPolicy.** Plain minikube does not; use
-  Calico or Cilium.
+- **The policy only takes effect if your cluster enforces NetworkPolicy.** Plain minikube does not.
+  Support depends on the CNI and how the cluster was provisioned; check your provider's docs, or use
+  the deny-all probe above to confirm.
 - **HTTPS egress to arbitrary hosts stays open**, because NetworkPolicy matches IP addresses and
   cannot distinguish the Anthropic API from any other host. This narrows exfiltration, it does not
   stop it. For a closed posture, serve the model in-cluster via the Model CRD `baseUrl` and set

@@ -28,7 +28,7 @@ falls back to the private ranges on the API server ports.
 {{- end -}}
 {{- if $cidrs -}}
 {{- $peers = append $peers (dict "cidrs" $cidrs "ports" $ports) -}}
-{{- else -}}
+{{- else if .Values.networkPolicy.autoDetect -}}
 {{- $svcCIDRs := list -}}
 {{- $svcPorts := list -}}
 {{- $svc := (lookup "v1" "Service" "default" "kubernetes") | default dict -}}
@@ -47,7 +47,7 @@ falls back to the private ranges on the API server ports.
 {{- $peers = append $peers (dict "cidrs" (uniq $svcCIDRs) "ports" (uniq $svcPorts)) -}}
 {{- end -}}
 {{- end -}}
-{{- if not $cidrs -}}
+{{- if and (not $cidrs) .Values.networkPolicy.autoDetect -}}
 {{- $slices := (lookup "discovery.k8s.io/v1" "EndpointSlice" "default" "") | default dict -}}
 {{- range ($slices.items | default list) -}}
 {{- if eq (index (.metadata.labels | default dict) "kubernetes.io/service-name") "kubernetes" -}}
@@ -64,7 +64,7 @@ falls back to the private ranges on the API server ports.
 {{- end -}}
 {{- end -}}
 {{- end -}}
-{{- if not $cidrs -}}
+{{- if and (not $cidrs) .Values.networkPolicy.autoDetect -}}
 {{- $ep := (lookup "v1" "Endpoints" "default" "kubernetes") | default dict -}}
 {{- range ($ep.subsets | default list) -}}
 {{- range (.addresses | default list) -}}
@@ -90,8 +90,12 @@ The endpoint is read from the same otel-environment-variables Secret the pod
 mounts at runtime, so tracing keeps working without any configuration here.
 A collector in this namespace needs no rule, and an external one is already
 covered by the public-internet rule.
+
+Skipped entirely when autoDetect is false, so no Secret read is required;
+a cross-namespace collector is then declared through extraEgress.
 */}}
 {{- define "claude-agent-sdk.otelEgress" -}}
+{{- if .Values.networkPolicy.autoDetect -}}
 {{- $secret := (lookup "v1" "Secret" .Release.Namespace "otel-environment-variables") | default dict -}}
 {{- $encoded := index ($secret.data | default dict) "OTEL_EXPORTER_OTLP_ENDPOINT" | default "" -}}
 {{- if $encoded -}}
@@ -116,6 +120,7 @@ covered by the public-internet rule.
   ports:
     - protocol: TCP
       port: {{ $port | int }}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

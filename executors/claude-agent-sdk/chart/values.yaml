@@ -82,6 +82,15 @@ httpRoute:
 networkPolicy:
   enabled: true
 
+  # Read the API server address and the OTEL endpoint from the cluster while
+  # rendering, so neither has to be configured. This needs get on services and
+  # endpointslices in the default namespace, and on the otel-environment-variables
+  # secret in this namespace. Helm turns a denied read into a render error rather
+  # than an empty result, so a namespace-scoped installer without those
+  # permissions must set this to false and supply apiServerCIDRs/apiServerPorts,
+  # plus extraEgress for a cross-namespace collector.
+  autoDetect: true
+
   # Kubernetes API server, needed to resolve Agent/Model/Tool/MCPServer/Secret.
   # Read from the cluster at install time - both the kubernetes.default ClusterIP
   # and the backing endpoint addresses, because Kubernetes does not define whether
