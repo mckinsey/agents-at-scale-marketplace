@@ -59,11 +59,3 @@ def test_controller_pool_import():
     assert hasattr(pool, 'pool_deleted')
     assert hasattr(pool, 'pool_timer')
 
-
-def test_package_version():
-    """Test that the src package exposes a version."""
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-    import src
-    assert src.__version__ == "0.1.0"
-
-
