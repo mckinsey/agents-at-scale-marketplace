@@ -18,6 +18,14 @@ rules:
   - apiGroups: [""]
     resources: ["secrets", "configmaps", "services"]
     verbs: ["get"]
+  {{- if .Values.rbac.impersonation.enabled }}
+  # A Query may name a ServiceAccount in spec.serviceAccount, which the SDK uses
+  # to resolve the agent, model and their secrets. Without this the resolution
+  # fails rather than falling back to this executor's own identity.
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["impersonate"]
+  {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

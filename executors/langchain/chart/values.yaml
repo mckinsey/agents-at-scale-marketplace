@@ -47,6 +47,18 @@ httpRoute:
 # RBAC configuration
 rbac:
   create: true
+  # Service account impersonation for per-query RBAC scoping.
+  #
+  # When enabled (default), the executor resolves a Query's agent, model and
+  # secrets as the ServiceAccount named in its spec.serviceAccount, matching the
+  # identity the Ark controller uses for the same field. Queries that do not set
+  # it are resolved with the executor's own service account, as before.
+  #
+  # When disabled, queries that set spec.serviceAccount fail rather than
+  # resolving with the executor's identity — a declared restriction that cannot
+  # be applied is an error, not a default.
+  impersonation:
+    enabled: true
 
 # Service account configuration
 serviceAccount:
