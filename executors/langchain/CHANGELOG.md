@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.8...executor-langchain-v0.1.9) (2026-09-03)
+
+
+### Bug Fixes
+
+* **executors:** grant impersonate so Query spec.serviceAccount is honoured ([#432](https://github.com/mckinsey/agents-at-scale-marketplace/issues/432)) ([1bd0643](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1bd064356646aea5fc771ac2bed9380fe55e5874))
+
 ## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-langchain-v0.1.7...executor-langchain-v0.1.8) (2026-08-21)
 
 

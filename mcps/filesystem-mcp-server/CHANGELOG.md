@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.61](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.60...filesystem-mcp-server-v0.1.61) (2026-09-03)
+
+
+### Bug Fixes
+
+* CVE-2026-84394 and CVE-2026-84292 ([#433](https://github.com/mckinsey/agents-at-scale-marketplace/issues/433)) ([6feed72](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6feed72d66cfe6fc01c9fd6b37c83a0b17a1fd67))
+* **deps:** bump fast-uri to 3.1.6 for four SSRF and host-confusion CVEs ([#416](https://github.com/mckinsey/agents-at-scale-marketplace/issues/416)) ([c857f14](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c857f14bd2853b09e3fb5205569bbd284c13907a))
+
 ## [0.1.60](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.59...filesystem-mcp-server-v0.1.60) (2026-08-21)
 
 

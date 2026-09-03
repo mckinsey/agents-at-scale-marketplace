@@ -2,6 +2,13 @@
 
 All notable changes to ARK Sandbox will be documented in this file.
 
+## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.7...ark-sandbox-v0.1.8) (2026-09-03)
+
+
+### Bug Fixes
+
+* **deps:** bump vulnerable transitive pins in uv locks ([#410](https://github.com/mckinsey/agents-at-scale-marketplace/issues/410)) ([4fac62e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4fac62e075f2dd39db45b42e791f23ff2e8ed7cf))
+
 ## [0.1.7](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.6...ark-sandbox-v0.1.7) (2026-08-21)
 
 

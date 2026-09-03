@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.44](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.43...v0.1.44) (2026-09-03)
+
+
+### Features
+
+* **claude-agent-sdk:** stream tool invocations to the broker ([#408](https://github.com/mckinsey/agents-at-scale-marketplace/issues/408)) ([a36ec51](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a36ec51558b775459092f47f696974517359e1f8))
+* **kubernetes-mcp-server:** hold MCP address in an Ark Configuration ([#423](https://github.com/mckinsey/agents-at-scale-marketplace/issues/423)) ([46332d1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/46332d175a43061ced919f5a433bc1da2916f992))
+
+
+### Bug Fixes
+
+* **claude-agent-sdk:** replace unmanaged network policy with scoped egress allow-list ([#429](https://github.com/mckinsey/agents-at-scale-marketplace/issues/429)) ([e43c063](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e43c063039bfd0681defe3185463b0d4ac0b6899))
+* CVE-2026-84394 and CVE-2026-84292 ([#433](https://github.com/mckinsey/agents-at-scale-marketplace/issues/433)) ([6feed72](https://github.com/mckinsey/agents-at-scale-marketplace/commit/6feed72d66cfe6fc01c9fd6b37c83a0b17a1fd67))
+* **deps:** bump fast-uri to 3.1.6 for four SSRF and host-confusion CVEs ([#416](https://github.com/mckinsey/agents-at-scale-marketplace/issues/416)) ([c857f14](https://github.com/mckinsey/agents-at-scale-marketplace/commit/c857f14bd2853b09e3fb5205569bbd284c13907a))
+* **deps:** bump vulnerable transitive pins in uv locks ([#410](https://github.com/mckinsey/agents-at-scale-marketplace/issues/410)) ([4fac62e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4fac62e075f2dd39db45b42e791f23ff2e8ed7cf))
+* **deps:** pin uuid under form-data2 ([#411](https://github.com/mckinsey/agents-at-scale-marketplace/issues/411)) ([5f6a093](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5f6a0939d9aa6f562333b431a23eebc95b273a6b))
+* **docs:** bump sharp to 0.35.4 for libheif CVEs ([#418](https://github.com/mckinsey/agents-at-scale-marketplace/issues/418)) ([1026ac4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1026ac44ce4e502dd2493097a0719d5eff24aa23))
+* **executors:** grant impersonate so Query spec.serviceAccount is honoured ([#432](https://github.com/mckinsey/agents-at-scale-marketplace/issues/432)) ([1bd0643](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1bd064356646aea5fc771ac2bed9380fe55e5874))
+* validate conversationId before using it as a session directory path ([#422](https://github.com/mckinsey/agents-at-scale-marketplace/issues/422)) ([71af19e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/71af19e01fb967766a9bb0091124888361856207))
+
 ## [0.1.43](https://github.com/mckinsey/agents-at-scale-marketplace/compare/v0.1.42...v0.1.43) (2026-08-21)
 
 
