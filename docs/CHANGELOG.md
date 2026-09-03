@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.21](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.20...marketplace-docs-v0.1.21) (2026-09-03)
+
+
+### Features
+
+* **kubernetes-mcp-server:** hold MCP address in an Ark Configuration ([#423](https://github.com/mckinsey/agents-at-scale-marketplace/issues/423)) ([46332d1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/46332d175a43061ced919f5a433bc1da2916f992))
+
+
+### Bug Fixes
+
+* **deps:** pin uuid under form-data2 ([#411](https://github.com/mckinsey/agents-at-scale-marketplace/issues/411)) ([5f6a093](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5f6a0939d9aa6f562333b431a23eebc95b273a6b))
+* **docs:** bump sharp to 0.35.4 for libheif CVEs ([#418](https://github.com/mckinsey/agents-at-scale-marketplace/issues/418)) ([1026ac4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1026ac44ce4e502dd2493097a0719d5eff24aa23))
+
 ## [0.1.20](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.19...marketplace-docs-v0.1.20) (2026-08-21)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.16](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.15...noah-v0.1.16) (2026-09-03)
+
+
+### Bug Fixes
+
+* **deps:** bump vulnerable transitive pins in uv locks ([#410](https://github.com/mckinsey/agents-at-scale-marketplace/issues/410)) ([4fac62e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4fac62e075f2dd39db45b42e791f23ff2e8ed7cf))
+
 ## [0.1.15](https://github.com/mckinsey/agents-at-scale-marketplace/compare/noah-v0.1.14...noah-v0.1.15) (2026-06-15)
 
 
