@@ -62,6 +62,10 @@ rbac:
     #   serviceAccountNames:
     #     - tenant-a-sa
     #     - tenant-b-sa
+    #
+    # Must be a list. A bare --set value renders a string and the Role is
+    # rejected on apply, so wrap it in braces:
+    #   --set 'rbac.impersonation.serviceAccountNames={tenant-a-sa,tenant-b-sa}'
     serviceAccountNames: []
 
     # Allow assuming ANY ServiceAccount in the namespace instead of the list
