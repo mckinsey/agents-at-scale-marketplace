@@ -33,6 +33,7 @@
   },
   "overrides": {
     "qs": ">=6.15.2",
-    "zod-to-json-schema": "3.23.5"
+    "zod-to-json-schema": "3.23.5",
+    "fast-uri": "3.1.7"
   }
 }
