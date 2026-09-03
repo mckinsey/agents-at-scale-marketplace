@@ -20,7 +20,7 @@
     "@aws-sdk/client-s3": "^3.1103.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "diff": "^9.0.0",
-    "express": "^4.22.2",
+    "express": "^5.2.1",
     "minimatch": "^10.2.3",
     "zod": "^3.25.76",
     "zod-to-json-schema": "3.23.5"
@@ -32,7 +32,7 @@
     "typescript": "^5.2.2"
   },
   "overrides": {
-    "qs": ">=6.15.2",
+    "qs": ">=6.16.0",
     "zod-to-json-schema": "3.23.5",
     "fast-uri": "3.1.7"
   }
