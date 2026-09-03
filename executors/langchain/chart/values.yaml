@@ -49,16 +49,24 @@ rbac:
   create: true
   # Service account impersonation for per-query RBAC scoping.
   #
-  # When enabled (default), the executor resolves a Query's agent, model and
-  # secrets as the ServiceAccount named in its spec.serviceAccount, matching the
-  # identity the Ark controller uses for the same field. Queries that do not set
-  # it are resolved with the executor's own service account, as before.
-  #
-  # When disabled, queries that set spec.serviceAccount fail rather than
-  # resolving with the executor's identity — a declared restriction that cannot
-  # be applied is an error, not a default.
+  # A Query may name a ServiceAccount in spec.serviceAccount; the executor then
+  # resolves that query's agent, model and secrets as that account instead of its
+  # own. Queries that do not set the field are unaffected.
   impersonation:
-    enabled: true
+    # ServiceAccounts this executor is allowed to assume, as an explicit
+    # allow-list. Empty (the default) grants nothing, so a query naming a
+    # ServiceAccount fails until an operator opts in by listing it here.
+    #
+    #   serviceAccountNames:
+    #     - tenant-a-sa
+    #     - tenant-b-sa
+    serviceAccountNames: []
+
+    # Allow assuming ANY ServiceAccount in the namespace instead of the list
+    # above. Anything that can reach this pod's token can then act as any account
+    # in the namespace, including a privileged one — and for the sandbox that
+    # token is mounted alongside model-directed code. Prefer serviceAccountNames.
+    allowAny: false
 
 # Service account configuration
 serviceAccount:

@@ -34,13 +34,18 @@ rules:
   - apiGroups: [""]
     resources: ["secrets", "configmaps", "services"]
     verbs: ["get"]
-  {{- if .Values.rbac.impersonation.enabled }}
+  {{- if or .Values.rbac.impersonation.allowAny .Values.rbac.impersonation.serviceAccountNames }}
   # A Query may name a ServiceAccount in spec.serviceAccount, which the SDK uses
-  # to resolve the agent, model and their secrets. Without this the resolution
-  # fails rather than falling back to this sandbox's own identity.
+  # to resolve the agent, model and their secrets. Restricted to an allow-list:
+  # this token is mounted into a pod running model-directed code, so an unscoped
+  # grant would let that code assume a privileged account in the namespace.
   - apiGroups: [""]
     resources: ["serviceaccounts"]
     verbs: ["impersonate"]
+    {{- if not .Values.rbac.impersonation.allowAny }}
+    resourceNames:
+      {{- toYaml .Values.rbac.impersonation.serviceAccountNames | nindent 6 }}
+    {{- end }}
   {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
