@@ -34,7 +34,8 @@ rules:
   - apiGroups: [""]
     resources: ["secrets", "configmaps", "services"]
     verbs: ["get"]
-  {{- if or .Values.rbac.impersonation.allowAny .Values.rbac.impersonation.serviceAccountNames }}
+  {{- $impersonation := .Values.rbac.impersonation | default dict }}
+  {{- if or $impersonation.allowAny $impersonation.serviceAccountNames }}
   # A Query may name a ServiceAccount in spec.serviceAccount, which the SDK uses
   # to resolve the agent, model and their secrets. Restricted to an allow-list:
   # this token is mounted into a pod running model-directed code, so an unscoped
@@ -42,9 +43,9 @@ rules:
   - apiGroups: [""]
     resources: ["serviceaccounts"]
     verbs: ["impersonate"]
-    {{- if not .Values.rbac.impersonation.allowAny }}
+    {{- if not $impersonation.allowAny }}
     resourceNames:
-      {{- toYaml .Values.rbac.impersonation.serviceAccountNames | nindent 6 }}
+      {{- toYaml ($impersonation.serviceAccountNames | default list) | nindent 6 }}
     {{- end }}
   {{- end }}
 ---
