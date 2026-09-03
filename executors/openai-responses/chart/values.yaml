@@ -49,6 +49,30 @@ httpRoute:
 # RBAC configuration
 rbac:
   create: true
+  # Service account impersonation for per-query RBAC scoping.
+  #
+  # A Query may name a ServiceAccount in spec.serviceAccount; the executor then
+  # resolves that query's agent, model and secrets as that account instead of its
+  # own. Queries that do not set the field are unaffected.
+  impersonation:
+    # ServiceAccounts this executor is allowed to assume, as an explicit
+    # allow-list. Empty (the default) grants nothing, so a query naming a
+    # ServiceAccount fails until an operator opts in by listing it here.
+    #
+    #   serviceAccountNames:
+    #     - tenant-a-sa
+    #     - tenant-b-sa
+    #
+    # Must be a list. A bare --set value renders a string and the Role is
+    # rejected on apply, so wrap it in braces:
+    #   --set 'rbac.impersonation.serviceAccountNames={tenant-a-sa,tenant-b-sa}'
+    serviceAccountNames: []
+
+    # Allow assuming ANY ServiceAccount in the namespace instead of the list
+    # above. Anything that can reach this pod's token can then act as any account
+    # in the namespace, including a privileged one — and for the sandbox that
+    # token is mounted alongside model-directed code. Prefer serviceAccountNames.
+    allowAny: false
 
 # Service account configuration
 serviceAccount:
