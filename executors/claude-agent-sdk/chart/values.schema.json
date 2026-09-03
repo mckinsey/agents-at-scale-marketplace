@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "rbac": {
+      "type": "object",
+      "properties": {
+        "impersonation": {
+          "type": "object",
+          "properties": {
+            "serviceAccountNames": {
+              "type": ["array", "null"],
+              "items": { "type": "string" }
+            },
+            "allowAny": { "type": ["boolean", "null"] }
+          }
+        }
+      }
+    }
+  }
+}
