@@ -250,6 +250,7 @@ class TestGetSandboxInfoTool:
 
         assert result['sandbox_id'] == 'test-sandbox'
         assert result['pod_ip'] == '10.0.0.1'
+        mock_k8s_manager.get_sandbox_cr.assert_called_with(name='test-sandbox', namespace=None)
 
 
 class TestUploadFileTool:
@@ -262,6 +263,9 @@ class TestUploadFileTool:
 
         assert result['path'] == '/workspace/test.py'
         assert result['success'] is True
+        mock_k8s_manager.upload_file.assert_called_with(
+            sandbox_name='test-sandbox', path='/workspace/test.py', content="print('hi')", namespace=None,
+        )
 
 
 class TestDownloadFileTool:
@@ -273,6 +277,9 @@ class TestDownloadFileTool:
         result = await tool_fn(sandbox_id="test-sandbox", path="/workspace/test.py")
 
         assert result['content'] == 'print("hello")'
+        mock_k8s_manager.download_file.assert_called_with(
+            sandbox_name='test-sandbox', path='/workspace/test.py', namespace=None,
+        )
 
 
 class TestListSandboxesTool:
@@ -285,6 +292,7 @@ class TestListSandboxesTool:
 
         assert len(result) == 1
         assert result[0]['sandbox_id'] == 'sandbox-1'
+        mock_k8s_manager.list_sandbox_crs.assert_called_with(namespace=None)
 
 
 class TestDeleteSandboxTool:
@@ -296,6 +304,7 @@ class TestDeleteSandboxTool:
         result = await tool_fn(sandbox_id="test-sandbox")
 
         assert result['deleted'] is True
+        mock_k8s_manager.delete_sandbox_cr.assert_called_with(name='test-sandbox', namespace=None)
 
 
 class TestGetSandboxLogsTool:
@@ -308,6 +317,9 @@ class TestGetSandboxLogsTool:
 
         assert result['sandbox_id'] == 'test-sandbox'
         assert 'Container started' in result['logs']
+        mock_k8s_manager.get_sandbox_logs.assert_called_with(
+            sandbox_name='test-sandbox', namespace=None, tail_lines=None,
+        )
 
 
 class TestToolErrorPaths:

@@ -3,6 +3,7 @@
 import sys
 import os
 import asyncio
+import logging
 from unittest.mock import Mock, AsyncMock, patch
 
 import pytest
@@ -114,14 +115,20 @@ class TestMain:
     async def test_runs_both_tasks_and_stops(self):
         from main import main
 
-        with patch("main.run_controller", AsyncMock(return_value=None)):
-            with patch("main.run_mcp_server", AsyncMock(return_value=None)):
+        with patch("main.run_controller", AsyncMock(return_value=None)) as mock_controller:
+            with patch("main.run_mcp_server", AsyncMock(return_value=None)) as mock_mcp_server:
                 await main()
 
+        mock_controller.assert_called_once()
+        mock_mcp_server.assert_called_once()
+
     @pytest.mark.asyncio
-    async def test_task_exception_is_logged(self):
+    async def test_task_exception_is_logged(self, caplog):
         from main import main
 
         with patch("main.run_controller", AsyncMock(side_effect=RuntimeError("boom"))):
             with patch("main.run_mcp_server", AsyncMock(return_value=None)):
-                await main()
+                with caplog.at_level(logging.ERROR, logger="main"):
+                    await main()
+
+        assert "Task failed: boom" in caplog.text

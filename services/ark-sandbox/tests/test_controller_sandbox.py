@@ -348,6 +348,7 @@ class TestSandboxPhaseChanged:
                 old="Running", new="Terminated", name="test-sandbox", namespace="default",
                 status={"podName": "pod-1"},
             )
+        mock_manager.delete_pod.assert_called_once_with("pod-1", "default")
 
 
 class TestSandboxDeleted:
@@ -374,3 +375,4 @@ class TestSandboxDeleted:
         mock_manager.delete_pod.side_effect = RuntimeError("boom")
         with patch("controller.sandbox.get_manager", return_value=mock_manager):
             await sandbox.sandbox_deleted(name="test-sandbox", namespace="default", status={"podName": "pod-1"})
+        mock_manager.delete_pod.assert_called_once_with("pod-1", "default")

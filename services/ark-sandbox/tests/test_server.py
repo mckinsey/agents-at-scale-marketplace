@@ -1,18 +1,15 @@
 """Tests for the MCP server app factory."""
 
-import sys
-import os
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from sandbox_mcp.server import create_app, lifespan
 
 
 class TestCreateApp:
     def test_registers_all_tools(self):
-        from sandbox_mcp.server import create_app
-
         with patch("sandbox_mcp.server.KubernetesManager", return_value=Mock()):
             mcp = create_app()
 
@@ -21,8 +18,10 @@ class TestCreateApp:
 
 class TestLifespan:
     @pytest.mark.asyncio
-    async def test_yields_once(self):
-        from sandbox_mcp.server import lifespan
+    async def test_logs_startup_and_shutdown(self, caplog):
+        with caplog.at_level(logging.INFO, logger="sandbox_mcp.server"):
+            async with lifespan(Mock()):
+                assert "Starting ARK Sandbox MCP server" in caplog.text
+                assert "Shutting down ARK Sandbox MCP server" not in caplog.text
 
-        async with lifespan(Mock()):
-            pass
+        assert "Shutting down ARK Sandbox MCP server" in caplog.text
