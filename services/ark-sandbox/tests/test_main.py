@@ -1,20 +1,17 @@
 """Tests for main.py entrypoint."""
 
-import sys
-import os
 import asyncio
 import logging
 from unittest.mock import Mock, AsyncMock, patch
 
 import pytest
+from starlette.testclient import TestClient
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from main import create_health_app, main, run_controller, run_mcp_server
 
 
 class TestCreateHealthApp:
     def test_routes_mounted(self):
-        from main import create_health_app
-
         mcp_app = Mock()
         lifespan = Mock()
         app = create_health_app(mcp_app, lifespan)
@@ -24,9 +21,6 @@ class TestCreateHealthApp:
 
     @pytest.mark.asyncio
     async def test_health_endpoint_returns_status(self):
-        from main import create_health_app
-        from starlette.testclient import TestClient
-
         mcp_app = Mock()
         app = create_health_app(mcp_app, None)
         client = TestClient(app)
@@ -38,23 +32,17 @@ class TestCreateHealthApp:
 class TestRunController:
     @pytest.mark.asyncio
     async def test_success(self):
-        from main import run_controller
-
         with patch("kopf.operator", AsyncMock()) as mock_operator:
             await run_controller(asyncio.Event())
         mock_operator.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_cancelled_error_is_swallowed(self):
-        from main import run_controller
-
         with patch("kopf.operator", AsyncMock(side_effect=asyncio.CancelledError())):
             await run_controller(asyncio.Event())
 
     @pytest.mark.asyncio
     async def test_generic_exception_reraised(self):
-        from main import run_controller
-
         with patch("kopf.operator", AsyncMock(side_effect=RuntimeError("boom"))):
             with pytest.raises(RuntimeError):
                 await run_controller(asyncio.Event())
@@ -63,8 +51,6 @@ class TestRunController:
 class TestRunMcpServer:
     @pytest.mark.asyncio
     async def test_success(self):
-        from main import run_mcp_server
-
         mock_mcp_app = Mock()
         mock_mcp_app.http_app.return_value = Mock(lifespan=Mock())
         mock_app = Mock()
@@ -82,8 +68,6 @@ class TestRunMcpServer:
 
     @pytest.mark.asyncio
     async def test_cancelled_error_is_swallowed(self):
-        from main import run_mcp_server
-
         mock_app = Mock()
         mock_app.http_app.return_value = Mock(lifespan=Mock())
         mock_server = Mock()
@@ -96,8 +80,6 @@ class TestRunMcpServer:
 
     @pytest.mark.asyncio
     async def test_generic_exception_reraised(self):
-        from main import run_mcp_server
-
         mock_app = Mock()
         mock_app.http_app.return_value = Mock(lifespan=Mock())
         mock_server = Mock()
@@ -113,8 +95,6 @@ class TestRunMcpServer:
 class TestMain:
     @pytest.mark.asyncio
     async def test_runs_both_tasks_and_stops(self):
-        from main import main
-
         with patch("main.run_controller", AsyncMock(return_value=None)) as mock_controller:
             with patch("main.run_mcp_server", AsyncMock(return_value=None)) as mock_mcp_server:
                 await main()
@@ -124,8 +104,6 @@ class TestMain:
 
     @pytest.mark.asyncio
     async def test_task_exception_is_logged(self, caplog):
-        from main import main
-
         with patch("main.run_controller", AsyncMock(side_effect=RuntimeError("boom"))):
             with patch("main.run_mcp_server", AsyncMock(return_value=None)):
                 with caplog.at_level(logging.ERROR, logger="main"):

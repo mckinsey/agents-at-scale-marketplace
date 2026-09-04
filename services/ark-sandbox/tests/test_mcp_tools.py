@@ -1,12 +1,11 @@
 """Tests for MCP tools."""
 
 import pytest
-import sys
-import os
 from unittest.mock import Mock, AsyncMock, patch
 
-# Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
+from sandbox_mcp.tools import register_tools
 
 
 @pytest.fixture
@@ -99,9 +98,6 @@ def mock_k8s_manager():
 @pytest.fixture
 def mcp_app(mock_k8s_manager):
     """Create an MCP app with registered tools."""
-    from fastmcp import FastMCP
-    from sandbox_mcp.tools import register_tools
-    
     mcp = FastMCP("Test Sandbox")
     register_tools(mcp, mock_k8s_manager)
     
@@ -150,9 +146,6 @@ class TestCreateSandboxTool:
     @pytest.mark.asyncio
     async def test_create_sandbox_basic(self, mock_k8s_manager):
         """Test basic sandbox creation."""
-        from sandbox_mcp.tools import register_tools
-        from fastmcp import FastMCP
-        
         mcp = FastMCP("Test")
         register_tools(mcp, mock_k8s_manager)
         
@@ -171,9 +164,6 @@ class TestCreateSandboxTool:
     @pytest.mark.asyncio
     async def test_create_sandbox_with_pvc(self, mock_k8s_manager):
         """Test sandbox creation with PVC."""
-        from sandbox_mcp.tools import register_tools
-        from fastmcp import FastMCP
-        
         mcp = FastMCP("Test")
         register_tools(mcp, mock_k8s_manager)
         
@@ -197,9 +187,6 @@ class TestExecuteCommandTool:
     @pytest.mark.asyncio
     async def test_execute_command(self, mock_k8s_manager):
         """Test command execution."""
-        from sandbox_mcp.tools import register_tools
-        from fastmcp import FastMCP
-        
         mcp = FastMCP("Test")
         register_tools(mcp, mock_k8s_manager)
         
@@ -221,9 +208,6 @@ class TestClaimFromPoolTool:
     @pytest.mark.asyncio
     async def test_claim_from_pool(self, mock_k8s_manager):
         """Test claiming sandbox from pool."""
-        from sandbox_mcp.tools import register_tools
-        from fastmcp import FastMCP
-        
         mcp = FastMCP("Test")
         register_tools(mcp, mock_k8s_manager)
         
@@ -327,8 +311,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_create_sandbox_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.create_sandbox_cr.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'create_sandbox')
@@ -338,8 +320,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_info_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.get_sandbox_cr.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'get_sandbox_info')
@@ -349,8 +329,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_execute_command_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.execute_command.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'execute_command')
@@ -360,8 +338,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_upload_file_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.upload_file.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'upload_file')
@@ -371,8 +347,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_download_file_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.download_file.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'download_file')
@@ -382,8 +356,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_list_sandboxes_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.list_sandbox_crs.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'list_sandboxes')
@@ -393,8 +365,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_delete_sandbox_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.delete_sandbox_cr.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'delete_sandbox')
@@ -404,8 +374,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_logs_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.get_sandbox_logs.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'get_sandbox_logs')
@@ -415,8 +383,6 @@ class TestToolErrorPaths:
 
     @pytest.mark.asyncio
     async def test_claim_sandbox_from_pool_error(self, mcp_app):
-        from fastmcp.exceptions import ToolError
-
         mcp, mock_k8s_manager = mcp_app
         mock_k8s_manager.claim_from_pool.side_effect = RuntimeError("boom")
         tool_fn = await _tool_fn(mcp, 'claim_sandbox_from_pool')

@@ -1,12 +1,11 @@
 """Tests for the Kubernetes manager."""
 
 import pytest
-import sys
-import os
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
-# Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from k8s.manager import KubernetesManager
+from kubernetes.client.rest import ApiException
+from kubernetes.config import ConfigException
 
 
 @pytest.fixture
@@ -35,8 +34,6 @@ class TestKubernetesManager:
     
     def test_init_loads_config(self, mock_k8s_client):
         """Test that manager loads kubernetes config on init."""
-        from k8s.manager import KubernetesManager
-        
         manager = KubernetesManager()
         
         # Should try to load in-cluster config first
@@ -44,9 +41,6 @@ class TestKubernetesManager:
     
     def test_init_falls_back_to_kubeconfig(self, mock_k8s_client):
         """Test that manager falls back to kubeconfig if not in cluster."""
-        from k8s.manager import KubernetesManager
-        from kubernetes.config import ConfigException
-        
         # Make in-cluster config fail with the correct exception type
         mock_k8s_client['config'].load_incluster_config.side_effect = ConfigException("Not in cluster")
         mock_k8s_client['config'].ConfigException = ConfigException
@@ -58,8 +52,6 @@ class TestKubernetesManager:
     
     def test_manager_has_required_methods(self, mock_k8s_client):
         """Test that manager has all required methods."""
-        from k8s.manager import KubernetesManager
-        
         manager = KubernetesManager()
         
         # Check for required methods
@@ -85,8 +77,6 @@ class TestPodOperations:
     @pytest.mark.asyncio
     async def test_create_pod_basic(self, mock_k8s_client):
         """Test basic pod creation."""
-        from k8s.manager import KubernetesManager
-        
         manager = KubernetesManager()
         
         # Mock the create_namespaced_pod call
@@ -108,8 +98,6 @@ class TestPodOperations:
     @pytest.mark.asyncio
     async def test_create_pod_with_pvc(self, mock_k8s_client):
         """Test pod creation with PVC mount."""
-        from k8s.manager import KubernetesManager
-        
         manager = KubernetesManager()
         
         mock_pod = Mock()
@@ -139,8 +127,6 @@ class TestSandboxCROperations:
     @pytest.mark.asyncio
     async def test_create_sandbox_cr(self, mock_k8s_client):
         """Test creating a Sandbox CR."""
-        from k8s.manager import KubernetesManager
-        
         manager = KubernetesManager()
         
         mock_sandbox = {
@@ -160,8 +146,6 @@ class TestSandboxCROperations:
     @pytest.mark.asyncio
     async def test_list_sandbox_crs(self, mock_k8s_client):
         """Test listing Sandbox CRs."""
-        from k8s.manager import KubernetesManager
-        
         manager = KubernetesManager()
         
         mock_sandboxes = {
@@ -192,8 +176,6 @@ class TestGetSandboxCR:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_cr_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         mock_k8s_client['custom_api'].get_namespaced_custom_object.return_value = {
             'metadata': {'name': 'test-sandbox', 'namespace': 'default'},
@@ -209,9 +191,6 @@ class TestGetSandboxCR:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_cr_not_found(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['custom_api'].get_namespaced_custom_object.side_effect = ApiException(status=404)
 
@@ -220,9 +199,6 @@ class TestGetSandboxCR:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_cr_other_error(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['custom_api'].get_namespaced_custom_object.side_effect = ApiException(status=500, reason="boom")
 
@@ -235,8 +211,6 @@ class TestDeleteSandboxCR:
 
     @pytest.mark.asyncio
     async def test_delete_sandbox_cr_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         result = await manager.delete_sandbox_cr('test-sandbox', namespace='default')
 
@@ -244,9 +218,6 @@ class TestDeleteSandboxCR:
 
     @pytest.mark.asyncio
     async def test_delete_sandbox_cr_not_found(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['custom_api'].delete_namespaced_custom_object.side_effect = ApiException(status=404)
 
@@ -255,9 +226,6 @@ class TestDeleteSandboxCR:
 
     @pytest.mark.asyncio
     async def test_delete_sandbox_cr_other_error(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['custom_api'].delete_namespaced_custom_object.side_effect = ApiException(status=500, reason="boom")
 
@@ -270,8 +238,6 @@ class TestUpdateSandboxStatus:
 
     @pytest.mark.asyncio
     async def test_update_sandbox_status_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         mock_k8s_client['custom_api'].get_namespaced_custom_object.return_value = {
             'metadata': {'name': 'test-sandbox'}, 'status': {},
@@ -283,9 +249,6 @@ class TestUpdateSandboxStatus:
 
     @pytest.mark.asyncio
     async def test_update_sandbox_status_error_reraised(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['custom_api'].get_namespaced_custom_object.side_effect = ApiException(status=500)
 
@@ -298,8 +261,6 @@ class TestWaitForSandboxReady:
 
     @pytest.mark.asyncio
     async def test_returns_when_running(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'name': 'test-sandbox', 'phase': 'Running'})
 
@@ -309,8 +270,6 @@ class TestWaitForSandboxReady:
 
     @pytest.mark.asyncio
     async def test_raises_when_terminated(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'name': 'test-sandbox', 'phase': 'Terminated'})
 
@@ -319,8 +278,6 @@ class TestWaitForSandboxReady:
 
     @pytest.mark.asyncio
     async def test_raises_on_timeout(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'name': 'test-sandbox', 'phase': 'Pending'})
 
@@ -339,8 +296,6 @@ class TestClaimFromPool:
 
     @pytest.mark.asyncio
     async def test_no_available_sandbox(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.list_sandbox_crs = AsyncMock(return_value=[])
 
@@ -349,8 +304,6 @@ class TestClaimFromPool:
 
     @pytest.mark.asyncio
     async def test_claim_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.list_sandbox_crs = AsyncMock(return_value=[
             {'name': 'pool-sbx-1', 'phase': 'Running'},
@@ -368,9 +321,6 @@ class TestClaimFromPool:
 
     @pytest.mark.asyncio
     async def test_claim_api_error(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         manager.list_sandbox_crs = AsyncMock(return_value=[
             {'name': 'pool-sbx-1', 'phase': 'Running'},
@@ -385,8 +335,6 @@ class TestCreatePodSpec:
     """Tests for create_pod_spec."""
 
     def test_with_owner_reference_and_pvc(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         pod = manager.create_pod_spec(
             name='test-sandbox',
@@ -413,9 +361,6 @@ class TestCreatePodError:
 
     @pytest.mark.asyncio
     async def test_create_pod_api_error_reraised(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['core_api'].create_namespaced_pod.side_effect = ApiException(status=500)
 
@@ -430,8 +375,6 @@ class TestDeletePod:
 
     @pytest.mark.asyncio
     async def test_delete_pod_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         await manager.delete_pod('test-sandbox', 'default')
 
@@ -439,9 +382,6 @@ class TestDeletePod:
 
     @pytest.mark.asyncio
     async def test_delete_pod_not_found_swallowed(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['core_api'].delete_namespaced_pod.side_effect = ApiException(status=404)
 
@@ -449,9 +389,6 @@ class TestDeletePod:
 
     @pytest.mark.asyncio
     async def test_delete_pod_other_error_raised(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['core_api'].delete_namespaced_pod.side_effect = ApiException(status=500)
 
@@ -464,8 +401,6 @@ class TestGetPodStatusAndIp:
 
     @pytest.mark.asyncio
     async def test_get_pod_status_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         mock_pod = Mock()
         mock_pod.status.phase = 'Running'
@@ -477,9 +412,6 @@ class TestGetPodStatusAndIp:
 
     @pytest.mark.asyncio
     async def test_get_pod_status_not_found(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['core_api'].read_namespaced_pod.side_effect = ApiException(status=404)
 
@@ -489,9 +421,6 @@ class TestGetPodStatusAndIp:
 
     @pytest.mark.asyncio
     async def test_get_pod_status_other_error_raised(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['core_api'].read_namespaced_pod.side_effect = ApiException(status=500)
 
@@ -500,8 +429,6 @@ class TestGetPodStatusAndIp:
 
     @pytest.mark.asyncio
     async def test_get_pod_ip_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         mock_pod = Mock()
         mock_pod.status.pod_ip = '10.0.0.5'
@@ -513,9 +440,6 @@ class TestGetPodStatusAndIp:
 
     @pytest.mark.asyncio
     async def test_get_pod_ip_not_found(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         mock_k8s_client['core_api'].read_namespaced_pod.side_effect = ApiException(status=404)
 
@@ -529,8 +453,6 @@ class TestExecuteCommand:
 
     @pytest.mark.asyncio
     async def test_sandbox_not_running(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'phase': 'Pending'})
 
@@ -539,8 +461,6 @@ class TestExecuteCommand:
 
     @pytest.mark.asyncio
     async def test_sandbox_has_no_pod(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'phase': 'Running', 'podName': None})
 
@@ -549,8 +469,6 @@ class TestExecuteCommand:
 
     @pytest.mark.asyncio
     async def test_execute_command_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'phase': 'Running', 'podName': 'pod-1'})
 
@@ -570,9 +488,6 @@ class TestExecuteCommand:
 
     @pytest.mark.asyncio
     async def test_execute_command_stream_error(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'phase': 'Running', 'podName': 'pod-1'})
 
@@ -586,8 +501,6 @@ class TestUploadDownloadFile:
 
     @pytest.mark.asyncio
     async def test_upload_file_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.execute_command = AsyncMock(return_value={'exit_code': 0, 'stdout': '', 'stderr': ''})
 
@@ -598,8 +511,6 @@ class TestUploadDownloadFile:
 
     @pytest.mark.asyncio
     async def test_upload_file_failure(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.execute_command = AsyncMock(return_value={'exit_code': 1, 'stdout': '', 'stderr': 'denied'})
 
@@ -608,8 +519,6 @@ class TestUploadDownloadFile:
 
     @pytest.mark.asyncio
     async def test_download_file_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.execute_command = AsyncMock(return_value={'exit_code': 0, 'stdout': 'print(1)', 'stderr': ''})
 
@@ -619,8 +528,6 @@ class TestUploadDownloadFile:
 
     @pytest.mark.asyncio
     async def test_download_file_failure(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.execute_command = AsyncMock(return_value={'exit_code': 1, 'stdout': '', 'stderr': 'missing'})
 
@@ -633,8 +540,6 @@ class TestGetSandboxLogs:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_logs_success(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'podName': 'pod-1'})
         mock_k8s_client['core_api'].read_namespaced_pod_log.return_value = 'log output'
@@ -645,8 +550,6 @@ class TestGetSandboxLogs:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_logs_no_pod(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'podName': None})
 
@@ -655,9 +558,6 @@ class TestGetSandboxLogs:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_logs_pod_not_found(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'podName': 'pod-1'})
         mock_k8s_client['core_api'].read_namespaced_pod_log.side_effect = ApiException(status=404)
@@ -667,9 +567,6 @@ class TestGetSandboxLogs:
 
     @pytest.mark.asyncio
     async def test_get_sandbox_logs_other_error(self, mock_k8s_client):
-        from k8s.manager import KubernetesManager
-        from kubernetes.client.rest import ApiException
-
         manager = KubernetesManager()
         manager.get_sandbox_cr = AsyncMock(return_value={'podName': 'pod-1'})
         mock_k8s_client['core_api'].read_namespaced_pod_log.side_effect = ApiException(status=500, reason="boom")
