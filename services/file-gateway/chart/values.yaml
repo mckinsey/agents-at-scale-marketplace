@@ -10,6 +10,11 @@ storage:
   storageClassName: ""
   accessModes:
     - ReadWriteOnce
+  # Empty means "<fullname>-storage", stable across upgrades. Releases installed
+  # before that became the default hold a timestamped PVC
+  # (file-gateway-storage-20260510143032 and similar) - pin that exact name here,
+  # or the next upgrade renders the new name and Helm deletes the old claim and
+  # its data.
   pvcName: ""
 
 httpRoute:
