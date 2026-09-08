@@ -277,6 +277,79 @@ class TestAdmissionControlAccounting:
         await manager.create_sandbox("conv-next")
 
     @pytest.mark.asyncio
+    async def test_concurrent_requests_for_one_conversation_all_failing_free_the_slot(
+        self, manager: SandboxManager
+    ) -> None:
+        """The last request out frees the slot, not the one that happened to take it.
+
+        Regression test: two requests for the same conversation shared a claim name but
+        each judged the slot from its own state. The one holding the reservation exited
+        while the other was in flight and declined to free it; the other did not believe
+        it owned the slot, so a phantom slot survived with nothing left in the cluster.
+        """
+        from kubernetes_asyncio import client
+
+        manager._config.max_active_sandboxes = 1
+        live = _wire_cluster(manager)
+        working_create = manager._k8s.create_sandbox_claim
+
+        async def failing_create(
+            name: str, template: str, namespace: str, labels: dict[str, str] | None = None
+        ) -> dict[str, Any]:
+            await asyncio.sleep(API_LATENCY)
+            raise client.ApiException(status=500)
+
+        manager._k8s.create_sandbox_claim = failing_create
+
+        results = await asyncio.gather(
+            manager.create_sandbox("conv-same"),
+            manager.create_sandbox("conv-same"),
+            return_exceptions=True,
+        )
+
+        assert all(isinstance(r, client.ApiException) for r in results)
+        assert live == []
+        assert manager._slots == set()
+        assert manager._in_flight == {}
+
+        manager._k8s.create_sandbox_claim = working_create
+        await manager.create_sandbox("conv-next")
+
+    @pytest.mark.asyncio
+    async def test_concurrent_requests_keep_the_slot_when_one_leaves_a_claim(
+        self, manager: SandboxManager
+    ) -> None:
+        """One failure among concurrent requests must not free a slot the other still needs."""
+        from kubernetes_asyncio import client
+
+        manager._config.max_active_sandboxes = 1
+        live = _wire_cluster(manager)
+        working_create = manager._k8s.create_sandbox_claim
+        first = True
+
+        async def flaky_create(
+            name: str, template: str, namespace: str, labels: dict[str, str] | None = None
+        ) -> dict[str, Any]:
+            nonlocal first
+            await asyncio.sleep(API_LATENCY)
+            if first:
+                first = False
+                raise client.ApiException(status=500)
+            return await working_create(name, template, namespace, labels)
+
+        manager._k8s.create_sandbox_claim = flaky_create
+
+        results = await asyncio.gather(
+            manager.create_sandbox("conv-same"),
+            manager.create_sandbox("conv-same"),
+            return_exceptions=True,
+        )
+
+        assert len(live) == 1
+        assert [isinstance(r, Exception) for r in results].count(False) == 1
+        assert manager._slots == {manager._claim_name("conv-same")}
+
+    @pytest.mark.asyncio
     async def test_recovery_reuses_the_same_slot(self, manager: SandboxManager) -> None:
         """Recovery replaces a sandbox rather than adding one, so it is never rejected."""
         manager._config.max_active_sandboxes = 1

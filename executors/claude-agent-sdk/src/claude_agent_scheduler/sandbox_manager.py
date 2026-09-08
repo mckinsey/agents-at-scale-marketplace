@@ -288,37 +288,46 @@ class SandboxManager:
         self._admission_lock = asyncio.Lock()
         self._slots: set[str] = set()
         self._in_flight: Counter[str] = Counter()
+        self._flight_reserved: set[str] = set()
+        self._flight_claimed: set[str] = set()
 
-    async def _admit(self, claim_name: str) -> bool:
-        """Reserve capacity for a claim. Returns True if this call took a new slot.
+    async def _admit(self, claim_name: str) -> None:
+        """Reserve capacity for a claim.
 
         A claim already holding a slot — a recovery, or a second request for the
         same conversation — is not new occupancy and skips the limit check.
         """
         async with self._admission_lock:
-            reserved = claim_name not in self._slots
-            if reserved:
+            if claim_name not in self._slots:
                 limit = self._config.max_active_sandboxes
                 if limit > 0 and len(self._slots) >= limit:
                     raise SandboxCapacityError(
                         f"Sandbox capacity reached ({len(self._slots)}/{limit} active). Retry later."
                     )
                 self._slots.add(claim_name)
+                self._flight_reserved.add(claim_name)
             self._in_flight[claim_name] += 1
-            return reserved
 
-    async def _release(self, claim_name: str, reserved: bool, claim_exists: bool) -> None:
-        """Drop the in-flight marker, freeing the slot only if this call took it and no claim remains.
+    async def _release(self, claim_name: str, claim_exists: bool) -> None:
+        """Drop the in-flight marker, and once the last one is gone decide the claim's slot.
 
-        A claim left in the cluster — provisioned, or adopted on 409 and then failed —
-        keeps its slot, because the pod it stands for is still consuming capacity.
+        Requests sharing a claim name share its occupancy, so the decision belongs to
+        whichever of them finishes last rather than to the one that took the slot. The
+        slot is freed only if this group of requests created it and none of them left a
+        claim behind: a claim in the cluster — provisioned, or adopted on 409 and then
+        failed — keeps its slot, because the pod it stands for still consumes capacity.
         """
         async with self._admission_lock:
+            if claim_exists:
+                self._flight_claimed.add(claim_name)
             self._in_flight[claim_name] -= 1
-            if self._in_flight[claim_name] <= 0:
-                del self._in_flight[claim_name]
-            if reserved and not claim_exists and claim_name not in self._in_flight:
+            if self._in_flight[claim_name] > 0:
+                return
+            del self._in_flight[claim_name]
+            if claim_name in self._flight_reserved and claim_name not in self._flight_claimed:
                 self._slots.discard(claim_name)
+            self._flight_reserved.discard(claim_name)
+            self._flight_claimed.discard(claim_name)
 
     async def _known_slots(self) -> set[str]:
         async with self._admission_lock:
@@ -375,12 +384,12 @@ class SandboxManager:
     async def create_sandbox(self, conversation_id: str) -> SandboxInfo:
         """Create a new sandbox for the conversation. Checks admission control."""
         claim_name = self._claim_name(conversation_id)
-        reserved = await self._admit(claim_name)
+        await self._admit(claim_name)
         claim = _ClaimState()
         try:
             return await self._provision(conversation_id, claim_name, claim)
         finally:
-            await self._release(claim_name, reserved, claim.exists)
+            await self._release(claim_name, claim.exists)
 
     async def _provision(self, conversation_id: str, claim_name: str, claim: _ClaimState) -> SandboxInfo:
         namespace = self._config.namespace
