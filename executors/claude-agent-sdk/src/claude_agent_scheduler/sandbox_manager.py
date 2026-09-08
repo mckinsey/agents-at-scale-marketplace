@@ -277,6 +277,26 @@ class SandboxManager:
         self._config = config
         self._k8s = _AsyncK8sHelper()
         self._cache = SandboxCache()
+        self._admission_lock = asyncio.Lock()
+        self._active_count = 0
+        self._in_flight = 0
+
+    async def _admit(self, gated: bool = True) -> None:
+        async with self._admission_lock:
+            limit = self._config.max_active_sandboxes
+            if gated and limit > 0:
+                active = self._active_count + self._in_flight
+                if active >= limit:
+                    raise SandboxCapacityError(
+                        f"Sandbox capacity reached ({active}/{limit} active). Retry later."
+                    )
+            self._in_flight += 1
+
+    async def _release(self, created: bool) -> None:
+        async with self._admission_lock:
+            self._in_flight -= 1
+            if created:
+                self._active_count += 1
 
     def _service_fqdn(self, sandbox_name: str) -> str:
         return f"{sandbox_name}.{self._config.namespace}.svc.cluster.local"
@@ -310,19 +330,22 @@ class SandboxManager:
 
     async def create_sandbox(self, conversation_id: str) -> SandboxInfo:
         """Create a new sandbox for the conversation. Checks admission control."""
+        return await self._create(conversation_id, gated=True)
+
+    async def _create(self, conversation_id: str, gated: bool) -> SandboxInfo:
+        await self._admit(gated=gated)
+        created = False
+        try:
+            info = await self._provision(conversation_id)
+            created = True
+            return info
+        finally:
+            await self._release(created)
+
+    async def _provision(self, conversation_id: str) -> SandboxInfo:
         claim_name = self._claim_name(conversation_id)
         namespace = self._config.namespace
         deadline = time.monotonic() + self._config.sandbox_ready_timeout
-
-        # Admission control
-        if self._config.max_active_sandboxes > 0:
-            claims = await self._k8s.list_sandbox_claims(
-                namespace, f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
-            )
-            if len(claims) >= self._config.max_active_sandboxes:
-                raise SandboxCapacityError(
-                    f"Sandbox capacity reached ({len(claims)}/{self._config.max_active_sandboxes} active). Retry later."
-                )
 
         labels = {
             LABEL_CONVERSATION_ID: conversation_id,
@@ -414,7 +437,9 @@ class SandboxManager:
 
         # Sandbox is genuinely gone — delete stale claim and recreate
         await self._k8s.delete_sandbox_claim(claim_name, namespace)
-        return await self.create_sandbox(conversation_id)
+        async with self._admission_lock:
+            self._active_count = max(0, self._active_count - 1)
+        return await self._create(conversation_id, gated=False)
 
     async def warm_cache(self) -> None:
         """Warm local cache from existing SandboxClaims on startup."""
@@ -460,6 +485,8 @@ class SandboxManager:
             )
             logger.info("Cached mapping: conversation=%s -> sandbox=%s", conversation_id, sandbox_name)
 
+        async with self._admission_lock:
+            self._active_count = len(items)
         self._cache.warm(items)
         logger.info("Cache warm complete: %d active conversations", len(items))
 
@@ -483,6 +510,8 @@ class SandboxManager:
         claims = await self._k8s.list_sandbox_claims(
             namespace, f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
         )
+        async with self._admission_lock:
+            self._active_count = len(claims)
 
         for item in claims:
             metadata = item.get("metadata", {})
@@ -513,6 +542,8 @@ class SandboxManager:
                     self._cache.evict(conversation_id)
                 if self._config.shutdown_policy == "Delete":
                     await self._k8s.delete_sandbox_claim(claim_name, namespace)
+                    async with self._admission_lock:
+                        self._active_count = max(0, self._active_count - 1)
 
     async def close(self) -> None:
         await self._k8s.close()

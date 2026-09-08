@@ -232,7 +232,11 @@ scheduler:
     sandboxReadyTimeout: 60    # seconds
     sandboxTemplate: claude-agent-sdk
     namespace: ""              # defaults to release namespace
-    maxActiveSandboxes: 0      # 0 = unlimited; set to cap concurrent sandbox pods
+    maxActiveSandboxes: 25     # cap on concurrent sandbox pods; 0 = unlimited (not recommended)
+    # 25 pods reserve ~12.5Gi memory and 5 CPU at the sandboxTemplate requests below. Raise it
+    # only if the cluster has headroom — a cap above what the node pool can schedule turns a fast
+    # 503 into a 60s sandboxReadyTimeout and a 502. sessionIdleTTL is the bigger lever on
+    # throughput: a sandbox is held for the full TTL after the last message, not while in use.
     # For a hard cap independent of the scheduler, set a namespace-level ResourceQuota on pods
   sandboxTemplate:
     resources:

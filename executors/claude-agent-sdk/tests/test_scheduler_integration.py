@@ -114,7 +114,7 @@ class TestEndToEndA2ARoundTrip:
     def test_admission_control_returns_503(self, sandbox_manager: SandboxManager) -> None:
         """Capacity limit reached → 503 with Retry-After."""
         sandbox_manager._config.max_active_sandboxes = 2
-        sandbox_manager._k8s.list_sandbox_claims = AsyncMock(return_value=[{}, {}])  # 2 claims = at capacity
+        sandbox_manager._active_count = 2  # at capacity
 
         mock_http_client = AsyncMock(spec=httpx.AsyncClient)
 
