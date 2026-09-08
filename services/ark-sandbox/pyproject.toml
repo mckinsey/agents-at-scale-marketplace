@@ -36,3 +36,6 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
 
+[tool.coverage.report]
+fail_under = 75
+
