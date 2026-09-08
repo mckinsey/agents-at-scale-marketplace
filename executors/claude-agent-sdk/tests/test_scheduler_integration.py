@@ -19,6 +19,7 @@ def sandbox_manager() -> SandboxManager:
     with patch("claude_agent_scheduler.sandbox_manager._AsyncK8sHelper"):
         mgr = SandboxManager(config=config)
         mgr._k8s = AsyncMock()
+        mgr._seeded = True
         return mgr
 
 

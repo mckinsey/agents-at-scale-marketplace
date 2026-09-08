@@ -44,6 +44,7 @@ def manager() -> SandboxManager:
     with patch("claude_agent_scheduler.sandbox_manager._AsyncK8sHelper"):
         mgr = SandboxManager(config=config)
         mgr._k8s = AsyncMock()
+        mgr._seeded = True
         return mgr
 
 
@@ -80,6 +81,64 @@ def _wire_cluster(manager: SandboxManager) -> list[dict[str, Any]]:
     manager._k8s.wait_for_sandbox_ready = AsyncMock()
     manager._k8s.get_sandbox_claim = AsyncMock(return_value=None)
     return live
+
+
+class TestAdmissionControlSeeding:
+    @pytest.mark.asyncio
+    async def test_creates_are_rejected_until_occupancy_is_seeded(self, manager: SandboxManager) -> None:
+        """A bounded scheduler that cannot see current occupancy rejects rather than guesses.
+
+        Regression test: admission stopped LISTing on create, so occupancy came only
+        from the startup LIST. When that LIST failed, warm_cache returned with nothing
+        seeded and a burst was admitted on top of whatever the cluster already held.
+        """
+        manager._config.max_active_sandboxes = 3
+        manager._seeded = False
+        live = _wire_cluster(manager)
+
+        with pytest.raises(SandboxCapacityError):
+            await manager.create_sandbox("conv-a")
+        assert live == []
+
+        await manager._reconcile_slots(set(), set())
+        await manager.create_sandbox("conv-a")
+        assert len(live) == 1
+
+    @pytest.mark.asyncio
+    async def test_failed_warm_cache_leaves_occupancy_unseeded(self, manager: SandboxManager) -> None:
+        """warm_cache must not report a seeded occupancy it never read."""
+        from kubernetes_asyncio import client
+
+        manager._config.max_active_sandboxes = 3
+        manager._seeded = False
+        manager._k8s.list_sandbox_claims = AsyncMock(side_effect=client.ApiException(status=503))
+
+        await manager.warm_cache()
+
+        assert manager._seeded is False
+
+    @pytest.mark.asyncio
+    async def test_warm_cache_seeds_occupancy(self, manager: SandboxManager) -> None:
+        """A successful startup LIST is what unblocks creates."""
+        manager._config.max_active_sandboxes = 3
+        manager._seeded = False
+        _wire_cluster(manager)
+
+        await manager.warm_cache()
+
+        assert manager._seeded is True
+        await manager.create_sandbox("conv-a")
+
+    @pytest.mark.asyncio
+    async def test_unlimited_does_not_wait_for_seeding(self, manager: SandboxManager) -> None:
+        """With no limit there is nothing to enforce, so occupancy need not be known."""
+        manager._config.max_active_sandboxes = 0
+        manager._seeded = False
+        live = _wire_cluster(manager)
+
+        await manager.create_sandbox("conv-a")
+
+        assert len(live) == 1
 
 
 class TestAdmissionControlConcurrency:
@@ -348,6 +407,88 @@ class TestAdmissionControlAccounting:
         assert len(live) == 1
         assert [isinstance(r, Exception) for r in results].count(False) == 1
         assert manager._slots == {manager._claim_name("conv-same")}
+
+    @pytest.mark.asyncio
+    async def test_failed_recovery_frees_the_slot(self, manager: SandboxManager) -> None:
+        """A recovery whose recreate leaves no claim must not keep the slot.
+
+        Regression test: recovery deletes the stale claim and re-enters create_sandbox
+        with the name still in occupancy, so the recreate reserved nothing. When it
+        failed outright the slot stayed held with no claim behind it, and unrelated
+        conversations were rejected until the next reaper cycle.
+        """
+        from kubernetes_asyncio import client
+
+        manager._config.max_active_sandboxes = 1
+        live = _wire_cluster(manager)
+        working_create = manager._k8s.create_sandbox_claim
+
+        info = await manager.create_sandbox("conv-a")
+        assert manager._slots == {info.claim_name}
+
+        async def failing_create(
+            name: str, template: str, namespace: str, labels: dict[str, str] | None = None
+        ) -> dict[str, Any]:
+            await asyncio.sleep(API_LATENCY)
+            raise client.ApiException(status=500)
+
+        manager._k8s.create_sandbox_claim = failing_create
+        with pytest.raises(client.ApiException):
+            await manager.recover_sandbox("conv-a")
+
+        assert live == []
+        assert manager._slots == set()
+
+        manager._k8s.create_sandbox_claim = working_create
+        await manager.create_sandbox("conv-b")
+
+    @pytest.mark.asyncio
+    async def test_last_out_sees_a_discard_by_another_request(self, manager: SandboxManager) -> None:
+        """Claim existence is read from shared state, not OR-ed across per-request snapshots.
+
+        Regression test: request A owned the CREATE while B adopted it on 409. B
+        finished first reporting a live claim, then A failed and deleted that claim.
+        Last-out trusted B's stale snapshot and kept a slot for a claim A had removed.
+        """
+        from kubernetes_asyncio import client
+
+        manager._config.max_active_sandboxes = 1
+        live = _wire_cluster(manager)
+        b_gave_up = asyncio.Event()
+        a_may_fail = asyncio.Event()
+        first = True
+
+        async def create(
+            name: str, template: str, namespace: str, labels: dict[str, str] | None = None
+        ) -> dict[str, Any]:
+            nonlocal first
+            if first:
+                first = False
+                live.append(_make_claim(name, name, f"sb-{name}"))
+                await a_may_fail.wait()
+                return {"metadata": {"name": name}}
+            raise client.ApiException(status=409)
+
+        async def never_ready(claim_name: str, namespace: str, timeout: float) -> str:
+            b_gave_up.set()
+            raise TimeoutError("sandbox never became ready")
+
+        manager._k8s.create_sandbox_claim = create
+        manager._k8s.resolve_sandbox_name = never_ready
+
+        a = asyncio.create_task(manager.create_sandbox("conv-c"))
+        await asyncio.sleep(0)
+        b = asyncio.create_task(manager.create_sandbox("conv-c"))
+        await b_gave_up.wait()
+        await asyncio.gather(b, return_exceptions=True)
+
+        assert manager._slots == {manager._claim_name("conv-c")}
+
+        a_may_fail.set()
+        await asyncio.gather(a, return_exceptions=True)
+
+        assert live == []
+        assert manager._slots == set()
 
     @pytest.mark.asyncio
     async def test_recovery_reuses_the_same_slot(self, manager: SandboxManager) -> None:

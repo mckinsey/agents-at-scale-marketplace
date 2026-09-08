@@ -289,17 +289,25 @@ class SandboxManager:
         self._slots: set[str] = set()
         self._in_flight: Counter[str] = Counter()
         self._flight_reserved: set[str] = set()
-        self._flight_claimed: set[str] = set()
+        self._claims: dict[str, _ClaimState] = {}
+        self._seeded = False
 
-    async def _admit(self, claim_name: str) -> None:
-        """Reserve capacity for a claim.
+    async def _admit(self, claim_name: str) -> _ClaimState:
+        """Reserve capacity for a claim, returning the state shared by its in-flight requests.
 
         A claim already holding a slot — a recovery, or a second request for the
         same conversation — is not new occupancy and skips the limit check.
+
+        Occupancy is seeded by the first successful LIST. Until then the limit is
+        unenforceable, so a bounded scheduler rejects rather than admitting blind.
         """
         async with self._admission_lock:
+            limit = self._config.max_active_sandboxes
+            if limit > 0 and not self._seeded:
+                raise SandboxCapacityError(
+                    "Sandbox occupancy is not yet known, so the capacity limit cannot be enforced. Retry later."
+                )
             if claim_name not in self._slots:
-                limit = self._config.max_active_sandboxes
                 if limit > 0 and len(self._slots) >= limit:
                     raise SandboxCapacityError(
                         f"Sandbox capacity reached ({len(self._slots)}/{limit} active). Retry later."
@@ -307,27 +315,27 @@ class SandboxManager:
                 self._slots.add(claim_name)
                 self._flight_reserved.add(claim_name)
             self._in_flight[claim_name] += 1
+            return self._claims.setdefault(claim_name, _ClaimState())
 
-    async def _release(self, claim_name: str, claim_exists: bool) -> None:
+    async def _release(self, claim_name: str) -> None:
         """Drop the in-flight marker, and once the last one is gone decide the claim's slot.
 
-        Requests sharing a claim name share its occupancy, so the decision belongs to
-        whichever of them finishes last rather than to the one that took the slot. The
-        slot is freed only if this group of requests created it and none of them left a
-        claim behind: a claim in the cluster — provisioned, or adopted on 409 and then
-        failed — keeps its slot, because the pod it stands for still consumes capacity.
+        Requests sharing a claim name share both its occupancy and its claim state, so
+        the decision belongs to whichever of them finishes last rather than to the one
+        that took the slot, and it reads whether a claim is there now rather than each
+        request's own snapshot of it. The slot is freed only if this group created it and
+        left no claim behind: a claim in the cluster — provisioned, or adopted on 409 and
+        then failed — keeps its slot, because the pod it stands for still consumes capacity.
         """
         async with self._admission_lock:
-            if claim_exists:
-                self._flight_claimed.add(claim_name)
             self._in_flight[claim_name] -= 1
             if self._in_flight[claim_name] > 0:
                 return
             del self._in_flight[claim_name]
-            if claim_name in self._flight_reserved and claim_name not in self._flight_claimed:
+            claim = self._claims.pop(claim_name, None)
+            if claim_name in self._flight_reserved and not (claim and claim.exists):
                 self._slots.discard(claim_name)
             self._flight_reserved.discard(claim_name)
-            self._flight_claimed.discard(claim_name)
 
     async def _known_slots(self) -> set[str]:
         async with self._admission_lock:
@@ -345,6 +353,7 @@ class SandboxManager:
             released = known - self._slots
             self._slots -= known - listed - set(self._in_flight)
             self._slots |= listed - released
+            self._seeded = True
 
     async def _forget_slot(self, claim_name: str) -> None:
         async with self._admission_lock:
@@ -384,12 +393,11 @@ class SandboxManager:
     async def create_sandbox(self, conversation_id: str) -> SandboxInfo:
         """Create a new sandbox for the conversation. Checks admission control."""
         claim_name = self._claim_name(conversation_id)
-        await self._admit(claim_name)
-        claim = _ClaimState()
+        claim = await self._admit(claim_name)
         try:
             return await self._provision(conversation_id, claim_name, claim)
         finally:
-            await self._release(claim_name, claim.exists)
+            await self._release(claim_name)
 
     async def _provision(self, conversation_id: str, claim_name: str, claim: _ClaimState) -> SandboxInfo:
         namespace = self._config.namespace
@@ -494,6 +502,7 @@ class SandboxManager:
 
         # Sandbox is genuinely gone — delete stale claim and recreate
         await self._k8s.delete_sandbox_claim(claim_name, namespace)
+        await self._forget_slot(claim_name)
         return await self.create_sandbox(conversation_id)
 
     async def warm_cache(self) -> None:
@@ -542,19 +551,24 @@ class SandboxManager:
 
         async with self._admission_lock:
             self._slots = {info.claim_name for info in items.values()}
+            self._seeded = True
         self._cache.warm(items)
         logger.info("Cache warm complete: %d active conversations", len(items))
 
     async def run_reaper(self) -> None:
-        """Background task that reaps idle sessions by reading claim annotations."""
+        """Background task that reaps idle sessions by reading claim annotations.
+
+        The first cycle runs immediately: it is also what seeds occupancy when the
+        startup LIST failed, and creates are rejected until something does.
+        """
         while True:
             try:
-                await asyncio.sleep(30)
                 await self._reap_once()
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Reaper error")
+            await asyncio.sleep(30)
 
     async def _reap_once(self) -> None:
         """Single reaper cycle: list claims, evict+delete expired ones."""
