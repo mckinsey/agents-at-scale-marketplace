@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.0](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.12...executor-claude-agent-sdk-v1.0.0) (2026-09-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **scheduler:** maxActiveSandboxes now defaults to 25 instead of 0 (unlimited). Set scheduler.config.maxActiveSandboxes to 0 to restore the previous behaviour.
+
+### Features
+
+* **claude-agent-sdk:** stream tool invocations to the broker ([#408](https://github.com/mckinsey/agents-at-scale-marketplace/issues/408)) ([a36ec51](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a36ec51558b775459092f47f696974517359e1f8))
+
+
+### Bug Fixes
+
+* **claude-agent-sdk:** replace unmanaged network policy with scoped egress allow-list ([#429](https://github.com/mckinsey/agents-at-scale-marketplace/issues/429)) ([e43c063](https://github.com/mckinsey/agents-at-scale-marketplace/commit/e43c063039bfd0681defe3185463b0d4ac0b6899))
+* **deps:** bump vulnerable transitive pins in uv locks ([#410](https://github.com/mckinsey/agents-at-scale-marketplace/issues/410)) ([4fac62e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/4fac62e075f2dd39db45b42e791f23ff2e8ed7cf))
+* **executors:** grant impersonate so Query spec.serviceAccount is honoured ([#432](https://github.com/mckinsey/agents-at-scale-marketplace/issues/432)) ([1bd0643](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1bd064356646aea5fc771ac2bed9380fe55e5874))
+* **scheduler:** bound concurrent sandbox creation and default the cap to 25 ([#437](https://github.com/mckinsey/agents-at-scale-marketplace/issues/437)) ([0afdaf0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0afdaf0b1d41bc6aed3bc020b4c4f6cd883b5fb6))
+* validate conversationId before using it as a session directory path ([#422](https://github.com/mckinsey/agents-at-scale-marketplace/issues/422)) ([71af19e](https://github.com/mckinsey/agents-at-scale-marketplace/commit/71af19e01fb967766a9bb0091124888361856207))
+
 ## [0.1.12](https://github.com/mckinsey/agents-at-scale-marketplace/compare/executor-claude-agent-sdk-v0.1.11...executor-claude-agent-sdk-v0.1.12) (2026-08-21)
 
 
