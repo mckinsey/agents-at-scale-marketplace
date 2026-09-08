@@ -108,9 +108,9 @@ ark-sdk fails the member call with `Query extension resolution only supports age
 got 'team'`.
 
 In scheduler mode each member turn provisions its own sandbox, because member calls carry
-no `contextId`. `scheduler.config.maxActiveSandboxes` defaults to `0` (unlimited); if you
-have capped it, a 3-member sequential team needs 3 and a selector team needs up to two per
-turn.
+no `contextId`. A 3-member sequential team needs 3 sandboxes and a selector team needs up
+to two per turn, all counting against `scheduler.config.maxActiveSandboxes` (default 25),
+so the default supports roughly 8 concurrent 3-member runs.
 
 ## Deployment Modes
 
@@ -146,9 +146,16 @@ kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/downl
 | `scheduler.config.sessionIdleTTL` | Idle session timeout (seconds) | `1800` |
 | `scheduler.config.shutdownPolicy` | `Delete` or `Retain` expired sandboxes | `Delete` |
 | `scheduler.config.sandboxReadyTimeout` | Sandbox readiness timeout (seconds) | `60` |
-| `scheduler.config.maxActiveSandboxes` | Max concurrent sandbox pods (0 = unlimited) | `0` |
+| `scheduler.config.maxActiveSandboxes` | Max concurrent sandbox pods (0 = unlimited) | `25` |
 | `scheduler.warmPool.enabled` | Enable pre-warmed sandbox pool | `false` |
 | `scheduler.warmPool.replicas` | Number of warm pool pods | `2` |
+
+Past the cap the scheduler returns `503` with `Retry-After: 30` rather than queuing. At the
+default sandbox requests, 25 pods reserve ~12.5Gi memory and 5 CPU; set the cap above what
+the node pool can schedule and a fast 503 becomes a `sandboxReadyTimeout` hang and a 502.
+`sessionIdleTTL` is the bigger lever on throughput — a sandbox is held for the full TTL
+after the last message, not just while a query runs. Set `0` for no cap only behind a
+namespace `ResourceQuota`.
 
 ### Known Limitations
 

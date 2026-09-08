@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 import uuid
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -45,6 +46,13 @@ class SandboxInfo:
     claim_name: str
     sandbox_name: str
     service_fqdn: str
+
+
+@dataclass
+class _ClaimState:
+    """Whether a provisioning attempt has left a claim in the cluster."""
+
+    exists: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +285,80 @@ class SandboxManager:
         self._config = config
         self._k8s = _AsyncK8sHelper()
         self._cache = SandboxCache()
+        self._admission_lock = asyncio.Lock()
+        self._slots: set[str] = set()
+        self._in_flight: Counter[str] = Counter()
+        self._flight_reserved: set[str] = set()
+        self._claims: dict[str, _ClaimState] = {}
+        self._seeded = False
+
+    async def _admit(self, claim_name: str) -> _ClaimState:
+        """Reserve capacity for a claim, returning the state shared by its in-flight requests.
+
+        A claim already holding a slot — a recovery, or a second request for the
+        same conversation — is not new occupancy and skips the limit check.
+
+        Occupancy is seeded by the first successful LIST. Until then the limit is
+        unenforceable, so a bounded scheduler rejects rather than admitting blind.
+        """
+        async with self._admission_lock:
+            limit = self._config.max_active_sandboxes
+            if limit > 0 and not self._seeded:
+                raise SandboxCapacityError(
+                    "Sandbox occupancy is not yet known, so the capacity limit cannot be enforced. Retry later."
+                )
+            if claim_name not in self._slots:
+                if limit > 0 and len(self._slots) >= limit:
+                    raise SandboxCapacityError(
+                        f"Sandbox capacity reached ({len(self._slots)}/{limit} active). Retry later."
+                    )
+                self._slots.add(claim_name)
+                self._flight_reserved.add(claim_name)
+            self._in_flight[claim_name] += 1
+            return self._claims.setdefault(claim_name, _ClaimState())
+
+    async def _release(self, claim_name: str) -> None:
+        """Drop the in-flight marker, and once the last one is gone decide the claim's slot.
+
+        Requests sharing a claim name share both its occupancy and its claim state, so
+        the decision belongs to whichever of them finishes last rather than to the one
+        that took the slot, and it reads whether a claim is there now rather than each
+        request's own snapshot of it. The slot is freed only if this group created it and
+        left no claim behind: a claim in the cluster — provisioned, or adopted on 409 and
+        then failed — keeps its slot, because the pod it stands for still consumes capacity.
+        """
+        async with self._admission_lock:
+            self._in_flight[claim_name] -= 1
+            if self._in_flight[claim_name] > 0:
+                return
+            del self._in_flight[claim_name]
+            claim = self._claims.pop(claim_name, None)
+            if claim_name in self._flight_reserved and not (claim and claim.exists):
+                self._slots.discard(claim_name)
+            self._flight_reserved.discard(claim_name)
+
+    async def _known_slots(self) -> set[str]:
+        async with self._admission_lock:
+            return set(self._slots)
+
+    async def _reconcile_slots(self, known: set[str], listed: set[str]) -> None:
+        """Adopt claims the LIST found, drop only those it disproves.
+
+        The LIST is a snapshot that may already be out of date in both directions.
+        Anything reserved after `known` was taken, or still being provisioned,
+        survives the drop: the LIST may predate its CREATE. Anything released
+        after `known` was taken is not re-adopted: the LIST may predate its DELETE.
+        """
+        async with self._admission_lock:
+            released = known - self._slots
+            self._slots -= known - listed - set(self._in_flight)
+            self._slots |= listed - released
+            self._seeded = True
+
+    async def _forget_slot(self, claim_name: str) -> None:
+        async with self._admission_lock:
+            if claim_name not in self._in_flight:
+                self._slots.discard(claim_name)
 
     def _service_fqdn(self, sandbox_name: str) -> str:
         return f"{sandbox_name}.{self._config.namespace}.svc.cluster.local"
@@ -311,24 +393,22 @@ class SandboxManager:
     async def create_sandbox(self, conversation_id: str) -> SandboxInfo:
         """Create a new sandbox for the conversation. Checks admission control."""
         claim_name = self._claim_name(conversation_id)
+        claim = await self._admit(claim_name)
+        try:
+            return await self._provision(conversation_id, claim_name, claim)
+        finally:
+            await self._release(claim_name)
+
+    async def _provision(self, conversation_id: str, claim_name: str, claim: _ClaimState) -> SandboxInfo:
         namespace = self._config.namespace
         deadline = time.monotonic() + self._config.sandbox_ready_timeout
-
-        # Admission control
-        if self._config.max_active_sandboxes > 0:
-            claims = await self._k8s.list_sandbox_claims(
-                namespace, f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
-            )
-            if len(claims) >= self._config.max_active_sandboxes:
-                raise SandboxCapacityError(
-                    f"Sandbox capacity reached ({len(claims)}/{self._config.max_active_sandboxes} active). Retry later."
-                )
 
         labels = {
             LABEL_CONVERSATION_ID: conversation_id,
             LABEL_MANAGED_BY: MANAGED_BY_VALUE,
         }
 
+        owned = False
         with tracer.start_as_current_span(
             "scheduler.sandbox.create",
             attributes={"sandbox.claim_name": claim_name, "sandbox.template": self._config.sandbox_template},
@@ -340,8 +420,11 @@ class SandboxManager:
                     namespace=namespace,
                     labels=labels,
                 )
+                owned = True
+                claim.exists = True
             except client.ApiException as e:
                 if e.status == 409:
+                    claim.exists = True
                     logger.info("SandboxClaim '%s' already exists (conflict), using existing", claim_name)
                 else:
                     span.set_status(StatusCode.ERROR, str(e))
@@ -352,36 +435,41 @@ class SandboxManager:
                 span.record_exception(e)
                 raise
 
-        with tracer.start_as_current_span(
-            "scheduler.sandbox.resolve_name",
-            attributes={"sandbox.claim_name": claim_name},
-        ) as span:
-            try:
-                remaining = int(deadline - time.monotonic())
-                if remaining <= 0:
-                    raise TimeoutError(f"Sandbox creation timed out for '{claim_name}'")
-                sandbox_name = await self._k8s.resolve_sandbox_name(
-                    claim_name=claim_name, namespace=namespace, timeout=remaining
-                )
-                span.set_attribute("sandbox.name", sandbox_name)
-            except Exception as e:
-                span.set_status(StatusCode.ERROR, str(e))
-                span.record_exception(e)
-                raise
+        try:
+            with tracer.start_as_current_span(
+                "scheduler.sandbox.resolve_name",
+                attributes={"sandbox.claim_name": claim_name},
+            ) as span:
+                try:
+                    remaining = int(deadline - time.monotonic())
+                    if remaining <= 0:
+                        raise TimeoutError(f"Sandbox creation timed out for '{claim_name}'")
+                    sandbox_name = await self._k8s.resolve_sandbox_name(
+                        claim_name=claim_name, namespace=namespace, timeout=remaining
+                    )
+                    span.set_attribute("sandbox.name", sandbox_name)
+                except Exception as e:
+                    span.set_status(StatusCode.ERROR, str(e))
+                    span.record_exception(e)
+                    raise
 
-        with tracer.start_as_current_span(
-            "scheduler.sandbox.wait_ready",
-            attributes={"sandbox.name": sandbox_name},
-        ) as span:
-            try:
-                remaining = int(deadline - time.monotonic())
-                if remaining <= 0:
-                    raise TimeoutError(f"Sandbox creation timed out waiting for '{sandbox_name}' to become ready")
-                await self._k8s.wait_for_sandbox_ready(name=sandbox_name, namespace=namespace, timeout=remaining)
-            except Exception as e:
-                span.set_status(StatusCode.ERROR, str(e))
-                span.record_exception(e)
-                raise
+            with tracer.start_as_current_span(
+                "scheduler.sandbox.wait_ready",
+                attributes={"sandbox.name": sandbox_name},
+            ) as span:
+                try:
+                    remaining = int(deadline - time.monotonic())
+                    if remaining <= 0:
+                        raise TimeoutError(f"Sandbox creation timed out waiting for '{sandbox_name}' to become ready")
+                    await self._k8s.wait_for_sandbox_ready(name=sandbox_name, namespace=namespace, timeout=remaining)
+                except Exception as e:
+                    span.set_status(StatusCode.ERROR, str(e))
+                    span.record_exception(e)
+                    raise
+        except Exception:
+            if owned and await self._discard_claim(claim_name, namespace):
+                claim.exists = False
+            raise
 
         service_fqdn = self._service_fqdn(sandbox_name)
         info = SandboxInfo(claim_name=claim_name, sandbox_name=sandbox_name, service_fqdn=service_fqdn)
@@ -414,6 +502,7 @@ class SandboxManager:
 
         # Sandbox is genuinely gone — delete stale claim and recreate
         await self._k8s.delete_sandbox_claim(claim_name, namespace)
+        await self._forget_slot(claim_name)
         return await self.create_sandbox(conversation_id)
 
     async def warm_cache(self) -> None:
@@ -460,19 +549,26 @@ class SandboxManager:
             )
             logger.info("Cached mapping: conversation=%s -> sandbox=%s", conversation_id, sandbox_name)
 
+        async with self._admission_lock:
+            self._slots = {info.claim_name for info in items.values()}
+            self._seeded = True
         self._cache.warm(items)
         logger.info("Cache warm complete: %d active conversations", len(items))
 
     async def run_reaper(self) -> None:
-        """Background task that reaps idle sessions by reading claim annotations."""
+        """Background task that reaps idle sessions by reading claim annotations.
+
+        The first cycle runs immediately: it is also what seeds occupancy when the
+        startup LIST failed, and creates are rejected until something does.
+        """
         while True:
             try:
-                await asyncio.sleep(30)
                 await self._reap_once()
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Reaper error")
+            await asyncio.sleep(30)
 
     async def _reap_once(self) -> None:
         """Single reaper cycle: list claims, evict+delete expired ones."""
@@ -480,9 +576,13 @@ class SandboxManager:
         ttl = self._config.session_idle_ttl
         now = datetime.now(timezone.utc)
 
+        known = await self._known_slots()
         claims = await self._k8s.list_sandbox_claims(
             namespace, f"{LABEL_MANAGED_BY}={MANAGED_BY_VALUE}"
         )
+        listed = {item.get("metadata", {}).get("name", "") for item in claims}
+        listed.discard("")
+        await self._reconcile_slots(known, listed)
 
         for item in claims:
             metadata = item.get("metadata", {})
@@ -513,6 +613,16 @@ class SandboxManager:
                     self._cache.evict(conversation_id)
                 if self._config.shutdown_policy == "Delete":
                     await self._k8s.delete_sandbox_claim(claim_name, namespace)
+                    await self._forget_slot(claim_name)
+
+    async def _discard_claim(self, claim_name: str, namespace: str) -> bool:
+        """Best-effort delete of a claim whose sandbox never became ready. Returns True if deleted."""
+        try:
+            await self._k8s.delete_sandbox_claim(claim_name, namespace)
+            return True
+        except Exception:
+            logger.warning("Failed to delete claim '%s' after provisioning failed", claim_name, exc_info=True)
+            return False
 
     async def close(self) -> None:
         await self._k8s.close()

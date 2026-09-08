@@ -19,7 +19,7 @@ class SchedulerConfig(BaseModel):
     sandbox_ready_timeout: int = Field(default=60, description="Sandbox readiness timeout in seconds")
     sandbox_template: str = Field(default="claude-agent-sdk", description="SandboxTemplate name")
     namespace: str = Field(default="default", description="Namespace for sandbox resources")
-    max_active_sandboxes: int = Field(default=0, description="Max concurrent sandboxes (0 = unlimited)")
+    max_active_sandboxes: int = Field(default=25, description="Max concurrent sandboxes (0 = unlimited)")
 
     @classmethod
     def from_yaml(cls, raw: str) -> "SchedulerConfig":
