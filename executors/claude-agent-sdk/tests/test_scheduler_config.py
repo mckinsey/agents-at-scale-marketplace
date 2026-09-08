@@ -13,7 +13,7 @@ class TestSchedulerConfigDefaults:
         assert config.sandbox_ready_timeout == 60
         assert config.sandbox_template == "claude-agent-sdk"
         assert config.namespace == "default"
-        assert config.max_active_sandboxes == 0
+        assert config.max_active_sandboxes == 25
 
 
 class TestSchedulerConfigFromYaml:
