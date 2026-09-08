@@ -128,3 +128,32 @@ class TestEndToEndA2ARoundTrip:
 
         assert response.status_code == 503
         assert response.headers.get("retry-after") == "30"
+
+    def test_recovery_at_capacity_returns_503(self, sandbox_manager: SandboxManager) -> None:
+        """A recovery rejected by admission control is a capacity signal, not a bad gateway."""
+        from claude_agent_scheduler.sandbox_manager import SandboxCapacityError
+
+        conversation_id = str(uuid.uuid4())
+        sandbox_manager.get_sandbox = AsyncMock(  # type: ignore[method-assign]
+            return_value=SandboxInfo(
+                claim_name="claim-1", sandbox_name="sb-1", service_fqdn="sb-1.test-ns.svc.cluster.local"
+            )
+        )
+        sandbox_manager.recover_sandbox = AsyncMock(  # type: ignore[method-assign]
+            side_effect=SandboxCapacityError("Sandbox capacity reached (1/1 active). Retry later.")
+        )
+
+        mock_http_client = AsyncMock(spec=httpx.AsyncClient)
+        mock_http_client.request = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
+
+        app = create_proxy_app(sandbox_manager=sandbox_manager, http_client=mock_http_client)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        response = client.post("/", json={
+            "jsonrpc": "2.0", "id": "1", "method": "message/send",
+            "params": {"contextId": conversation_id, "message": {"role": "user", "parts": [{"text": "hi"}]}},
+        })
+
+        assert response.status_code == 503
+        assert response.headers.get("retry-after") == "30"
+        assert "capacity reached" in json.loads(response.content)["error"]["message"]

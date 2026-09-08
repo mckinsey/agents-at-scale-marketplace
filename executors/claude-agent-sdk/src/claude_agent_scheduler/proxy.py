@@ -62,6 +62,16 @@ def _jsonrpc_error(request_id: Any, code: int, message: str) -> bytes:
     }).encode()
 
 
+def _capacity_response(request_id: Any, error: SandboxCapacityError) -> Response:
+    """Build the 503 returned whenever admission control rejects a sandbox."""
+    return Response(
+        content=_jsonrpc_error(request_id, -32000, str(error)),
+        status_code=503,
+        media_type="application/json",
+        headers={"Retry-After": "30"},
+    )
+
+
 def extract_context_id(body: bytes) -> tuple[str, bytes, bool]:
     """Extract and validate contextId from A2A JSON-RPC body.
 
@@ -199,12 +209,7 @@ def create_proxy_app(
                             )
                 except SandboxCapacityError as e:
                     route_span.set_status(StatusCode.ERROR, str(e))
-                    return Response(
-                        content=_jsonrpc_error(request_id, -32000, str(e)),
-                        status_code=503,
-                        media_type="application/json",
-                        headers={"Retry-After": "30"},
-                    )
+                    return _capacity_response(request_id, e)
                 except Exception as e:
                     route_span.set_status(StatusCode.ERROR, str(e))
                     route_span.record_exception(e)
@@ -244,6 +249,9 @@ def create_proxy_app(
                         response = await _proxy_request(http_client, request, body, target_url)
                         response.body = _inject_context_id(response.body, conversation_id)
                         return response
+                    except SandboxCapacityError as capacity_err:
+                        route_span.set_status(StatusCode.ERROR, str(capacity_err))
+                        return _capacity_response(request_id, capacity_err)
                     except Exception as recovery_err:
                         route_span.set_status(StatusCode.ERROR, str(recovery_err))
                         route_span.record_exception(recovery_err)

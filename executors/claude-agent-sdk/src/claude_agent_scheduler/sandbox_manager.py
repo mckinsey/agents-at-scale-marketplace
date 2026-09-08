@@ -48,6 +48,13 @@ class SandboxInfo:
     service_fqdn: str
 
 
+@dataclass
+class _ClaimState:
+    """Whether a provisioning attempt has left a claim in the cluster."""
+
+    exists: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Local cache — pure performance optimization, not authoritative
 # ---------------------------------------------------------------------------
@@ -300,13 +307,17 @@ class SandboxManager:
             self._in_flight[claim_name] += 1
             return reserved
 
-    async def _release(self, claim_name: str, reserved: bool, provisioned: bool) -> None:
-        """Drop the in-flight marker, freeing the slot only if this call took it and failed."""
+    async def _release(self, claim_name: str, reserved: bool, claim_exists: bool) -> None:
+        """Drop the in-flight marker, freeing the slot only if this call took it and no claim remains.
+
+        A claim left in the cluster — provisioned, or adopted on 409 and then failed —
+        keeps its slot, because the pod it stands for is still consuming capacity.
+        """
         async with self._admission_lock:
             self._in_flight[claim_name] -= 1
             if self._in_flight[claim_name] <= 0:
                 del self._in_flight[claim_name]
-            if reserved and not provisioned and claim_name not in self._in_flight:
+            if reserved and not claim_exists and claim_name not in self._in_flight:
                 self._slots.discard(claim_name)
 
     async def _known_slots(self) -> set[str]:
@@ -316,12 +327,15 @@ class SandboxManager:
     async def _reconcile_slots(self, known: set[str], listed: set[str]) -> None:
         """Adopt claims the LIST found, drop only those it disproves.
 
-        Anything reserved after `known` was snapshotted, or still being provisioned,
-        survives: the LIST may predate its CREATE.
+        The LIST is a snapshot that may already be out of date in both directions.
+        Anything reserved after `known` was taken, or still being provisioned,
+        survives the drop: the LIST may predate its CREATE. Anything released
+        after `known` was taken is not re-adopted: the LIST may predate its DELETE.
         """
         async with self._admission_lock:
+            released = known - self._slots
             self._slots -= known - listed - set(self._in_flight)
-            self._slots |= listed
+            self._slots |= listed - released
 
     async def _forget_slot(self, claim_name: str) -> None:
         async with self._admission_lock:
@@ -362,15 +376,13 @@ class SandboxManager:
         """Create a new sandbox for the conversation. Checks admission control."""
         claim_name = self._claim_name(conversation_id)
         reserved = await self._admit(claim_name)
-        provisioned = False
+        claim = _ClaimState()
         try:
-            info = await self._provision(conversation_id, claim_name)
-            provisioned = True
-            return info
+            return await self._provision(conversation_id, claim_name, claim)
         finally:
-            await self._release(claim_name, reserved, provisioned)
+            await self._release(claim_name, reserved, claim.exists)
 
-    async def _provision(self, conversation_id: str, claim_name: str) -> SandboxInfo:
+    async def _provision(self, conversation_id: str, claim_name: str, claim: _ClaimState) -> SandboxInfo:
         namespace = self._config.namespace
         deadline = time.monotonic() + self._config.sandbox_ready_timeout
 
@@ -392,8 +404,10 @@ class SandboxManager:
                     labels=labels,
                 )
                 owned = True
+                claim.exists = True
             except client.ApiException as e:
                 if e.status == 409:
+                    claim.exists = True
                     logger.info("SandboxClaim '%s' already exists (conflict), using existing", claim_name)
                 else:
                     span.set_status(StatusCode.ERROR, str(e))
@@ -436,8 +450,8 @@ class SandboxManager:
                     span.record_exception(e)
                     raise
         except Exception:
-            if owned:
-                await self._discard_claim(claim_name, namespace)
+            if owned and await self._discard_claim(claim_name, namespace):
+                claim.exists = False
             raise
 
         service_fqdn = self._service_fqdn(sandbox_name)
@@ -578,12 +592,14 @@ class SandboxManager:
                     await self._k8s.delete_sandbox_claim(claim_name, namespace)
                     await self._forget_slot(claim_name)
 
-    async def _discard_claim(self, claim_name: str, namespace: str) -> None:
-        """Best-effort delete of a claim whose sandbox never became ready."""
+    async def _discard_claim(self, claim_name: str, namespace: str) -> bool:
+        """Best-effort delete of a claim whose sandbox never became ready. Returns True if deleted."""
         try:
             await self._k8s.delete_sandbox_claim(claim_name, namespace)
+            return True
         except Exception:
             logger.warning("Failed to delete claim '%s' after provisioning failed", claim_name, exc_info=True)
+            return False
 
     async def close(self) -> None:
         await self._k8s.close()

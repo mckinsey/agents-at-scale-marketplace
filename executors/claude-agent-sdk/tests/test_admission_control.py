@@ -162,6 +162,50 @@ class TestAdmissionControlConcurrency:
         assert manager._claim_name("conv-late") in manager._slots
 
     @pytest.mark.asyncio
+    async def test_stale_list_does_not_readopt_a_released_claim(self, manager: SandboxManager) -> None:
+        """Reconciliation must not resurrect a claim deleted after its LIST was issued.
+
+        Regression test: the adopt side unconditionally unioned the LIST in, so a
+        provision that failed and deleted its claim mid-reap had the name put back,
+        leaving phantom occupancy that fails closed until the next reaper cycle.
+        """
+        manager._config.max_active_sandboxes = 2
+        live = _wire_cluster(manager)
+        list_issued = asyncio.Event()
+        reconcile_may_run = asyncio.Event()
+        provision_may_fail = asyncio.Event()
+
+        async def list_claims(namespace: str, label_selector: str) -> list[dict[str, Any]]:
+            snapshot = list(live)
+            list_issued.set()
+            await reconcile_may_run.wait()
+            return snapshot
+
+        async def wait_ready(**kwargs: object) -> None:
+            await provision_may_fail.wait()
+            raise TimeoutError("readiness timeout")
+
+        manager._k8s.list_sandbox_claims = list_claims
+        manager._k8s.wait_for_sandbox_ready = AsyncMock(side_effect=wait_ready)
+
+        doomed = asyncio.create_task(manager.create_sandbox("conv-doomed"))
+        while not live:
+            await asyncio.sleep(0)
+
+        reap = asyncio.create_task(manager._reap_once())
+        await list_issued.wait()
+
+        provision_may_fail.set()
+        with pytest.raises(TimeoutError):
+            await doomed
+
+        reconcile_may_run.set()
+        await reap
+
+        assert live == []
+        assert manager._slots == set()
+
+    @pytest.mark.asyncio
     async def test_capacity_is_reusable_after_reap(self, manager: SandboxManager) -> None:
         """Freeing claims outside the scheduler must free capacity within a reap cycle."""
         manager._config.max_active_sandboxes = 2
@@ -212,6 +256,25 @@ class TestAdmissionControlAccounting:
             await manager.create_sandbox("conv-adopted")
 
         assert [c["metadata"]["name"] for c in live] == [claim_name]
+        assert manager._slots == {claim_name}
+
+    @pytest.mark.asyncio
+    async def test_create_failure_leaving_no_claim_frees_capacity(self, manager: SandboxManager) -> None:
+        """A CREATE that fails outright leaves nothing behind, so its slot must be released."""
+        from kubernetes_asyncio import client
+
+        manager._config.max_active_sandboxes = 1
+        _wire_cluster(manager)
+        working_create = manager._k8s.create_sandbox_claim
+        manager._k8s.create_sandbox_claim = AsyncMock(side_effect=client.ApiException(status=500))
+
+        with pytest.raises(client.ApiException):
+            await manager.create_sandbox("conv-doomed")
+
+        assert manager._slots == set()
+
+        manager._k8s.create_sandbox_claim = working_create
+        await manager.create_sandbox("conv-next")
 
     @pytest.mark.asyncio
     async def test_recovery_reuses_the_same_slot(self, manager: SandboxManager) -> None:
