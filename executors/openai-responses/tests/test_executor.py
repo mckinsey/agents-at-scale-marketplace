@@ -2,7 +2,7 @@
 
 import json
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 from ark_sdk.executor import Message
 
@@ -27,6 +27,7 @@ from openai_responses_executor.models import (
     ANNOTATION_KEY,
     FILE_IDS_ANNOTATION_KEY,
     MAX_TOOL_CALLS_ANNOTATION_KEY,
+    MCP_PREFETCH_ANNOTATION_KEY,
 )
 
 
@@ -574,3 +575,148 @@ class TestExecuteAgent:
         with p1, p2, p3:
             with pytest.raises(RuntimeError, match="API error"):
                 await self._executor().execute_agent(_request())
+
+    @pytest.mark.asyncio
+    async def test_zdr_error_clears_session_and_raises_hint(self, tmp_path):
+        session_dir = tmp_path / "conv-123"
+        session_dir.mkdir()
+        (session_dir / "response_id").write_text("resp-prev-001")
+
+        client = _mock_client(RuntimeError(
+            "previous_response_id not supported: organization enforces Zero Data Retention"
+        ))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            with pytest.raises(RuntimeError, match="Zero Data Retention"):
+                await self._executor().execute_agent(_request())
+
+        assert not (session_dir / "response_id").exists()
+
+    @pytest.mark.asyncio
+    async def test_max_tool_iterations_reached_returns_placeholder_message(self, tmp_path):
+        client = _mock_client(
+            _make_function_call_response("search", {"query": "python"}, "call-001"),
+        )
+        p1, p2, p3 = self._patches(tmp_path, client)
+        p1_cfg = patch("openai_responses_executor.executor.config", MagicMock(sessions_dir=tmp_path, max_tool_iterations=1))
+        with p1_cfg, p2, p3:
+            messages = await self._executor().execute_agent(
+                _request(tools=[_tool("search", "Search the web")])
+            )
+
+        assert len(client.captured) == 1
+        assert "maximum tool call iterations" in messages[0].content
+
+    @pytest.mark.asyncio
+    async def test_streams_output_text_deltas(self, tmp_path):
+        class _StreamWithDeltas:
+            def __init__(self, response):
+                self._response = response
+                self._events = [MagicMock(type="response.output_text.delta", delta="Pa"),
+                                 MagicMock(type="response.output_text.delta", delta="ris")]
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if not self._events:
+                    raise StopAsyncIteration
+                return self._events.pop(0)
+
+            async def get_final_response(self):
+                return self._response
+
+        response = _make_text_response("Paris.")
+        client = MagicMock()
+        client.responses.stream = MagicMock(return_value=_StreamWithDeltas(response))
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            executor = self._executor()
+            await executor.execute_agent(_request())
+
+        assert executor.stream_chunk.await_args_list == [call("Pa"), call("ris")]
+
+    @pytest.mark.asyncio
+    async def test_custom_tool_call_output_is_extracted_from_input_field(self, tmp_path):
+        item = MagicMock()
+        item.type = "custom_tool_call"
+        item.input = "constrained output"
+        response = MagicMock(id="resp-ctc", output=[item])
+        client = _mock_client(response)
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            messages = await self._executor().execute_agent(_request())
+
+        assert messages[0].content == "constrained output"
+
+    @pytest.mark.asyncio
+    async def test_mcp_prefetch_chain_injects_result_and_disables_tools(self, tmp_path):
+        server = MagicMock()
+        req = _request(
+            tools=[_tool("search", "Search the web")],
+            execution_engine_annotations={
+                MCP_PREFETCH_ANNOTATION_KEY: json.dumps(
+                    [{"tool": "weather__get", "args": {"q": "{input}"}, "bind": "w", "label": "Weather"}]
+                )
+            },
+        )
+        client = _mock_client(_make_text_response("It is sunny."))
+        p1, p2, p3 = self._patches(tmp_path, client)
+
+        with p1, p2, p3, \
+             patch("openai_responses_executor.executor.discover_mcp_function_tools",
+                   AsyncMock(return_value=([{"type": "function", "name": "weather__get"}],
+                                            {"weather__get": (server, "get")}))), \
+             patch("openai_responses_executor.executor.call_mcp_tool",
+                   AsyncMock(return_value={"temp": 72})) as mock_call:
+            await self._executor().execute_agent(req)
+
+        mock_call.assert_awaited_once_with(server, "get", {"q": "hello"})
+        assert "tools" not in client.captured[0] or not client.captured[0]["tools"]
+        injected_text = client.captured[0]["input"][-1]["content"]
+        assert "[Weather]" in injected_text
+        assert "72" in injected_text
+
+
+class TestExecuteFunctionCall:
+    def _fc(self, tool_name="search", arguments='{"query": "python"}', call_id="call-1"):
+        fc = MagicMock(arguments=arguments, call_id=call_id)
+        fc.name = tool_name
+        return fc
+
+    @pytest.mark.asyncio
+    async def test_malformed_json_arguments_fall_back_to_raw(self):
+        fc = self._fc(tool_name="search", arguments="not-json")
+        req = _request(tools=[_tool("search", "Search the web")])
+
+        result = await OpenAIResponsesExecutor()._execute_function_call(fc, req, mcp_registry=None)
+
+        assert result["arguments"] == {"raw": "not-json"}
+
+    @pytest.mark.asyncio
+    async def test_dispatches_to_mcp_registry_when_tool_name_matches(self):
+        fc = self._fc(tool_name="weather__get")
+        server = MagicMock()
+        registry = {"weather__get": (server, "get")}
+        req = _request(tools=[])
+
+        with patch("openai_responses_executor.executor.call_mcp_tool", AsyncMock(return_value={"temp": 72})) as mock_call:
+            result = await OpenAIResponsesExecutor()._execute_function_call(fc, req, mcp_registry=registry)
+
+        mock_call.assert_awaited_once_with(server, "get", {"query": "python"})
+        assert result == {"temp": 72}
+
+    @pytest.mark.asyncio
+    async def test_tool_not_declared_and_not_in_mcp_registry_returns_error(self):
+        fc = self._fc(tool_name="not-a-real-tool")
+        req = _request(tools=[_tool("search", "Search the web")])
+
+        result = await OpenAIResponsesExecutor()._execute_function_call(fc, req, mcp_registry=None)
+
+        assert "not available" in result["error"]
