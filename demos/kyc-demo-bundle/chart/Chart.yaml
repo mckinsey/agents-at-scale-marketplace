@@ -25,3 +25,4 @@ dependencies:
   - name: file-gateway
     version: 0.1.6
     repository: oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts
+    condition: file-gateway.enabled
