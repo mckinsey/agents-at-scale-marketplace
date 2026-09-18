@@ -204,7 +204,7 @@ wheels = [
 
 [[package]]
 name = "ark-sdk"
-version = "0.1.68"
+version = "0.1.69"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"] },
@@ -223,7 +223,7 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/f3/c6b98c8389d7b83e92dbcbae215621b7bec80a89bddcbbde4a7be47bff0f/ark_sdk-0.1.68-py3-none-any.whl", hash = "sha256:9212e8b07eee7e6996db344271fabc41cde4bfe7107bb297e6ae88457c165939", size = 237916, upload-time = "2026-08-20T12:43:11.862Z" },
+    { url = "https://files.pythonhosted.org/packages/50/63/056b95ad8680e64c620ad7b0553d7bd060367f39c68acd230ad92dcfac44/ark_sdk-0.1.69-py3-none-any.whl", hash = "sha256:035e3d691f3e9ffa627cd43d63750efb27bf7ae681d470d36f1cecb8571b0bee", size = 242913, upload-time = "2026-09-14T15:46:25.237Z" },
 ]
 
 [[package]]
@@ -630,7 +630,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["http-server"], specifier = ">=0.3.0" },
-    { name = "ark-sdk", specifier = "==0.1.68" },
+    { name = "ark-sdk", specifier = "==0.1.69" },
     { name = "faiss-cpu", specifier = ">=1.7.4" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "langchain-community", specifier = ">=0.0.20" },
