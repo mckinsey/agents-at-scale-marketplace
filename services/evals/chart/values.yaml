@@ -1,0 +1,41 @@
+# Default values for the Evals add-on.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  # Built locally for OrbStack (shared docker daemon); pushed to GHCR for real
+  # deployments. Never = use the locally built tag, don't attempt a registry
+  # pull (there is no remote repo for it yet). Switch to IfNotPresent once the
+  # image is published.
+  repository: ark-evals-engine
+  tag: "0.1.0"
+  pullPolicy: Never
+
+# The standalone eval WorkflowTemplate a workflow references from its onExit
+# hook (story 02).
+workflowTemplate:
+  enabled: true
+  name: eval-run
+
+# The file-gateway REST endpoint the engine reads the produced output from and
+# writes the report to (story 03/04). Points at the file-gateway service.
+fileGateway:
+  url: "http://file-gateway-api.default.svc.cluster.local:80"
+
+# ServiceAccount the eval pods run under. It needs RBAC to create/read/delete
+# Ark Queries (the judge) and to read ConfigMaps (the suite). Owning its own SA
+# keeps the add-on independently deployable (no dependency on the KYC SA).
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+# Reference suite shipped with the add-on (story 06). Rendered into a ConfigMap
+# so `make`/helm install gives a working example out of the box.
+referenceSuite:
+  enabled: true
+
+commonLabels: {}
