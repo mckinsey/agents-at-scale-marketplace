@@ -203,7 +203,7 @@ wheels = [
 
 [[package]]
 name = "ark-sdk"
-version = "0.1.68"
+version = "0.1.70"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server"] },
@@ -222,7 +222,7 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/f3/c6b98c8389d7b83e92dbcbae215621b7bec80a89bddcbbde4a7be47bff0f/ark_sdk-0.1.68-py3-none-any.whl", hash = "sha256:9212e8b07eee7e6996db344271fabc41cde4bfe7107bb297e6ae88457c165939", size = 237916, upload-time = "2026-08-20T12:43:11.862Z" },
+    { url = "https://files.pythonhosted.org/packages/63/40/e0439e6a319cafca6fde537ba9931c0af545357461c6bb675714b5116ede/ark_sdk-0.1.70-py3-none-any.whl", hash = "sha256:882eb7152253d641947d6775df0e586dfab56777f28c0ffb1cc8e33900f515bb", size = 250017, upload-time = "2026-10-05T16:00:49.551Z" },
 ]
 
 [[package]]
@@ -621,7 +621,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["http-server"], specifier = ">=0.3.0" },
-    { name = "ark-sdk", specifier = "==0.1.68" },
+    { name = "ark-sdk", specifier = "==0.1.70" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "kubernetes", specifier = ">=32.0.0,<37.0.0" },
     { name = "mcp", specifier = ">=1.8.0" },
