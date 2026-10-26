@@ -10,6 +10,7 @@
 ### Features
 
 * **claude-agent-sdk:** stream tool invocations to the broker ([#408](https://github.com/mckinsey/agents-at-scale-marketplace/issues/408)) ([a36ec51](https://github.com/mckinsey/agents-at-scale-marketplace/commit/a36ec51558b775459092f47f696974517359e1f8))
+* **claude-agent-sdk:** tool name, id and input now appear in the query stream as the agent calls them, instead of staying hidden until it produces text
 
 
 ### Bug Fixes
