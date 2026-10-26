@@ -2,8 +2,8 @@ apiVersion: v2
 name: noah
 description: Noah - ARK Runtime Agent with MCP server
 type: application
-version: 0.1.15
-appVersion: 0.1.15
+version: 0.1.16
+appVersion: 0.1.16
 annotations:
   ark.mckinsey.com/service: noah
   ark.mckinsey.com/resources: service

@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.0](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.20...marketplace-docs-v1.0.0) (2026-09-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **scheduler:** maxActiveSandboxes now defaults to 25 instead of 0 (unlimited). Set scheduler.config.maxActiveSandboxes to 0 to restore the previous behaviour.
+
+### Features
+
+* **kubernetes-mcp-server:** hold MCP address in an Ark Configuration ([#423](https://github.com/mckinsey/agents-at-scale-marketplace/issues/423)) ([46332d1](https://github.com/mckinsey/agents-at-scale-marketplace/commit/46332d175a43061ced919f5a433bc1da2916f992))
+
+
+### Bug Fixes
+
+* **deps:** pin uuid under form-data2 ([#411](https://github.com/mckinsey/agents-at-scale-marketplace/issues/411)) ([5f6a093](https://github.com/mckinsey/agents-at-scale-marketplace/commit/5f6a0939d9aa6f562333b431a23eebc95b273a6b))
+* **docs:** bump sharp to 0.35.4 for libheif CVEs ([#418](https://github.com/mckinsey/agents-at-scale-marketplace/issues/418)) ([1026ac4](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1026ac44ce4e502dd2493097a0719d5eff24aa23))
+* **scheduler:** bound concurrent sandbox creation and default the cap to 25 ([#437](https://github.com/mckinsey/agents-at-scale-marketplace/issues/437)) ([0afdaf0](https://github.com/mckinsey/agents-at-scale-marketplace/commit/0afdaf0b1d41bc6aed3bc020b4c4f6cd883b5fb6))
+
 ## [0.1.20](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.19...marketplace-docs-v0.1.20) (2026-08-21)
 
 
