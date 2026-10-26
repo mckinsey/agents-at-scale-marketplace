@@ -21,5 +21,34 @@ XRAY-1061020 - no CVE assigned, GHSA-2xp9-vwfh-vxw4 (next, all versions)
 - Evidence: AVIF is not opt-in anywhere (Next defaults images.formats to webp, and no formats key exists in the repo), the only images are committed to the repo rather than attacker-supplied, and next 15.5.24 disables AVIF optimization regardless.
 - Re-check when libheif ships a fix and sharp picks it up: at that point Xray should report a fixed next version and this entry must be removed rather than carried forward.
 
+XRAY-1090872 - CVE-2026-93687 (braces 3.0.3)
+XRAY-1146824 - no CVE assigned (picomatch 2.3.2, 4.0.4)
+- Stack overflow / ReDoS in recursive glob-pattern expansion, reachable only by feeding the
+  parser attacker-controlled brace/extglob patterns.
+- NOT REACHABLE: both resolve through nextra's own build-time content discovery
+  (nextra-theme-docs -> nextra -> fast-glob -> micromatch -> braces/picomatch@2.3.2, and
+  nextra -> ts-morph -> @ts-morph/common -> picomatch@4.0.4). They scan fixed, repo-controlled
+  MDX source paths during `next build`'s static export; no attacker-supplied pattern ever
+  reaches them, and nothing in this path exists in the deployed GitHub Pages artifact.
+- No fix available: braces 3.0.3 and picomatch 4.0.7 (latest of each) are still the vulnerable
+  versions per the advisories; micromatch has not picked up a patched release of either.
+
+XRAY-1092077 - no CVE assigned, GHSA (uri-js 4.4.1)
+- Infinite loop / DoS in uri-js's removeDotSegments when fed a crafted path containing Unicode
+  line/paragraph separators.
+- NOT SHIPPED: reached only via the "serve" devDependency (serve -> ajv -> uri-js), which
+  docs/scripts/check-links.js spawns to preview the static export locally. CI-only, same
+  reachability class as the useragent/robots-txt-guard entries above; not in any container
+  image or the deployed docs artifact.
+- No fix available: uri-js 4.4.1 is the latest release and the project is unmaintained.
+
+XRAY-1100109 - CVE-2023-54404 (zod 3.25.76, zod 4.0.0-beta.20250424T163858)
+- Uncontrolled memory consumption: z.array()/z.set()/z.map() schemas without an explicit size
+  bound accumulate one issue object per failing element with no cap.
+- No fix available: per the upstream maintainer (zod#1872), this is unchanged in every
+  released version, including the pinned CVE fix in 4.6.6, which only tightened the bounded-
+  schema case. Reachable in both docs (nextra/nextra-theme-docs's own zod/zod-to-json-schema)
+  and mcps/filesystem-mcp-server (direct zod dependency), but there is no version to bump to.
+
 # Only tolerate what has no fix. Xray's fixed_versions goes stale, so confirm against
 # the package's own release notes, not just the scan output.
