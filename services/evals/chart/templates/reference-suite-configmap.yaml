@@ -1,0 +1,22 @@
+{{- if .Values.referenceSuite.enabled }}
+{{- $suiteName := "kyc-profile-init" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Named eval-suite-<suite-name> so the WorkflowTemplate can mount it by the
+  # suite name the onExit handler passes (story 01/02).
+  name: "eval-suite-{{ $suiteName }}"
+  labels:
+    {{- include "evals.labels" . | nindent 4 }}
+data:
+  # Top-level suite files, verbatim.
+  suite.json: |-
+{{ .Files.Get (printf "files/%s/suite.json" $suiteName) | indent 4 }}
+  dataset.json: |-
+{{ .Files.Get (printf "files/%s/dataset.json" $suiteName) | indent 4 }}
+  # judges/ files flattened to dotted keys (ConfigMap keys cannot contain '/').
+{{- range $path, $_ := .Files.Glob (printf "files/%s/judges/*" $suiteName) }}
+  {{ printf "judges.%s" (base $path) }}: |-
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}

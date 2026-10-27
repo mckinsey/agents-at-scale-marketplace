@@ -1,0 +1,131 @@
+# KYC profile-init WorkflowTemplate WITH the eval onExit hook.
+# Reference example of how a workflow owner wires the eval add-on into their
+# own workflow (story 02). The `onExit: eval-onexit` line and the `eval-onexit`
+# template at the bottom are the ONLY additions on top of the stock KYC
+# template; everything else is the original workflow. Apply with:
+#   kubectl apply -f lx-profile-initialization-with-eval.yaml -n default
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  annotations:
+    meta.helm.sh/release-name: kyc-onboarding-bundle
+    meta.helm.sh/release-namespace: default
+    workflows.argoproj.io/description: Extract inquiry information from email/document to initialize customer
+      profile
+    workflows.argoproj.io/migrated-from: legacyx
+    workflows.argoproj.io/title: Phase I - Customer Profile Initialization - 1. Profile Initialization
+    workflows.argoproj.io/version: v0.0.1
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    bundle: kyc-onboarding
+    managed-by: helm
+    migrated-from: legacyx
+  name: lx-profile-initialization
+  namespace: default
+spec:
+  arguments:
+    parameters:
+    - name: output-base-dir
+      value: source_code_files/1-customer-profile-initialization
+    - name: input-file
+      value: source_code_files/1-customer-profile-initialization/input/mock-up-email-abf.txt
+    - name: output-file
+      value: source_code_files/1-customer-profile-initialization/intermediate/inquiry_information.json
+  entrypoint: main
+  onExit: eval-onexit
+  serviceAccountName: kyc-onboarding-bundle-argo-workflow
+  templates:
+  - inputs:
+      parameters:
+      - name: output-base-dir
+      - name: input-file
+      - name: output-file
+    name: main
+    steps:
+    - - arguments:
+          parameters:
+          - name: output-base-dir
+            value: '{{inputs.parameters.output-base-dir}}'
+        name: ensure-output-dirs
+        template: ensure-output-dirs-script
+    - - arguments:
+          parameters:
+          - name: input-file
+            value: '{{inputs.parameters.input-file}}'
+          - name: output-file
+            value: '{{inputs.parameters.output-file}}'
+        name: extract-email-information
+        template: extract-email-query
+  - inputs:
+      parameters:
+      - name: output-base-dir
+    name: ensure-output-dirs-script
+    script:
+      command:
+      - bash
+      image: alpine/k8s:1.28.13
+      source: "set -euo pipefail\nBASE=\"{{inputs.parameters.output-base-dir}}\"\nMCP_DATA=\"/data/aas-files\"\
+        \nDEP=\"file-gateway-filesystem-mcp\"\nif ! kubectl get deployment \"$DEP\" >/dev/null 2>&1; then\n\
+        \  NS=$(kubectl config view --minify -o jsonpath='{..namespace}')\n  echo \"ERROR: deployment\
+        \ '$DEP' not found in namespace '${NS:-default}'\" >&2\n  echo \"Hint: set filesystemMcpDeployment\
+        \ in values.yaml or via --set to match your filesystem MCP deployment name.\" >&2\n  exit 1\n\
+        fi\nfor dir in \"$BASE/intermediate\" \"$BASE/output\"; do\n  kubectl exec deployment/file-gateway-filesystem-mcp\
+        \ -- mkdir -p \"$MCP_DATA/$dir\"\ndone\necho \"Created intermediate and output directories\"\n"
+  - inputs:
+      parameters:
+      - name: input-file
+      - name: output-file
+    name: extract-email-query
+    resource:
+      action: create
+      failureCondition: status.phase == error
+      manifest: "apiVersion: ark.mckinsey.com/v1alpha1\nkind: Query\nmetadata:\n  generateName: profile-init-\n\
+        spec:\n  sessionId: \"session-{{workflow.uid}}\"\n  conversationId: \"conversation-{{workflow.uid}}\"\
+        \n  target:\n    type: agent\n    name: consolidation-analyst-agent\n  serviceAccount: kyc-onboarding-bundle-argo-workflow\n\
+        \  timeout: 15m\n  ttl: 24h\n  input: |\n    You must complete this task yourself and save the\
+        \ output; do not hand off or terminate.\n\n    Step 1 \u2014 Read the email: Use filesystem-mcp-server-read-file\
+        \ with path: {{inputs.parameters.input-file}}\n\n    Step 2 \u2014 Extract and structure the data\
+        \ in the LegacyX format for inquiry_information.json.\n    The output JSON must have exactly this\
+        \ structure (same as LegacyX demo):\n\n    {\n      \"Inquiry information\": [\n        {\n  \
+        \        \"subsection\": \"Company details\",\n          \"content\": [\n            {\"Company\
+        \ Name\": \"<from email>\", \"validation status\": \"_Pending_\", \"validation source\": \"NA\"\
+        },\n            {\"Company Address\": \"<from email if present>\", \"validation status\": \"_Pending_\"\
+        , \"validation source\": \"NA\"},\n            {\"Company Number\": \"<if present>\", \"validation\
+        \ status\": \"_Pending_\", \"validation source\": \"NA\"},\n            {\"Company Nature of Business\"\
+        : \"<brief from email/subject>\", \"validation status\": \"_Pending_\", \"validation source\"\
+        : \"NA\"},\n            {\"Key Individuals\": [{\"name\": \"...\", \"Position\": \"...\", \"Address\"\
+        : \"...\", \"Nationality\": \"...\", \"validation status\": \"_Pending_\", \"validation source\"\
+        : \"NA\"}]}\n          ]\n        },\n        {\n          \"subsection\": \"Contact details\"\
+        ,\n          \"content\": [\n            {\"Contact name\": \"<sender from email>\"},\n      \
+        \      {\"Contact email address\": \"<from email>\"},\n            {\"Contact phone number\":\
+        \ \"<from email if present>\"}\n          ]\n        },\n        {\n          \"subsection\":\
+        \ \"Inquiry details\",\n          \"content\": [\n            {\"Customer Inquiry Date\": \"<date\
+        \ from email>\"},\n            {\"Product requested\": [<list of products/services mentioned>]},\n\
+        \            {\"Account purpose\": \"<from email body>\"},\n            {\"Submitted documents\"\
+        : [<list if mentioned>]}\n          ]\n        },\n        {\"source\": \"Email conversation between\
+        \ <sender company> and <recipient>\"}\n      ]\n    }\n\n    Extract from the email: sender (contact\
+        \ name), recipient, date, subject, body, company mentions, and any products/purpose/documents\
+        \ mentioned. Use validation status \"_Pending_\" and validation source \"NA\" for all fields from\
+        \ the email (no external validation yet). Populate Company details from company names and context\
+        \ in the email.\n\n    Step 3 \u2014 Save the JSON (REQUIRED): Call filesystem-mcp-server-write-file\
+        \ with path: {{inputs.parameters.output-file}} and content: your full JSON. Use the exact path;\
+        \ do NOT add /data or /mnt prefix.\n"
+      successCondition: status.phase == done
+  - name: eval-onexit
+    steps:
+    - - arguments:
+          parameters:
+          - name: suite-name
+            value: kyc-profile-init
+          - name: output-key
+            value: source_code_files/1-customer-profile-initialization/intermediate/inquiry_information.json
+          - name: report-key
+            value: source_code_files/1-customer-profile-initialization/intermediate/eval_report.md
+          - name: workflow-name
+            value: '{{workflow.name}}'
+        name: evaluate
+        templateRef:
+          name: eval-run
+          template: evaluate
+        when: '{{workflow.status}} == Succeeded'

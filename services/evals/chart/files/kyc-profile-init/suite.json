@@ -1,0 +1,9 @@
+{
+  "name": "kyc-profile-init",
+  "judge_model": "default",
+  "threshold": 0.80,
+  "default_dimension_threshold": 3,
+  "judge_thresholds": {
+    "quality": { "relevance": 3, "groundedness": 3, "tone_clarity": 3 }
+  }
+}
