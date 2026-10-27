@@ -112,14 +112,21 @@ Generate S3 secret access key - autogenerate if empty
 {{- end }}
 
 {{/*
-PVC name - use provided name or generate with timestamp suffix
+PVC name - use provided name, else a stable name derived from the release.
+
+Must not depend on `now`: that renders a new name on every `helm upgrade`, so each
+upgrade provisions a fresh PVC and abandons the previous one along with its EBS
+volume. One namespace accumulated 8 such PVCs, of which 2 were in use.
+
+Existing releases installed before this change hold a timestamped PVC. Set
+`storage.pvcName` to that exact name to keep it, otherwise the upgrade renders the
+new stable name and Helm removes the old claim and its data.
 */}}
 {{- define "file-gateway.pvcName" -}}
 {{- if .Values.storage.pvcName }}
 {{- .Values.storage.pvcName }}
 {{- else }}
-{{- $timestamp := now | date "20060102150405" }}
-{{- printf "%s-storage-%s" (include "file-gateway.fullname" .) $timestamp }}
+{{- printf "%s-storage" (include "file-gateway.fullname" .) }}
 {{- end }}
 {{- end }}
 
