@@ -36,11 +36,11 @@ cd services/file-gateway
 devspace deploy
 ```
 
-Or with Helm:
+Or with Helm, into any namespace:
 
 ```bash
 helm install file-gateway oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/file-gateway \
-  -n default --create-namespace
+  -n <namespace> --create-namespace
 ```
 
 (From a checkout, replace the chart reference with `services/file-gateway/chart`.)
@@ -51,15 +51,9 @@ Access via:
 
 ### Multi-tenant installs
 
-The dashboard's Files page reaches the File API through Ark API in the namespace the dashboard is scoped to. Each tenant namespace therefore needs its own release. Install with Helm once per tenant:
+The dashboard's Files page looks for the File API in the current tenant's namespace, so each tenant needs its own release. 
 
-```bash
-helm install file-gateway oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/file-gateway \
-  -n <tenant-namespace> --create-namespace \
-  --set httpRoute.enabled=false
-```
-
-The dashboard does not use the HTTPRoute. Its default hostnames are the same in every namespace, so either disable it or set distinct `httpRoute.hostnames` per tenant.
+Run the Helm command above once per tenant namespace and add `--set httpRoute.enabled=false`: the default HTTPRoute hostnames are the same in every namespace and would conflict. The dashboard does not use the HTTPRoute.
 
 ## Services
 
