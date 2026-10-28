@@ -27,7 +27,9 @@ For larger files or datasets, consider using RAG (Retrieval-Augmented Generation
 ark install marketplace/services/file-gateway
 ```
 
-Or with DevSpace:
+`ark install` always installs into the `default` namespace.
+
+Or with DevSpace (installs into the current kube context namespace):
 
 ```bash
 cd services/file-gateway
@@ -37,12 +39,27 @@ devspace deploy
 Or with Helm:
 
 ```bash
-helm install file-gateway services/file-gateway/chart -n default
+helm install file-gateway oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/file-gateway \
+  -n default --create-namespace
 ```
 
+(From a checkout, replace the chart reference with `services/file-gateway/chart`.)
+
 Access via:
-- Port forward: `kubectl port-forward svc/file-gateway-file-api 8080:8080`
+- Port forward: `kubectl port-forward svc/file-gateway-api 8080:80 -n <namespace>`
 - Ark Dashboard → [Files page](http://dashboard.127.0.0.1.nip.io:8080/files)
+
+### Multi-tenant installs
+
+The dashboard's Files page reaches the File API through Ark API in the namespace the dashboard is scoped to. Each tenant namespace therefore needs its own release. Install with Helm once per tenant:
+
+```bash
+helm install file-gateway oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/file-gateway \
+  -n <tenant-namespace> --create-namespace \
+  --set httpRoute.enabled=false
+```
+
+The dashboard does not use the HTTPRoute. Its default hostnames are the same in every namespace, so either disable it or set distinct `httpRoute.hostnames` per tenant.
 
 ## Services
 
@@ -151,7 +168,7 @@ ark uninstall marketplace/services/file-gateway
 **Using Helm:**
 
 ```bash
-helm uninstall file-gateway -n default
+helm uninstall file-gateway -n <namespace>
 ```
 
 **Using DevSpace:**
