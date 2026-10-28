@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v1.0.0...marketplace-docs-v1.0.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **deps:** close the Xray advisory batch blocking every PR gate ([#485](https://github.com/mckinsey/agents-at-scale-marketplace/issues/485)) ([1a2c073](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1a2c0732273664f5d519c7ea3e80c6b66a0424be))
+
 ## [1.0.0](https://github.com/mckinsey/agents-at-scale-marketplace/compare/marketplace-docs-v0.1.20...marketplace-docs-v1.0.0) (2026-09-08)
 
 
