@@ -27,22 +27,33 @@ For larger files or datasets, consider using RAG (Retrieval-Augmented Generation
 ark install marketplace/services/file-gateway
 ```
 
-Or with DevSpace:
+`ark install` always installs into the `default` namespace.
+
+Or with DevSpace (installs into the current kube context namespace):
 
 ```bash
 cd services/file-gateway
 devspace deploy
 ```
 
-Or with Helm:
+Or with Helm, into any namespace:
 
 ```bash
-helm install file-gateway services/file-gateway/chart -n default
+helm install file-gateway oci://ghcr.io/mckinsey/agents-at-scale-marketplace/charts/file-gateway \
+  -n <namespace> --create-namespace
 ```
 
+(From a checkout, replace the chart reference with `services/file-gateway/chart`.)
+
 Access via:
-- Port forward: `kubectl port-forward svc/file-gateway-file-api 8080:8080`
+- Port forward: `kubectl port-forward svc/file-gateway-api 8080:80 -n <namespace>`
 - Ark Dashboard → [Files page](http://dashboard.127.0.0.1.nip.io:8080/files)
+
+### Multi-tenant installs
+
+The dashboard's Files page looks for the File API in the current tenant's namespace, so each tenant needs its own release. 
+
+Run the Helm command above once per tenant namespace and add `--set httpRoute.enabled=false`: the default HTTPRoute hostnames are the same in every namespace and would conflict. The dashboard does not use the HTTPRoute.
 
 ## Services
 
@@ -151,7 +162,7 @@ ark uninstall marketplace/services/file-gateway
 **Using Helm:**
 
 ```bash
-helm uninstall file-gateway -n default
+helm uninstall file-gateway -n <namespace>
 ```
 
 **Using DevSpace:**
