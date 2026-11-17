@@ -55,6 +55,19 @@ class OpenAIResponsesExecutor(BaseExecutor):
     def _extract_function_calls(response: Any) -> list[Any]:
         return [item for item in response.output if getattr(item, "type", None) == "function_call"]
 
+    def _report_response_usage(self, response: Any) -> None:
+        usage = getattr(response, "usage", None)
+        # Remove once the ark-sdk pin provides report_usage.
+        report_usage = getattr(self, "report_usage", None)
+        if usage is None or report_usage is None:
+            return
+        details = getattr(usage, "input_tokens_details", None)
+        report_usage(
+            prompt_tokens=usage.input_tokens or 0,
+            completion_tokens=usage.output_tokens or 0,
+            cached_tokens=getattr(details, "cached_tokens", 0) or 0,
+        )
+
     # ------------------------------------------------------------------
     # Main execution
     # ------------------------------------------------------------------
@@ -196,6 +209,8 @@ class OpenAIResponsesExecutor(BaseExecutor):
                     if event.type == "response.output_text.delta":
                         await self.stream_chunk(event.delta)
                 response = await stream.get_final_response()
+
+            self._report_response_usage(response)
 
             if conversation_id:
                 await sessions.save_response_id(conversation_id, response.id)
