@@ -380,7 +380,15 @@ class TestSessionHelpers:
 # ---------------------------------------------------------------------------
 
 
-def _make_text_response(text="Test response", response_id="resp-001"):
+def _usage(input_tokens, output_tokens, cached_tokens=0):
+    usage = MagicMock()
+    usage.input_tokens = input_tokens
+    usage.output_tokens = output_tokens
+    usage.input_tokens_details.cached_tokens = cached_tokens
+    return usage
+
+
+def _make_text_response(text="Test response", response_id="resp-001", usage=None):
     content_part = MagicMock()
     content_part.type = "output_text"
     content_part.text = text
@@ -390,10 +398,11 @@ def _make_text_response(text="Test response", response_id="resp-001"):
     response = MagicMock()
     response.id = response_id
     response.output = [message_item]
+    response.usage = usage
     return response
 
 
-def _make_function_call_response(name, arguments, call_id, response_id="resp-tool-001"):
+def _make_function_call_response(name, arguments, call_id, response_id="resp-tool-001", usage=None):
     fc_item = MagicMock()
     fc_item.type = "function_call"
     fc_item.name = name
@@ -402,6 +411,7 @@ def _make_function_call_response(name, arguments, call_id, response_id="resp-too
     response = MagicMock()
     response.id = response_id
     response.output = [fc_item]
+    response.usage = usage
     return response
 
 
@@ -574,3 +584,65 @@ class TestExecuteAgent:
         with p1, p2, p3:
             with pytest.raises(RuntimeError, match="API error"):
                 await self._executor().execute_agent(_request())
+
+
+class TestReportUsage:
+    def _patches(self, tmp_path, client):
+        return TestExecuteAgent()._patches(tmp_path, client)
+
+    def _executor(self):
+        executor = TestExecuteAgent()._executor()
+        executor.report_usage = MagicMock()
+        return executor
+
+    @pytest.mark.asyncio
+    async def test_reports_usage_for_each_response_in_tool_loop(self, tmp_path):
+        client = _mock_client(
+            _make_function_call_response(
+                "search", {"query": "python"}, "call-001", usage=_usage(100, 20, cached_tokens=40)
+            ),
+            _make_text_response("Python is a programming language.", usage=_usage(150, 30)),
+        )
+        executor = self._executor()
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await executor.execute_agent(_request(tools=[_tool("search", "Search the web")]))
+
+        assert [c.kwargs for c in executor.report_usage.call_args_list] == [
+            {"prompt_tokens": 100, "completion_tokens": 20, "cached_tokens": 40},
+            {"prompt_tokens": 150, "completion_tokens": 30, "cached_tokens": 0},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_cached_tokens_default_to_zero_without_details(self, tmp_path):
+        usage = _usage(10, 5)
+        usage.input_tokens_details = None
+        client = _mock_client(_make_text_response("Answer.", usage=usage))
+        executor = self._executor()
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await executor.execute_agent(_request())
+
+        executor.report_usage.assert_called_once_with(
+            prompt_tokens=10, completion_tokens=5, cached_tokens=0
+        )
+
+    @pytest.mark.asyncio
+    async def test_skips_when_response_has_no_usage(self, tmp_path):
+        client = _mock_client(_make_text_response("Answer."))
+        executor = self._executor()
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3:
+            await executor.execute_agent(_request())
+
+        executor.report_usage.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_skips_when_ark_sdk_lacks_report_usage(self, tmp_path):
+        client = _mock_client(_make_text_response("Answer.", usage=_usage(10, 5)))
+        executor = TestExecuteAgent()._executor()
+        p1, p2, p3 = self._patches(tmp_path, client)
+        with p1, p2, p3, patch.object(OpenAIResponsesExecutor, "report_usage", None, create=True):
+            messages = await executor.execute_agent(_request())
+
+        assert messages[0].content == "Answer."
