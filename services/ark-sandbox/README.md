@@ -1,5 +1,8 @@
 # Ark Sandbox
 
+> [!WARNING]
+> **This component is no longer maintained.** Ark Sandbox is unmaintained and will not receive further updates, bug fixes, or security patches. Use at your own risk.
+
 Isolated container environments for AI agent code execution with MCP tool access.
 
 ## Overview
