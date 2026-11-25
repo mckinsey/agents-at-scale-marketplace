@@ -15,11 +15,11 @@ spec:
     name: {{ .Values.modelRef.name }}
   maxCompletionTokens: 4096
   tools:
-  - name: file-gateway-mcpserver-read-file
+  - name: file-gateway-read-file
     type: mcp
-  - name: file-gateway-mcpserver-write-file
+  - name: file-gateway-write-file
     type: mcp
-  - name: file-gateway-mcpserver-list-directory
+  - name: file-gateway-list-directory
     type: mcp
   prompt: |
     You are a compliance screening specialist. Screen individuals against sanctions lists, PEP databases, and adverse media.

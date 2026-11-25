@@ -72,7 +72,7 @@ build-filesystem:
 	@kubectl wait --for=jsonpath='{.status.phase}=Bound' pvc/file-gateway-storage -n $(NAMESPACE) --timeout=120s 2>/dev/null || \
 		(echo "Error: PVC not Bound. Run 'make install' first, then 'make build'."; exit 1)
 	@echo "Deploying filesystem MCP server..."
-	@helm template mcp-filesystem ../../mcps/filesystem-mcp-server/chart \
+	@helm template filesystem-mcp-server ../../mcps/filesystem-mcp-server/chart \
 		--namespace $(NAMESPACE) \
 		--set persistence.existingClaim=file-gateway-storage \
 		--set env.BASE_DATA_DIR=/data/aas-files \
@@ -254,14 +254,14 @@ uninstall:
 	@kubectl delete rolebinding argo-workflow-default-access -n $(NAMESPACE) 2>/dev/null || true
 	@echo "Removing MCP servers..."
 	@kubectl delete mcpserver pdf-extraction-mcp perplexity web-research-mcp companies-house -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
-	@kubectl delete mcpserver -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete mcpserver -l app.kubernetes.io/name=filesystem-mcp-server -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete mcpserver -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@echo "Removing file-gateway and MCP deployments..."
 	@kubectl delete deployment -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
-	@kubectl delete deployment -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
+	@kubectl delete deployment -l app.kubernetes.io/name=filesystem-mcp-server -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
 	@kubectl delete deployment pdf-extraction-mcp web-research-mcp perplexity-ask-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s --force --grace-period=0 2>/dev/null || true
 	@kubectl delete service,serviceaccount,secret -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
-	@kubectl delete service,serviceaccount -l app.kubernetes.io/name=mcp-filesystem -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
+	@kubectl delete service,serviceaccount -l app.kubernetes.io/name=filesystem-mcp-server -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete service pdf-extraction-mcp web-research-mcp perplexity-ask-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete serviceaccount pdf-extraction-mcp web-research-mcp perplexity-ask-mcp -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
 	@kubectl delete httproute -l app.kubernetes.io/name=file-gateway -n $(NAMESPACE) --ignore-not-found --timeout=30s 2>/dev/null || true
@@ -435,12 +435,12 @@ verify-agents:
 
 verify-mcp:
 	@echo "MCPServers:"
-	@kubectl get mcpserver mcp-filesystem -n $(NAMESPACE) 2>/dev/null || echo "  mcp-filesystem: NOT FOUND (run make build)"
+	@kubectl get mcpserver filesystem-mcp-server -n $(NAMESPACE) 2>/dev/null || echo "  filesystem-mcp-server: NOT FOUND (run make build)"
 	@kubectl get mcpserver pdf-extraction-mcp -n $(NAMESPACE) 2>/dev/null || echo "  pdf-extraction-mcp: NOT FOUND (run make build-pdf-mcp)"
 	@kubectl get mcpserver web-research-mcp -n $(NAMESPACE) 2>/dev/null || echo "  web-research-mcp: NOT FOUND (run make build-web-mcp)"
 	@echo ""
 	@echo "Pods:"
-	@kubectl get pods -n $(NAMESPACE) -l app.kubernetes.io/name=mcp-filesystem 2>/dev/null || true
+	@kubectl get pods -n $(NAMESPACE) -l app.kubernetes.io/name=filesystem-mcp-server 2>/dev/null || true
 	@kubectl get pods -n $(NAMESPACE) -l app=pdf-extraction-mcp 2>/dev/null || true
 	@kubectl get pods -n $(NAMESPACE) -l app=web-research-mcp 2>/dev/null || true
 

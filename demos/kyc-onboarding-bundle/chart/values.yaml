@@ -186,7 +186,7 @@ dataSeeder:
     tag: latest
     pullPolicy: IfNotPresent
 # Filesystem MCP deployment name (must match the standalone mcp-filesystem chart's deployment name)
-filesystemMcpDeployment: "mcp-filesystem-filesystem-mcp-server"
+filesystemMcpDeployment: "filesystem-mcp-server"
 
 # File Gateway (installed with bundle; provides file-gateway-api and file-gateway-filesystem-mcp)
 file-gateway:
