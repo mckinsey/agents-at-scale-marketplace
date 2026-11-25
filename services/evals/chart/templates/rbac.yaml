@@ -1,0 +1,46 @@
+{{- if .Values.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "evals.serviceAccountName" . }}
+  labels:
+    {{- include "evals.labels" . | nindent 4 }}
+{{- end }}
+{{- if .Values.rbac.create }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "evals.fullname" . }}-runner
+  labels:
+    {{- include "evals.labels" . | nindent 4 }}
+rules:
+  # Create/poll/clean up the judge Query (story 03).
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["queries"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  # Read the suite ConfigMap (mounted as a volume; get is for diagnostics).
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+  # Argo's executor reports step results via this resource; without it every
+  # eval step fails at teardown even after the engine ran successfully.
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtaskresults"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "evals.fullname" . }}-runner
+  labels:
+    {{- include "evals.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "evals.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ include "evals.fullname" . }}-runner
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

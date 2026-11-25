@@ -1,0 +1,17 @@
+apiVersion: v2
+name: evals
+description: >-
+  Evals - grade the output of an Ark agentic workflow against a golden dataset
+  with an LLM-as-judge, and report a pass rate against a threshold. Triggered
+  from a workflow's onExit hook.
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+keywords:
+  - evals
+  - evaluation
+  - llm-as-judge
+  - argo
+  - quality
+annotations:
+  ark.mckinsey.com/marketplace-item-name: service/evals

@@ -1,0 +1,4 @@
+# Patterns to ignore when packaging the chart.
+.DS_Store
+*.tmp
+*.bak
