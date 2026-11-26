@@ -2,6 +2,13 @@
 
 All notable changes to ARK Sandbox will be documented in this file.
 
+## [0.1.9](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.8...ark-sandbox-v0.1.9) (2026-11-26)
+
+
+### Bug Fixes
+
+* note to say ark-sandbox is not maintained ([#515](https://github.com/mckinsey/agents-at-scale-marketplace/issues/515)) ([9bd27b2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9bd27b2c09131cdba9b5cfabe94a6f095f547953))
+
 ## [0.1.8](https://github.com/mckinsey/agents-at-scale-marketplace/compare/ark-sandbox-v0.1.7...ark-sandbox-v0.1.8) (2026-09-08)
 
 

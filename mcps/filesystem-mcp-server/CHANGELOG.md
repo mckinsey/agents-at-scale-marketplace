@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.62](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.61...filesystem-mcp-server-v0.1.62) (2026-11-26)
+
+
+### Bug Fixes
+
+* **deps:** close the Xray advisory batch blocking every PR gate ([#485](https://github.com/mckinsey/agents-at-scale-marketplace/issues/485)) ([1a2c073](https://github.com/mckinsey/agents-at-scale-marketplace/commit/1a2c0732273664f5d519c7ea3e80c6b66a0424be))
+* note to say ark-sandbox is not maintained ([#515](https://github.com/mckinsey/agents-at-scale-marketplace/issues/515)) ([9bd27b2](https://github.com/mckinsey/agents-at-scale-marketplace/commit/9bd27b2c09131cdba9b5cfabe94a6f095f547953))
+
 ## [0.1.61](https://github.com/mckinsey/agents-at-scale-marketplace/compare/filesystem-mcp-server-v0.1.60...filesystem-mcp-server-v0.1.61) (2026-09-08)
 
 
