@@ -50,5 +50,24 @@ XRAY-1100109 - CVE-2023-54404 (zod 3.25.76, zod 4.0.0-beta.20250424T163858)
   schema case. Reachable in both docs (nextra/nextra-theme-docs's own zod/zod-to-json-schema)
   and mcps/filesystem-mcp-server (direct zod dependency), but there is no version to bump to.
 
+XRAY-1172638 - CVE-2026-133949 (pip 25.1.1)
+- pip's bundled certifi trusts the compromised eMudhra intermediate certificates, so a TLS
+  MITM of the package index presenting a certificate chained to one of those intermediates
+  would not be rejected during download.
+- NOT REACHABLE in the marketplace: pip is not a declared or pinned dependency anywhere in
+  the repo — it appears only as the implicit build-environment tool the Xray scan picks up.
+  It runs at image build time only ("pip install -r requirements.txt"), against the standard
+  public PyPI (and, for mcps/speech-mcp-server, torch's CPU index) over pinned HTTPS. There is
+  no attacker-in-the-middle on those connections in the CI build, and no --extra-index-url or
+  untrusted index is configured (same evidence as XRAY-97724 above). pip is never invoked at
+  runtime in any shipped container.
+- Fix exists but is not applicable here: pip 26.2.2 ships the remediation, and per the advisory
+  pip is not vulnerable at all under a Python that rejects the compromised intermediates
+  (CVE-2026-115557). Because pip is picked up implicitly rather than pinned, there is no
+  manifest version to bump that would change the scan result; the exposure is the build
+  toolchain, which the runner images update independently.
+- Re-check when the scanned environment reports pip >= 26.2.2: at that point this entry should
+  be removed rather than carried forward.
+
 # Only tolerate what has no fix. Xray's fixed_versions goes stale, so confirm against
 # the package's own release notes, not just the scan output.
